@@ -1,0 +1,3 @@
+# 强制 .js 和 .json 文件使用 CRLF 换行符
+*.js text eol=CRLF
+*.json text eol=CRLF
