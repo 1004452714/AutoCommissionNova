@@ -22,10 +22,7 @@ export async function identification() {
 
     await initSkipCommissionsList();
     const supportedCommissions = await loadSupportedCommissions();
-    initializeStandardizer();
-
-    log.info("支持的战斗委托: {count} 个", supportedCommissions.fight.length);
-    log.info("支持的对话委托: {count} 个", supportedCommissions.talk.length);
+    initializeStandardizer(supportedCommissions);
 
     for (const commission of supportedCommissions.fight) {
       ensureDirectoryExists(PATHS.FIGHT_SCRIPT_BASE + "/" + commission);
