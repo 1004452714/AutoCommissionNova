@@ -19,17 +19,7 @@
   "settings_ui": "settings.json",
   "main": "main.js",
   "library": [
-    "./src",
-    "./src/config",
-    "./src/core",
-    "./src/recognition",
-    "./src/processors",
-    "./src/vision",
-    "./src/dialog",
-    "./src/navigation",
-    "./src/data",
-    "./src/utils",
-    "./src/version"
+
   ],
   "saved_files": [
     "Data/commissions_data.json"

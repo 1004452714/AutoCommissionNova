@@ -76,11 +76,13 @@ export async function recognizeCommissions(supportedCommissions) {
           try {
             const text = cleanText(results[i].text);
             if (text && text.length >= MIN_TEXT_LENGTH) {
-              log.info('第{index}个委托: "{text}"', regionIndex + 1, text);
+              log.info('第{index}个委托(OCR): "{text}"', regionIndex + 1, text);
               const standardizedName = standardizeCommissionName(text);
               const finalName = standardizedName || text;
               if (standardizedName && standardizedName !== text) {
-                log.info('委托名称标准化: {raw} -> {standard}', text, standardizedName);
+                log.info('第{index}个委托(标准化): {raw} -> {standard}', regionIndex + 1, text, standardizedName);
+              } else if (!standardizedName) {
+                log.warn('第{index}个委托标准化失败，使用OCR原始结果: "{text}"', regionIndex + 1, text);
               }
               const isFight = supportedCommissions.fight.includes(finalName);
               const isTalk = supportedCommissions.talk.includes(finalName);
@@ -164,8 +166,14 @@ export async function recognizeCommissions(supportedCommissions) {
         try {
           const text = cleanText(results[i].text);
           if (text && text.length >= MIN_TEXT_LENGTH) {
+            log.info('第4个委托(OCR): "{text}"', text);
             const standardizedName = standardizeCommissionName(text);
             const finalName = standardizedName || text;
+            if (standardizedName && standardizedName !== text) {
+              log.info('第4个委托(标准化): {raw} -> {standard}', text, standardizedName);
+            } else if (!standardizedName) {
+              log.warn('第4个委托标准化失败，使用OCR原始结果: "{text}"', text);
+            }
             const isFight = supportedCommissions.fight.includes(finalName);
             const isTalk = supportedCommissions.talk.includes(finalName);
             fourthCommission = {

@@ -78,6 +78,8 @@ function buildTalkStandardizationList() {
  * @returns {string|null} 标准化后的名称
  */
 export function standardizeCommissionName(rawName) {
+  //TODO 开发时BGI环境有bug，模块会重复初始化，后续修复后可以去掉initialize
+  initialize();
   const allNames = [...Object.keys(standardizationLists.fight), ...Object.keys(standardizationLists.talk)];
   return getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
 }
