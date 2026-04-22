@@ -4,6 +4,7 @@
  */
 import { PATHS } from "../config/index.js";
 import { calculateDistance, getCommissionTargetPosition } from "../navigation/index.js";
+import { scanCommissionScripts } from "../utils/index.js";
 
 /**
  * 执行战斗委托
@@ -14,12 +15,14 @@ export async function executeFightCommission(commission) {
   try {
     log.info("执行战斗委托: {name}", commission.name);
     const location = commission.location.trim();
-    const scriptPaths = [
-      PATHS.FIGHT_SCRIPT_BASE + "/" + commission.name + "/" + location + "-1.json",
-      PATHS.FIGHT_SCRIPT_BASE + "/" + commission.name + "/" + location + "-2.json",
-      PATHS.FIGHT_SCRIPT_BASE + "/" + commission.name + "/" + location + "-3.json",
-    ];
+    const scriptPaths = scanCommissionScripts(PATHS.FIGHT_SCRIPT_BASE, commission.name, location);
 
+    if (scriptPaths.length === 0) {
+      log.warn("未找到委托 {name} 在地点 {location} 的任何脚本文件", commission.name, location);
+      return false;
+    }
+
+    log.info("找到 {count} 个脚本文件", scriptPaths.length);
     const scriptInfo = [];
     for (const scriptPath of scriptPaths) {
       try {
