@@ -5,7 +5,7 @@
 import { GAME_RESOLUTION, PATHS } from "../config/index.js";
 import { getSetting } from "../utils/settings-utils.js";
 import { loadSupportedCommissions, saveCommissionsData, initSkipCommissionsList } from "../data/index.js";
-import { recognizeCommissions, initializeStandardizer } from "../recognition/index.js";
+import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
 import { prepareForLeyLineRun } from "./preparation.js";
 import { executeCommissionTracking } from "./commission-executor.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
@@ -22,7 +22,7 @@ export async function identification() {
 
     await initSkipCommissionsList();
     const supportedCommissions = await loadSupportedCommissions();
-    initializeStandardizer(supportedCommissions);
+    await initCommissionReferenceData(supportedCommissions);
 
     for (const commission of supportedCommissions.fight) {
       ensureDirectoryExists(PATHS.FIGHT_SCRIPT_BASE + "/" + commission);

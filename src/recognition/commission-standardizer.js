@@ -1,35 +1,39 @@
 /**
  * 委托名称/地点标准化模块
- * 使用编辑距离算法将 OCR 识别结果标准化为已知委托名称
+ * 使用编辑距离算法将 OCR 识别结果标准化为已知委托名称和地点
  */
 import { THRESHOLDS, PATHS } from "../config/index.js";
 import { getClosestMatch } from "./text-matcher.js";
+import { loadSupportedCommissions } from "../data/index.js";
 
-const standardizationLists = { fight: {}, talk: {} };
+const referenceData = { fight: {}, talk: {} };
 
 /**
- * 初始化标准化列表
- * @param {Object} supportedCommissions - 支持的委托列表 { fight: [], talk: [] }
+ * 初始化委托名称和地点参考数据
+ * @param {Object} [supportedCommissions] - 支持的委托列表 { fight: [], talk: [] }，不传参则从数据源加载
  */
-export function initialize(supportedCommissions) {
-  log.info("初始化委托标准化列表...");
+export async function initReferenceData(supportedCommissions) {
+  log.info("初始化委托名称和地点参考数据...");
   try {
-    standardizationLists.fight = buildFightStandardizationList(supportedCommissions.fight);
-    standardizationLists.talk = buildTalkStandardizationList(supportedCommissions.talk);
-    log.info("委托标准化列表初始化完成");
-    log.debug("战斗委托标准化列表: {count} 个委托", Object.keys(standardizationLists.fight).length);
-    log.debug("对话委托标准化列表: {count} 个委托", Object.keys(standardizationLists.talk).length);
+    if (!supportedCommissions) {
+      supportedCommissions = await loadSupportedCommissions();
+    }
+    referenceData.fight = buildFightReferenceMap(supportedCommissions.fight);
+    referenceData.talk = buildTalkReferenceMap(supportedCommissions.talk);
+    log.info("委托参考数据初始化完成");
+    log.debug("战斗委托参考数据: {count} 个委托", Object.keys(referenceData.fight).length);
+    log.debug("对话委托参考数据: {count} 个委托", Object.keys(referenceData.talk).length);
   } catch (error) {
-    log.error("初始化标准化列表时出错: {error}", error.message);
+    log.error("初始化委托参考数据时出错: {error}", error.message);
   }
 }
 
 /**
- * 构建战斗委托标准化列表
+ * 构建战斗委托名称-地点映射表
  * @param {string[]} fightCommissions - 战斗委托名称列表
  * @returns {Object} { 委托名: [地点列表] }
  */
-function buildFightStandardizationList(fightCommissions) {
+function buildFightReferenceMap(fightCommissions) {
   const fightList = {};
   try {
     const assetsPath = PATHS.FIGHT_SCRIPT_BASE;
@@ -48,17 +52,17 @@ function buildFightStandardizationList(fightCommissions) {
       }
     }
   } catch (error) {
-    log.error("构建战斗委托标准化列表时出错: {error}", error.message);
+    log.error("构建战斗委托参考数据时出错: {error}", error.message);
   }
   return fightList;
 }
 
 /**
- * 构建对话委托标准化列表
+ * 构建对话委托名称-地点映射表
  * @param {string[]} talkCommissions - 对话委托名称列表
  * @returns {Object} { 委托名: [地点列表] }
  */
-function buildTalkStandardizationList(talkCommissions) {
+function buildTalkReferenceMap(talkCommissions) {
   const talkList = {};
   try {
     const processPath = PATHS.TALK_PROCESS_BASE;
@@ -74,7 +78,7 @@ function buildTalkStandardizationList(talkCommissions) {
       }
     }
   } catch (error) {
-    log.error("构建对话委托标准化列表时出错: {error}", error.message);
+    log.error("构建对话委托参考数据时出错: {error}", error.message);
   }
   return talkList;
 }
@@ -82,12 +86,12 @@ function buildTalkStandardizationList(talkCommissions) {
 /**
  * 标准化委托名称
  * @param {string} rawName - OCR 识别的原始名称
- * @returns {string|null} 标准化后的名称，未初始化或匹配失败时返回 null
+ * @returns {Promise<string|null>} 标准化后的名称，未初始化或匹配失败时返回 null
  */
-export function standardizeCommissionName(rawName) {
-  //TODO 开发时BGI环境有bug，模块会重复初始化，后续修复后可以去掉initialize
-  initialize();
-  const allNames = [...Object.keys(standardizationLists.fight), ...Object.keys(standardizationLists.talk)];
+export async function standardizeCommissionName(rawName) {
+  //TODO 开发时BGI环境有bug，模块会重复初始化，后续修复后可以去掉initReferenceData
+  await initReferenceData();
+  const allNames = [...Object.keys(referenceData.fight), ...Object.keys(referenceData.talk)];
   return getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
 }
 
@@ -99,13 +103,13 @@ export function standardizeCommissionName(rawName) {
  */
 export function standardizeCommissionLocation(commissionName, rawLocation) {
   let candidates = [];
-  if (standardizationLists.fight[commissionName]) {
-    candidates = standardizationLists.fight[commissionName];
-  } else if (standardizationLists.talk[commissionName]) {
-    candidates = standardizationLists.talk[commissionName];
+  if (referenceData.fight[commissionName]) {
+    candidates = referenceData.fight[commissionName];
+  } else if (referenceData.talk[commissionName]) {
+    candidates = referenceData.talk[commissionName];
   }
   if (candidates.length === 0) {
-    log.warn("没有找到委托 {name} 的标准化地点列表", commissionName);
+    log.warn("没有找到委托 {name} 的参考地点列表", commissionName);
     return rawLocation;
   }
   const closestLocation = getClosestMatch(rawLocation, candidates, THRESHOLDS.LOCATION);

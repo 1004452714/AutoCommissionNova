@@ -81,7 +81,7 @@ export async function recognizeCommissions(supportedCommissions) {
           try {
             const text = cleanText(results[j].text);
             if (text && text.length >= MIN_TEXT_LENGTH) {
-              const standardizedName = standardizeCommissionName(text);
+              const standardizedName = await standardizeCommissionName(text);
               const finalName = standardizedName || text;
               if (standardizedName && standardizedName !== text) {
                 log.info('第{index}个委托(标准化名称): {raw} -> {standard}', i + 1, text, standardizedName);
