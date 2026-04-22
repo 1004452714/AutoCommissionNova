@@ -67,32 +67,36 @@ export async function recognizeCommissions(supportedCommissions) {
     log.info("开始执行委托识别");
     const allCommissions = [];
 
-    for (let regionIndex = 0; regionIndex < 3; regionIndex++) {
-      const region = OCR_REGIONS.Main_Dev[regionIndex];
-      log.info("识别第{index}个委托区域", regionIndex + 1);
+    for (let i = 0; i < 4; i++) {
+      if (i === 3) {
+        await pageScroll(1);
+      }
+
+      const region = OCR_REGIONS.Main_Dev[i];
+      log.info("识别第{index}个委托区域", i + 1);
+      let commission = null;
       try {
         const results = await easyOCR(region);
-        for (let i = 0; i < results.count; i++) {
+        for (let j = 0; j < results.count; j++) {
           try {
-            const text = cleanText(results[i].text);
+            const text = cleanText(results[j].text);
             if (text && text.length >= MIN_TEXT_LENGTH) {
-              log.info('第{index}个委托(OCR): "{text}"', regionIndex + 1, text);
               const standardizedName = standardizeCommissionName(text);
               const finalName = standardizedName || text;
               if (standardizedName && standardizedName !== text) {
-                log.info('第{index}个委托(标准化): {raw} -> {standard}', regionIndex + 1, text, standardizedName);
+                log.info('第{index}个委托(标准化名称): {raw} -> {standard}', i + 1, text, standardizedName);
               } else if (!standardizedName) {
-                log.warn('第{index}个委托标准化失败，使用OCR原始结果: "{text}"', regionIndex + 1, text);
+                log.warn('第{index}个委托标准化失败，使用OCR原始结果: "{text}"', i + 1, text);
               }
               const isFight = supportedCommissions.fight.includes(finalName);
               const isTalk = supportedCommissions.talk.includes(finalName);
-              allCommissions.push({
-                id: regionIndex + 1,
+              commission = {
+                id: i + 1,
                 name: finalName,
                 supported: isFight || isTalk,
                 type: isFight ? COMMISSION_TYPE.FIGHT : isTalk ? COMMISSION_TYPE.TALK : "",
                 location: "",
-              });
+              };
               break;
             }
           } catch (ocrError) {
@@ -101,14 +105,15 @@ export async function recognizeCommissions(supportedCommissions) {
           }
         }
       } catch (regionError) {
-        log.error("识别第{index}个委托区域时出错: {error}", regionIndex + 1, regionError);
+        log.error("识别第{index}个委托区域时出错: {error}", i + 1, regionError);
         continue;
       }
-    }
 
-    log.info("步骤2: 检测所有委托的完成状态");
-    for (let i = 0; i < Math.min(3, allCommissions.length); i++) {
-      const commission = allCommissions[i];
+      if (!commission) {
+        continue;
+      }
+      allCommissions.push(commission);
+
       try {
         const status = await detectCommissionStatusByImage(i);
         if (status === "completed") {
@@ -153,79 +158,6 @@ export async function recognizeCommissions(supportedCommissions) {
         } catch (escapeError) {
           log.warn("尝试退出详情页面时出错: {error}", escapeError);
         }
-      }
-    }
-
-    log.info("步骤3: 翻页后识别第4个委托");
-    await pageScroll(1);
-    const region = OCR_REGIONS.Main_Dev[3];
-    let fourthCommission = null;
-    try {
-      const results = await easyOCR(region);
-      for (let i = 0; i < results.count; i++) {
-        try {
-          const text = cleanText(results[i].text);
-          if (text && text.length >= MIN_TEXT_LENGTH) {
-            log.info('第4个委托(OCR): "{text}"', text);
-            const standardizedName = standardizeCommissionName(text);
-            const finalName = standardizedName || text;
-            if (standardizedName && standardizedName !== text) {
-              log.info('第4个委托(标准化): {raw} -> {standard}', text, standardizedName);
-            } else if (!standardizedName) {
-              log.warn('第4个委托标准化失败，使用OCR原始结果: "{text}"', text);
-            }
-            const isFight = supportedCommissions.fight.includes(finalName);
-            const isTalk = supportedCommissions.talk.includes(finalName);
-            fourthCommission = {
-              id: 4,
-              name: finalName,
-              supported: isFight || isTalk,
-              type: isFight ? COMMISSION_TYPE.FIGHT : isTalk ? COMMISSION_TYPE.TALK : "",
-              location: "",
-            };
-            break;
-          }
-        } catch (ocrError) {
-          continue;
-        }
-      }
-    } catch (regionError) {
-      log.error("识别第4个委托区域时出错: {error}", regionError);
-    }
-
-    if (fourthCommission) {
-      allCommissions.push(fourthCommission);
-      try {
-        const status = await detectCommissionStatusByImage(3);
-        if (status === "completed") {
-          fourthCommission.location = "已完成";
-        } else {
-          const detailButton = COMMISSION_DETAIL_BUTTONS[3];
-          click(detailButton.x, detailButton.y);
-          await sleep(700);
-          const detailStatus = await checkDetailPageEntered();
-          fourthCommission.country = detailStatus;
-          let location = await recognizeCommissionLocation();
-          const standardizedLocation = standardizeCommissionLocation(fourthCommission.name, location);
-          if (standardizedLocation && standardizedLocation !== location) {
-            location = standardizedLocation;
-          }
-          fourthCommission.location = location;
-          if (fourthCommission.location !== "已完成") {
-            keyDown("VK_ESCAPE");
-            await sleep(300);
-            keyUp("VK_ESCAPE");
-            await sleep(1200);
-            const bigMapPosition = await getPositionWithVoting();
-            fourthCommission.CommissionPosition = bigMapPosition;
-            keyDown("VK_ESCAPE");
-            await sleep(300);
-            keyUp("VK_ESCAPE");
-            await sleep(1200);
-          }
-        }
-      } catch (error) {
-        log.error("处理第4个委托时出错: {error}", error.message);
       }
     }
 
