@@ -62,8 +62,6 @@ export async function findNearestFightProcess(commissionName, location, commissi
       const targetPos = await getCommissionTargetPosition(pathFile);
       if (targetPos) {
         const distance = calculateDistance(commissionPosition, targetPos);
-        log.info("子目录 {dir}: 目标位置 ({x}, {y})，距离: {distance}", 
-          dir.split('/').pop().split('\\').pop(), targetPos.x, targetPos.y, distance);
         
         if (distance < minDistance) {
           minDistance = distance;

@@ -33,9 +33,32 @@ export class StepProcessorRegistry {
 
   /**
    * 兼容层：将字符串/数字格式步骤转换为对象格式
+   * 
    * 保持与现有 process.json 流程文件的完全兼容
+   * 旧版流程文件使用字符串格式定义步骤，新版使用对象格式
+   * 
+   * 转换规则：
+   * - "xxx.json" → { type: "地图追踪", data: "xxx.json" }（路径追踪文件）
+   * - "F" → { type: "对话", data: {} }（对话交互）
+   * - "等待" → { type: "等待", data: {} }（其他步骤类型）
+   * 
    * @param {Object|string} step - 原始步骤
-   * @returns {Object} 标准化后的步骤对象
+   * @returns {Object} 标准化后的步骤对象 { type: string, data: any }
+   * 
+   * @example
+   * // 路径追踪文件
+   * normalizeStep("蒙德城-1.json");
+   * // 返回: { type: "地图追踪", data: "蒙德城-1.json" }
+   * 
+   * @example
+   * // 对话交互
+   * normalizeStep("F");
+   * // 返回: { type: "对话", data: {} }
+   * 
+   * @example
+   * // 已为对象格式，直接返回
+   * normalizeStep({ type: "等待", data: { ms: 1000 } });
+   * // 返回: { type: "等待", data: { ms: 1000 } }
    */
   normalizeStep(step) {
     if (typeof step === "string") {

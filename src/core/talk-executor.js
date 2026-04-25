@@ -9,12 +9,19 @@ import { isInMainUI } from "../vision/ui-detector.js";
 
 /**
  * 读取并解析流程文件
+ * 
+ * 从指定路径加载并解析流程文件
+ * 支持JSON数组格式和纯文本行格式
+ * 
  * @param {string} commissionName - 委托名称
  * @param {string} location - 委托地点
- * @param {string} processFileName - 流程文件名
- * @returns {Promise<Array|false>} 步骤数组
+ * @param {string} processFileName - 流程文件名，默认为"process.json"
+ * @returns {Promise<Array|false>} 步骤数组，失败返回false
+ * 
+ * @example
+ * const steps = await loadProcessFile("语言交流", "蒙德城");
  */
-export async function loadAndParseProcessFile(commissionName, location, processFileName = "process.json") {
+export async function loadProcessFile(commissionName, location, processFileName = "process.json") {
   const processFilePath = PATHS.TALK_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFileName;
   try {
     const processContent = await file.readText(processFilePath);
@@ -46,7 +53,7 @@ export async function loadAndParseProcessFile(commissionName, location, processF
  */
 export async function executeTalkCommission(commissionName, location, stepRegistry) {
   try {
-    const processSteps = await loadAndParseProcessFile(commissionName, location, "process.json");
+    const processSteps = await loadProcessFile(commissionName, location, "process.json");
     return await executeUnifiedTalkProcess(processSteps, commissionName, location, stepRegistry);
   } catch (error) {
     log.error("执行对话委托时出错: {error}", error.message);

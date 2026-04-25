@@ -3,7 +3,7 @@
  * 使用编辑距离算法将 OCR 识别结果标准化为已知委托名称和地点
  */
 import { THRESHOLDS, PATHS } from "../config/index.js";
-import { getClosestMatch } from "./text-matcher.js";
+import { getClosestMatch } from "./text-similarity.js";
 import { loadSupportedCommissions } from "../data/index.js";
 
 const referenceData = { fight: {}, talk: {} };

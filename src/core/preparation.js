@@ -8,7 +8,7 @@ import { getSetting } from "../utils/settings-utils.js";
 /**
  * 委托前准备工作：设置分辨率、前往七天神像、切换队伍
  */
-export async function prepareForLeyLineRun() {
+export async function prepareForCommission() {
   log.info("开始执行委托前准备");
   setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
   try {
@@ -22,6 +22,6 @@ export async function prepareForLeyLineRun() {
       await genshin.switchParty(setting.team);
     }
   } catch (error) {
-    log.error("prepareForLeyLineRun函数出现错误: {error}", error.message);
+    log.error("prepareForCommission函数出现错误: {error}", error.message);
   }
 }

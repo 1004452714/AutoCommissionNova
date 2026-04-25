@@ -6,7 +6,7 @@ import { GAME_RESOLUTION, PATHS } from "../config/index.js";
 import { getSetting } from "../utils/settings-utils.js";
 import { loadSupportedCommissions, saveCommissionsData, initSkipCommissionsList } from "../data/index.js";
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
-import { prepareForLeyLineRun } from "./preparation.js";
+import { prepareForCommission } from "./preparation.js";
 import { executeCommissionTracking } from "./commission-executor.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
 
@@ -67,7 +67,7 @@ export async function executeMainProcess(stepRegistry) {
       await identification();
     }
 
-    await prepareForLeyLineRun();
+    await prepareForCommission();
     await executeCommissionTracking(stepRegistry);
 
     if (!setting.prepare) {

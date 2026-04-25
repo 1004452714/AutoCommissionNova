@@ -15,7 +15,7 @@ import { register as registerSwitchTeam } from "./switch-team.js";
 import { register as registerSwitchRole } from "./switch-role.js";
 import { register as registerCommissionTracking } from "./commission-tracking.js";
 import { register as registerLocationDetection } from "./location-detection.js";
-import { register as registerCommissionDescriptionDetection } from "./commission-description-detection.js";
+import { register as registerCommissionDescDetect } from "./commission-desc-detect.js";
 
 const allProcessors = [
   registerWait,
@@ -31,7 +31,7 @@ const allProcessors = [
   registerSwitchRole,
   registerCommissionTracking,
   registerLocationDetection,
-  registerCommissionDescriptionDetection,
+  registerCommissionDescDetect,
 ];
 
 /**

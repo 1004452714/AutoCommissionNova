@@ -3,7 +3,7 @@
  * 自动处理对话流程：识别NPC、选择对话选项、跳过剧情
  */
 import { PATHS } from "../config/index.js";
-import { easyOCR, easyTemplateMatch } from "../vision/index.js";
+import { ocrCaptureRegion, templateMatchCaptureRegion } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isInMainUI } from "../vision/ui-detector.js";
 
@@ -23,7 +23,7 @@ export async function executeOptimizedAutoTalk(options) {
 
   let extractedName = null;
   const nameRegion = { X: 75, Y: 240, WIDTH: 225, HEIGHT: 60 };
-  const nameResults = await easyOCR(nameRegion);
+  const nameResults = await ocrCaptureRegion(nameRegion);
   for (let i = 0; i < nameResults.count; i++) {
     const text = nameResults[i].text;
     log.info("任务区域识别文本: {text}", text);
@@ -37,7 +37,7 @@ export async function executeOptimizedAutoTalk(options) {
 
   const dialogRegion = { X: 1150, Y: 300, WIDTH: 350, HEIGHT: 400 };
   const talkIconRegion = { X: 1260, Y: 300, WIDTH: 90, HEIGHT: 550 };
-  const dialogResults = await easyOCR(dialogRegion);
+  const dialogResults = await ocrCaptureRegion(dialogRegion);
   let clickedWhitelistNPC = false;
   let clickedExtractedName = false;
 
@@ -101,7 +101,7 @@ export async function executeOptimizedAutoTalk(options) {
 
     let foundPriorityOption = false;
     const dialogOptionsRegion = { X: 1250, Y: 250, WIDTH: 550, HEIGHT: 600 };
-    const ocrResults = await easyOCR(dialogOptionsRegion);
+    const ocrResults = await ocrCaptureRegion(dialogOptionsRegion);
     if (ocrResults.count > 0) {
       for (let i = 0; i < ocrResults.count; i++) {
         const ocrText = ocrResults[i].text;
@@ -118,8 +118,8 @@ export async function executeOptimizedAutoTalk(options) {
       }
 
       if (!foundPriorityOption && !checkMainUI()) {
-        const exitList = await easyTemplateMatch(PATHS.TALK_EXIT_IMAGE, talkIconRegion, true);
-        const iconList = await easyTemplateMatch(PATHS.TALK_ICON_IMAGE, talkIconRegion);
+        const exitList = await templateMatchCaptureRegion(PATHS.TALK_EXIT_IMAGE, talkIconRegion, true);
+        const iconList = await templateMatchCaptureRegion(PATHS.TALK_ICON_IMAGE, talkIconRegion);
         let clickXY = null;
 
         if (exitList.count === 1) {

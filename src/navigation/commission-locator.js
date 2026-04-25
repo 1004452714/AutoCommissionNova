@@ -3,7 +3,7 @@
  * 在委托界面中查找指定委托并获取其地图位置
  */
 import { OCR_REGIONS, COMMISSION_DETAIL_BUTTONS, MIN_TEXT_LENGTH } from "../config/index.js";
-import { easyOCR, easyOCROne, enterCommissionScreen, pageScroll } from "../vision/index.js";
+import { ocrCaptureRegion, ocrCaptureRegionText, enterCommissionScreen, pageScroll } from "../vision/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { getPositionWithVoting } from "./position-utils.js";
 
@@ -26,7 +26,7 @@ export async function findCommissionTarget(commissionName) {
       for (let regionIndex = 0; regionIndex < 3; regionIndex++) {
         const region = OCR_REGIONS.Main_Dev[regionIndex];
         try {
-          const results = await easyOCR(region);
+          const results = await ocrCaptureRegion(region);
           for (let i = 0; i < results.count; i++) {
             const text = cleanText(results[i].text);
             if (text && text.length >= MIN_TEXT_LENGTH) {
@@ -52,7 +52,7 @@ export async function findCommissionTarget(commissionName) {
         log.info("前3个委托中未找到，检查第4个委托");
         await pageScroll(1);
         const region = OCR_REGIONS.Main_Dev[3];
-        const results = await easyOCR(region);
+        const results = await ocrCaptureRegion(region);
         for (let i = 0; i < results.count; i++) {
           const text = cleanText(results[i].text);
           if (text && text.length >= MIN_TEXT_LENGTH && text === commissionName) {
@@ -68,13 +68,12 @@ export async function findCommissionTarget(commissionName) {
 
     let currentCommissionPosition = null;
     try {
-      if (index === 4) index = 3;
       const button = COMMISSION_DETAIL_BUTTONS[index - 1];
       if (button) {
         click(button.x, button.y);
         await sleep(2000);
 
-        const trackingResult = await easyOCROne(OCR_REGIONS.COMMISSION_TRACKING);
+        const trackingResult = await ocrCaptureRegionText(OCR_REGIONS.COMMISSION_TRACKING);
         if (trackingResult === "追踪") {
           log.info("发现追踪按钮，点击追踪");
           click(1693, 1000);

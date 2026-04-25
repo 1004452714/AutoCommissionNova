@@ -11,12 +11,10 @@
 export async function loadFightProcess(processPath) {
   try {
     const processContent = await file.readText(processPath);
-    log.info("加载战斗流程文件: {path}", processPath);
     
     try {
       const jsonData = JSON.parse(processContent);
       if (Array.isArray(jsonData)) {
-        log.debug("流程文件解析成功，共 {count} 个步骤", jsonData.length);
         return jsonData;
       }
       log.error("流程文件格式错误，应为数组: {path}", processPath);

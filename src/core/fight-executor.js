@@ -13,8 +13,6 @@ import { loadFightProcess } from "./fight-process-loader.js";
  */
 export async function executeFightCommission(commission, stepRegistry) {
   try {
-    log.info("执行战斗委托: {name} ({location})", commission.name, commission.location);
-    
     // 1. 匹配最近的流程
     const matched = await findNearestFightProcess(
       commission.name,
@@ -27,7 +25,7 @@ export async function executeFightCommission(commission, stepRegistry) {
       return false;
     }
     
-    log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, matched.distance);
+    log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, matched.distance.toFixed(2));
     
     // 2. 加载流程步骤
     const processSteps = await loadFightProcess(matched.processPath);
@@ -54,8 +52,6 @@ export async function executeFightCommission(commission, stepRegistry) {
  * @returns {Promise<boolean>}
  */
 async function executeFightProcessSteps(commission, processDir, processSteps, stepRegistry) {
-  log.info("开始执行战斗流程: {name}, 共 {count} 个步骤", commission.name, processSteps.length);
-  
   for (let i = 0; i < processSteps.length; i++) {
     const step = processSteps[i];
     log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);

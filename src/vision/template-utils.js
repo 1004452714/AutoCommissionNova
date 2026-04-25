@@ -6,12 +6,19 @@ import { PATHS, THRESHOLDS } from "../config/index.js";
 
 /**
  * 模板匹配识别（手动截图模式）
+ * 
+ * 对指定游戏区域进行模板匹配，返回所有匹配结果
+ * 自动进行截图、匹配、资源释放的完整流程
+ * 
  * @param {string} imgPath - 模板图片路径
  * @param {Object} ocrRegion - 搜索区域 { X, Y, WIDTH, HEIGHT }
  * @param {boolean} useMask - 是否使用掩码
  * @returns {Promise<Object>} 匹配结果
+ * 
+ * @example
+ * const results = await templateMatchCaptureRegion(PATHS.UNCOMPLETED, { X: 0, Y: 0, WIDTH: 1920, HEIGHT: 1080 });
  */
-export async function easyTemplateMatch(imgPath, ocrRegion, useMask = false) {
+export async function templateMatchCaptureRegion(imgPath, ocrRegion, useMask = false) {
   try {
     if (!ocrRegion || typeof ocrRegion !== "object") {
       log.error("TemplateMatch区域参数不能为空且必须是对象");
@@ -44,11 +51,18 @@ export async function easyTemplateMatch(imgPath, ocrRegion, useMask = false) {
 }
 
 /**
- * 使用 BvPage + RecognitionObject 进行模板匹配
+ * BvPage模板匹配识别
+ * 
+ * 使用BvPage进行模板匹配，支持等待超时
+ * 适用于需要等待特定元素出现的场景
+ * 
  * @param {string} imgPath - 模板图片路径
  * @param {Object} [roi] - 搜索区域 { X, Y, WIDTH, HEIGHT }
  * @param {number} [timeout] - 等待超时（毫秒）
  * @returns {Promise<Array>} 匹配结果列表
+ * 
+ * @example
+ * const results = await bvPageTemplateMatch(PATHS.COMPLETED, null, 3000);
  */
 export async function bvPageTemplateMatch(imgPath, roi, timeout = 3000) {
   const mat = file.ReadImageMatSync(imgPath);

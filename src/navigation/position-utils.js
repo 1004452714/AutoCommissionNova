@@ -4,10 +4,19 @@
  */
 
 /**
- * 计算两点之间的距离
- * @param {Object} point1 - 点1 { X, Y } 或 { x, y }
- * @param {Object} point2 - 点2 { x, y }
- * @returns {number} 距离，无效数据返回 Infinity
+ * 计算两点之间的欧几里得距离
+ * 
+ * @param {Object} point1 - 点1坐标 { X, Y } 或 { x, y }
+ * @param {Object} point2 - 点2坐标 { X, Y } 或 { x, y }
+ * @returns {number} 两点间距离，无效数据返回 Infinity
+ * 
+ * @example
+ * const distance = calculateDistance({ x: 100, y: 200 }, { x: 150, y: 250 });
+ * // 返回: 70.71...
+ * 
+ * @example
+ * // 兼容大写键名
+ * const distance = calculateDistance({ X: 100, Y: 200 }, { X: 150, Y: 250 });
  */
 export function calculateDistance(point1, point2) {
   if (!point1 || !point2) return Infinity;
@@ -23,13 +32,28 @@ export function calculateDistance(point1, point2) {
 
 /**
  * 使用投票机制获取最可靠的地图位置
+ * 
+ * 通过多次识别不同缩放级别的地图坐标，使用聚类投票算法选出最可信的位置
+ * 
+ * 算法流程：
+ * 1. 从2.0倍缩放开始，每次增加0.3，直到5.0倍或识别6次
+ * 2. 每次识别后将坐标加入位置列表
+ * 3. 对所有位置进行聚类：距离小于5像素的点归为同一簇
+ * 4. 选择点数最多的簇的第一个位置作为最终结果
+ * 
  * @returns {Promise<Object>} 位置对象 { x, y }
+ * @throws {Error} 无法从大地图中识别位置时抛出异常
+ * 
+ * @example
+ * const position = await getPositionWithVoting();
+ * console.log("坐标:", position.x, position.y);
  */
 export async function getPositionWithVoting() {
   let scale = 2.0;
   const positions = [];
   let recognitionCount = 0;
 
+  // 多次识别：从2.0倍缩放到5.0倍，最多识别6次
   while (scale <= 5.0 && recognitionCount < 6) {
     try {
       await genshin.setBigMapZoomLevel(scale);
@@ -44,6 +68,7 @@ export async function getPositionWithVoting() {
   }
 
   if (positions.length > 0) {
+    // 聚类算法：将距离小于5像素的点归为同一簇
     const clusters = [];
     for (const pos of positions) {
       let added = false;
@@ -53,6 +78,8 @@ export async function getPositionWithVoting() {
       }
       if (!added) clusters.push([pos]);
     }
+    
+    // 选择点数最多的簇
     clusters.sort((a, b) => b.length - a.length);
     if (clusters.length > 0) {
       const bestPosition = clusters[0][0];
@@ -65,8 +92,18 @@ export async function getPositionWithVoting() {
 
 /**
  * 从路径追踪文件获取目标坐标
- * @param {string} scriptPath - 路径追踪文件路径
- * @returns {Promise<Object|null>} 目标坐标 { x, y }
+ * 
+ * 读取 _path.json 文件，提取最后一个路径点的坐标
+ * 用于战斗委托流程的距离匹配
+ * 
+ * @param {string} scriptPath - 路径追踪文件路径（_path.json）
+ * @returns {Promise<Object|null>} 目标坐标 { x, y }，失败返回null
+ * 
+ * @example
+ * const position = await getCommissionTargetPosition("assets/语言交流/蒙德城/_path.json");
+ * if (position) {
+ *   console.log("目标坐标:", position.x, position.y);
+ * }
  */
 export async function getCommissionTargetPosition(scriptPath) {
   try {

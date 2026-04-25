@@ -2,8 +2,8 @@
  * 委托描述检测步骤处理器
  */
 import { OCR_REGIONS, PATHS } from "../config/index.js";
-import { easyOCROne } from "../vision/index.js";
-import { loadAndParseProcessFile } from "../core/talk-executor.js";
+import { ocrCaptureRegionText } from "../vision/index.js";
+import { loadProcessFile } from "../core/talk-executor.js";
 
 export function register(registry) {
   registry.register("委托描述检测", async function(step, context) {
@@ -35,14 +35,14 @@ export function register(registry) {
 
       for (let c = 0; c < 13; c++) {
         try {
-          const ocrResult = await easyOCROne(OCR_REGIONS.COMMISSION_DETAIL);
+          const ocrResult = await ocrCaptureRegionText(OCR_REGIONS.COMMISSION_DETAIL);
           if (ocrResult === context.commissionName || ocrResult === "") {
             await sleep(1000);
             log.debug("检测到委托名称或空文本，继续等待...");
           } else if ((!useKeyword && ocrResult === targetDescription) || (useKeyword && ocrResult.includes(targetDescription))) {
             log.info("委托描述检测成功，执行后续步骤");
             if (executeFile && runType === "process") {
-              const nextSteps = await loadAndParseProcessFile(context.commissionName, context.location, executeFile);
+              const nextSteps = await loadProcessFile(context.commissionName, context.location, executeFile);
               if (nextSteps && Array.isArray(nextSteps)) {
                 context.processSteps.splice(context.currentIndex + 1, 0, ...nextSteps);
                 log.info("已插入 {count} 个后续步骤", nextSteps.length);

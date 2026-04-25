@@ -4,7 +4,7 @@
  */
 import { stepRegistry } from "../src/processors/registry.js";
 import { registerAllProcessors } from "../src/processors/index.js";
-import { loadAndParseProcessFile } from "../src/core/talk-executor.js";
+import { loadProcessFile } from "../src/core/talk-executor.js";
 import { isInMainUI } from "../src/vision/ui-detector.js";
 
 registerAllProcessors(stepRegistry);
