@@ -76,8 +76,5 @@ export async function loadSupportedCommissions() {
     talk: whitelist.talk.filter((name) => availableTalk.includes(name)),
   };
 
-  log.info("支持的战斗委托: {count} 个（白名单 {wl} 个，可用 {avail} 个）", supported.fight.length, whitelist.fight.length, availableFight.length);
-  log.info("支持的对话委托: {count} 个（白名单 {wl} 个，可用 {avail} 个）", supported.talk.length, whitelist.talk.length, availableTalk.length);
-
   return supported;
 }

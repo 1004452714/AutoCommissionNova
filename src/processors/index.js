@@ -42,5 +42,4 @@ export function registerAllProcessors(registry) {
   for (const registerFn of allProcessors) {
     registerFn(registry);
   }
-  log.info("所有步骤处理器注册完成，共 {count} 个注册函数", allProcessors.length);
 }

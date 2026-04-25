@@ -64,7 +64,6 @@ export async function checkDetailPageEntered() {
  */
 export async function recognizeCommissions(supportedCommissions) {
   try {
-    log.info("开始执行委托识别");
     const allCommissions = [];
 
     for (let i = 0; i < 4; i++) {
@@ -73,7 +72,6 @@ export async function recognizeCommissions(supportedCommissions) {
       }
 
       const region = OCR_REGIONS.Main_Dev[i];
-      log.info("识别第{index}个委托区域", i + 1);
       let commission = null;
       try {
         const results = await easyOCR(region);
@@ -161,12 +159,6 @@ export async function recognizeCommissions(supportedCommissions) {
       }
     }
 
-    if (allCommissions.length > 0) {
-      log.info("委托识别完成，共识别到 {total} 个委托，其中 {supported} 个受支持",
-        allCommissions.length, allCommissions.filter(function(c) { return c.supported; }).length);
-    } else {
-      log.warn("委托识别失败，未识别到任何委托");
-    }
     return allCommissions;
   } catch (error) {
     log.error("委托识别出错: {error}", error.message);

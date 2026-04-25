@@ -13,14 +13,12 @@ const referenceData = { fight: {}, talk: {} };
  * @param {Object} [supportedCommissions] - 支持的委托列表 { fight: [], talk: [] }，不传参则从数据源加载
  */
 export async function initReferenceData(supportedCommissions) {
-  log.info("初始化委托名称和地点参考数据...");
   try {
     if (!supportedCommissions) {
       supportedCommissions = await loadSupportedCommissions();
     }
     referenceData.fight = buildFightReferenceMap(supportedCommissions.fight);
     referenceData.talk = buildTalkReferenceMap(supportedCommissions.talk);
-    log.info("委托参考数据初始化完成");
     log.debug("战斗委托参考数据: {count} 个委托", Object.keys(referenceData.fight).length);
     log.debug("对话委托参考数据: {count} 个委托", Object.keys(referenceData.talk).length);
   } catch (error) {
@@ -114,7 +112,6 @@ export function standardizeCommissionLocation(commissionName, rawLocation) {
   }
   const closestLocation = getClosestMatch(rawLocation, candidates, THRESHOLDS.LOCATION);
   if (closestLocation) {
-    log.info("标准化地点: {raw} -> {standard}", rawLocation, closestLocation);
     return closestLocation;
   }
   log.info("地点相似度未达阈值，保持原地点: {raw}", rawLocation);

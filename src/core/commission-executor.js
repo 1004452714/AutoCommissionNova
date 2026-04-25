@@ -25,7 +25,6 @@ export async function executeCommissionTracking(stepRegistry) {
       const commissionsData = JSON.parse(commissionsDataContent);
       if (commissionsData && commissionsData.commissions && Array.isArray(commissionsData.commissions)) {
         commissions = commissionsData.commissions.filter((c) => c.supported);
-        log.info("已加载支持的委托数据，共 {count} 个", commissions.length);
       } else {
         log.error("委托数据文件格式错误");
         return false;
@@ -101,7 +100,6 @@ export async function executeCommissionTracking(stepRegistry) {
       } else {
         log.info("委托 {name} 执行成功", commission.name);
       }
-      log.info("立刻执行下一个委托");
     }
 
     log.info("委托追踪全部执行完成，共执行 {count}/{total} 个委托", completedCount, commissions.length);

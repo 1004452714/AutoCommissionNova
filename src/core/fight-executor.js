@@ -41,10 +41,6 @@ export async function executeFightCommission(commission) {
     }
 
     scriptInfo.sort((a, b) => a.distance - b.distance);
-    log.info("排序后的脚本执行顺序:");
-    scriptInfo.forEach((info, index) => {
-      log.info("{index}. 脚本: {path}, 距离: {distance}", index + 1, info.path, info.distance);
-    });
 
     if (scriptInfo.length > 0) {
       const closestScript = scriptInfo[0];

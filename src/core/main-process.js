@@ -15,7 +15,6 @@ import { enterCommissionScreen } from "../vision/ui-detector.js";
  * @returns {Promise<Array>} 识别到的委托列表
  */
 export async function identification() {
-  log.info("开始执行原神每日委托识别脚本");
   try {
     setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
     await genshin.returnMainUi();
@@ -41,7 +40,6 @@ export async function identification() {
     const commissions = await recognizeCommissions(supportedCommissions);
 
     if (commissions && commissions.length > 0) {
-      log.info("委托识别成功，开始保存数据");
       await saveCommissionsData(commissions);
       log.info("委托识别完成，共识别到 {total} 个委托，其中 {supported} 个受支持",
         commissions.length, commissions.filter(function(c) { return c.supported; }).length);

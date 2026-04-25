@@ -14,7 +14,6 @@ export class StepProcessorRegistry {
    */
   register(stepType, handler) {
     this.processors[stepType] = handler;
-    log.info("注册步骤处理器: {type}", stepType);
   }
 
   /**
