@@ -81,6 +81,7 @@ export async function executeMainProcess(stepRegistry) {
   }
 }
 
+
 function ensureDirectoryExists(dirPath) {
   try {
     const tempFilePath = dirPath + "/.temp";

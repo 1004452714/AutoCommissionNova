@@ -38,13 +38,14 @@ function buildFightReferenceMap(fightCommissions) {
     for (const commissionName of fightCommissions) {
       try {
         const folderPath = assetsPath + "/" + commissionName;
-        const files = Array.from(file.readPathSync(folderPath));
-        const jsonFiles = files.filter((f) => f.endsWith(".json"));
-        const cleanFileNames = jsonFiles.map((filePath) => {
-          const fileName = filePath.split("/").pop().split("\\").pop();
-          return fileName.replace(/-(\d+)?\.json$/, "");
+        const items = Array.from(file.readPathSync(folderPath));
+        const subDirs = items.filter((item) => file.isFolder(item));
+        const cleanSubDirs = subDirs.map((subDirPath) => {
+          const dirName = subDirPath.split("/").pop().split("\\").pop();
+          // 从 "{地点}-{编号}" 中提取地点部分
+          return dirName.replace(/-(\d+)$/, "");
         });
-        fightList[commissionName] = cleanFileNames;
+        fightList[commissionName] = cleanSubDirs;
       } catch (folderError) {
         log.warn("无法读取战斗委托 {name} 的目录: {error}", commissionName, folderError.message);
       }

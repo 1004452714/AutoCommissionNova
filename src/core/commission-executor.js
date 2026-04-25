@@ -79,7 +79,7 @@ export async function executeCommissionTracking(stepRegistry) {
             log.warn("对话委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
           }
         } else {
-          const fightSuccess = await executeFightCommission(commission);
+          const fightSuccess = await executeFightCommission(commission, stepRegistry);
           if (fightSuccess) {
             const completed = await isCompleted(completedCount);
             if (completed) { completedCount++; success = true; log.info("委托 {name} 已完成", commission.name); }

@@ -1,66 +1,82 @@
 /**
  * 战斗委托执行模块
- * 合并了原 core.js 和 execute.js 中重复的战斗执行逻辑
+ * 采用流程步骤驱动方式执行战斗委托
  */
-import { PATHS } from "../config/index.js";
-import { calculateDistance, getCommissionTargetPosition } from "../navigation/index.js";
-import { scanCommissionScripts } from "../utils/index.js";
+import { findNearestFightProcess } from "./fight-process-matcher.js";
+import { loadFightProcess } from "./fight-process-loader.js";
 
 /**
  * 执行战斗委托
  * @param {Object} commission - 委托对象
+ * @param {Object} stepRegistry - 步骤处理器注册表
  * @returns {Promise<boolean>}
  */
-export async function executeFightCommission(commission) {
+export async function executeFightCommission(commission, stepRegistry) {
   try {
-    log.info("执行战斗委托: {name}", commission.name);
-    const location = commission.location.trim();
-    const scriptPaths = scanCommissionScripts(PATHS.FIGHT_SCRIPT_BASE, commission.name, location);
-
-    if (scriptPaths.length === 0) {
-      log.warn("未找到委托 {name} 在地点 {location} 的任何脚本文件", commission.name, location);
+    log.info("执行战斗委托: {name} ({location})", commission.name, commission.location);
+    
+    // 1. 匹配最近的流程
+    const matched = await findNearestFightProcess(
+      commission.name,
+      commission.location,
+      commission.CommissionPosition
+    );
+    
+    if (!matched) {
+      log.warn("未找到委托 {name} 在 {location} 的流程", commission.name, commission.location);
       return false;
     }
-
-    log.info("找到 {count} 个脚本文件", scriptPaths.length);
-    const scriptInfo = [];
-    for (const scriptPath of scriptPaths) {
-      try {
-        file.readTextSync(scriptPath);
-        const targetPos = await getCommissionTargetPosition(scriptPath);
-        if (targetPos) {
-          const distance = calculateDistance(commission.CommissionPosition, targetPos);
-          scriptInfo.push({ path: scriptPath, distance, valid: true });
-          log.info("委托 {name} 目标位置: ({x}, {y})，距离: {distance}", scriptPath, targetPos.x, targetPos.y, distance);
-        } else {
-          scriptInfo.push({ path: scriptPath, distance: Infinity, valid: false });
-        }
-      } catch (readError) {
-        continue;
-      }
+    
+    log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, matched.distance);
+    
+    // 2. 加载流程步骤
+    const processSteps = await loadFightProcess(matched.processPath);
+    
+    if (!processSteps || processSteps.length === 0) {
+      log.warn("流程文件为空或解析失败: {path}", matched.processPath);
+      return false;
     }
-
-    scriptInfo.sort((a, b) => a.distance - b.distance);
-
-    if (scriptInfo.length > 0) {
-      const closestScript = scriptInfo[0];
-      try {
-        log.info("执行最近的脚本: {path} (距离: {distance})", closestScript.path, closestScript.distance);
-        dispatcher.addTimer(new RealtimeTimer("AutoPick", { forceInteraction: false }));
-        await pathingScript.runFile(closestScript.path);
-        log.info("路径追踪脚本执行完成");
-        dispatcher.ClearAllTriggers();
-        return true;
-      } catch (scriptError) {
-        log.error("执行路径追踪脚本时出错: {error}", scriptError);
-        dispatcher.ClearAllTriggers();
-      }
-    }
-
-    log.warn("战斗委托 {name} 所有脚本执行失败", commission.name);
-    return false;
+    
+    // 3. 执行流程步骤
+    return await executeFightProcessSteps(commission, matched.processDir, processSteps, stepRegistry);
   } catch (error) {
     log.error("执行战斗委托时出错: {error}", error.message);
     return false;
   }
+}
+
+/**
+ * 执行战斗流程步骤
+ * @param {Object} commission - 委托对象
+ * @param {string} processDir - 流程所在目录
+ * @param {Array} processSteps - 流程步骤数组
+ * @param {Object} stepRegistry - 步骤处理器注册表
+ * @returns {Promise<boolean>}
+ */
+async function executeFightProcessSteps(commission, processDir, processSteps, stepRegistry) {
+  log.info("开始执行战斗流程: {name}, 共 {count} 个步骤", commission.name, processSteps.length);
+  
+  for (let i = 0; i < processSteps.length; i++) {
+    const step = processSteps[i];
+    log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
+    
+    try {
+      await stepRegistry.process(step, {
+        commissionName: commission.name,
+        location: commission.location,
+        processDir: processDir,
+        currentIndex: i,
+      });
+    } catch (stepError) {
+      log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
+      dispatcher.ClearAllTriggers();
+      return false;
+    }
+    
+    await sleep(1000);
+  }
+  
+  dispatcher.ClearAllTriggers();
+  log.info("战斗委托流程执行完成: {name}", commission.name);
+  return true;
 }
