@@ -115,7 +115,7 @@ export async function recognizeCommissions(supportedCommissions) {
 
       try {
         // 检测委托状态
-        const status = await detectCommissionStatusByImage(i);
+        const status = await detectCommissionStatusByImage(i, finalName);
         if (status === "completed") {
           commission.location = "已完成";
           continue;

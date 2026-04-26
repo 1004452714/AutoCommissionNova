@@ -2,17 +2,19 @@
  * 委托完成检测模块
  * 检查委托是否已完成
  */
-import { enterCommissionScreen, pageScroll } from "../vision/ui-detector.js";
+import { COMMISSION_CONFIG } from "../config/index.js";
+import { enterCommissionScreen } from "../vision/ui-detector.js";
+import { ocrCaptureRegionText } from "../vision/ocr-utils.js";
 import { detectCommissionStatusByImage } from "./status-detector.js";
 
 /**
- * 检查委托是否已完成
- * @param {number} completedCount - 已完成的委托数量
+ * 检查指定委托是否已完成
+ * 通过遍历4个委托位置的OCR识别，匹配委托名后检测其完成状态
+ * @param {string} commissionName - 委托名称
  * @returns {Promise<boolean>}
  */
-export async function isCompleted(completedCount) {
+export async function isCompleted(commissionName) {
   try {
-    log.info("已完成委托数量: {completedCount}", completedCount);
     const enterSuccess = await enterCommissionScreen();
     if (!enterSuccess) {
       log.error("无法进入委托界面");
@@ -20,14 +22,21 @@ export async function isCompleted(completedCount) {
     }
     await sleep(900);
 
-    if (completedCount === 0) {
-      await pageScroll(1);
-      const status = await detectCommissionStatusByImage(3);
-      return status === "completed";
-    } else {
-      const status = await detectCommissionStatusByImage(3 - completedCount);
-      return status === "completed";
+    // 遍历4个委托位置，找到对应的委托名
+    for (let i = 0; i < 4; i++) {
+      const config = COMMISSION_CONFIG[i];
+      const ocrResult = await ocrCaptureRegionText(config.ocrRegion);
+      
+      if (ocrResult && ocrResult.trim() === commissionName) {
+        // 找到匹配的委托，检测其完成状态
+        log.info("找到委托 {name}，检测完成状态", commissionName);
+        const status = await detectCommissionStatusByImage(i, commissionName);
+        return status === "completed";
+      }
     }
+
+    log.warn("未在委托界面找到委托: {name}", commissionName);
+    return false;
   } catch (error) {
     log.error("检查委托完成状态失败: {error}", error.message);
     try {

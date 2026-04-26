@@ -11,6 +11,33 @@ export const COMMISSION_DETAIL_BUTTONS = [
   { id: 4, x: 1550, y: 560, checkX: 1450, checkWidth: 150 },
 ];
 
+/**
+ * 委托统一配置（OCR区域 + 状态检查区域）
+ * 每个配置项包含委托名OCR识别区域和完成状态检测区域
+ */
+export const COMMISSION_CONFIG = [
+  {
+    index: 0,
+    ocrRegion: { X: 796, Y: 293, WIDTH: 440, HEIGHT: 40 },
+    statusRegion: { x: 1550, y: 320, checkX: 1450, checkWidth: 150 },
+  },
+  {
+    index: 1,
+    ocrRegion: { X: 796, Y: 401, WIDTH: 440, HEIGHT: 40 },
+    statusRegion: { x: 1550, y: 440, checkX: 1450, checkWidth: 150 },
+  },
+  {
+    index: 2,
+    ocrRegion: { X: 796, Y: 509, WIDTH: 440, HEIGHT: 40 },
+    statusRegion: { x: 1550, y: 530, checkX: 1500, checkWidth: 100 },
+  },
+  {
+    index: 3,
+    ocrRegion: { X: 796, Y: 544, WIDTH: 440, HEIGHT: 40 },
+    statusRegion: { x: 1550, y: 560, checkX: 1450, checkWidth: 150 },
+  },
+];
+
 export const GAME_RESOLUTION = { WIDTH: 1920, HEIGHT: 1080, DPI: 1 };
 
 export const MIN_TEXT_LENGTH = 3;

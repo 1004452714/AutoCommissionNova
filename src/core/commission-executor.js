@@ -97,8 +97,8 @@ export async function executeCommissionTracking(stepRegistry) {
           const talkSuccess = await executeTalkCommission(commission.name, commission.location, stepRegistry);
           dispatcher.ClearAllTriggers();
           if (talkSuccess) {
-            const completed = await isCompleted(completedCount);
-            if (completed) { completedCount++; success = true; log.info("对话委托 {name} 执行完成", commission.name); }
+            const completed = await isCompleted(commission.name);
+            if (completed) { success = true; log.info("对话委托 {name} 执行完成", commission.name); }
             else { log.warn("对话委托 {name} 执行后检查未完成，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT); }
           } else {
             log.warn("对话委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
@@ -106,8 +106,8 @@ export async function executeCommissionTracking(stepRegistry) {
         } else {
           const fightSuccess = await executeFightCommission(commission, stepRegistry);
           if (fightSuccess) {
-            const completed = await isCompleted(completedCount);
-            if (completed) { completedCount++; success = true; log.info("委托 {name} 已完成", commission.name); }
+            const completed = await isCompleted(commission.name);
+            if (completed) { success = true; log.info("委托 {name} 已完成", commission.name); }
             else { log.info("委托 {name} 未完成", commission.name); }
           } else {
             log.warn("战斗委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
