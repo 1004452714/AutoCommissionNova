@@ -5,7 +5,6 @@
 import { PATHS } from "../config/index.js";
 import { executeOptimizedAutoTalk } from "../dialog/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
-import { isInMainUI } from "../vision/ui-detector.js";
 
 /**
  * 读取并解析流程文件
@@ -77,7 +76,6 @@ async function executeUnifiedTalkProcess(processSteps, commissionName, location,
       return false;
     }
 
-    const checkMainUI = isInMainUI;
     let priorityOptions = [];
     let npcWhiteList = [];
 
@@ -96,7 +94,6 @@ async function executeUnifiedTalkProcess(processSteps, commissionName, location,
           location,
           processSteps,
           currentIndex: i,
-          isInMainUI: checkMainUI,
           priorityOptions,
           npcWhiteList,
         };

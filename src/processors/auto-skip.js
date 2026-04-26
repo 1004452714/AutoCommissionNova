@@ -41,7 +41,6 @@ async function executeDialogStep(step, context) {
     await executeOptimizedAutoTalk({
       priorityOptions: priorityOptions,
       npcWhiteList: npcWhiteList,
-      isInMainUI: context.isInMainUI || isInMainUI,
     });
   } catch (error) {
     log.error("执行对话步骤时出错: {error}", error.message);

@@ -12,12 +12,10 @@ import { isInMainUI } from "../vision/ui-detector.js";
  * @param {Object} options - 配置选项
  * @param {string[]} [options.priorityOptions] - 优先对话选项
  * @param {string[]} [options.npcWhiteList] - NPC 白名单
- * @param {Function} [options.isInMainUI] - 主界面检测函数引用
  */
 export async function executeOptimizedAutoTalk(options) {
   const priorityOptions = (options && options.priorityOptions) || [];
   const npcWhiteList = (options && options.npcWhiteList) || [];
-  const checkMainUI = (options && options.isInMainUI) || isInMainUI;
 
   keyPress("V");
 
@@ -54,7 +52,7 @@ export async function executeOptimizedAutoTalk(options) {
           leftButtonClick();
           keyUp("VK_MENU");
           await sleep(200);
-          if (!checkMainUI()) { clickedWhitelistNPC = true; break; }
+          if (!isInMainUI()) { clickedWhitelistNPC = true; break; }
         }
       }
     }
@@ -71,7 +69,7 @@ export async function executeOptimizedAutoTalk(options) {
           leftButtonClick();
           keyUp("VK_MENU");
           await sleep(200);
-          if (!checkMainUI()) { clickedExtractedName = true; break; }
+          if (!isInMainUI()) { clickedExtractedName = true; break; }
         }
       }
     }
@@ -90,14 +88,14 @@ export async function executeOptimizedAutoTalk(options) {
   await sleep(1000);
   log.info("开始执行自动剧情");
 
-  while (!checkMainUI() && attempts < maxAttempts) {
+  while (!isInMainUI() && attempts < maxAttempts) {
     attempts++;
     const startTime = Date.now();
     while (Date.now() - startTime < 1000) {
       keyPress("VK_SPACE");
       await sleep(200);
     }
-    if (checkMainUI()) { log.info("检测到已返回主界面，结束循环"); break; }
+    if (isInMainUI()) { log.info("检测到已返回主界面，结束循环"); break; }
 
     let foundPriorityOption = false;
     const dialogOptionsRegion = { X: 1250, Y: 250, WIDTH: 550, HEIGHT: 600 };
@@ -117,7 +115,7 @@ export async function executeOptimizedAutoTalk(options) {
         if (foundPriorityOption) break;
       }
 
-      if (!foundPriorityOption && !checkMainUI()) {
+      if (!foundPriorityOption && !isInMainUI()) {
         const exitList = await templateMatchCaptureRegion(PATHS.TALK_EXIT_IMAGE, talkIconRegion, true);
         const iconList = await templateMatchCaptureRegion(PATHS.TALK_ICON_IMAGE, talkIconRegion);
         let clickXY = null;
@@ -144,10 +142,10 @@ export async function executeOptimizedAutoTalk(options) {
       }
     }
 
-    if (checkMainUI()) { log.info("检测到已返回主界面，结束循环"); break; }
+    if (isInMainUI()) { log.info("检测到已返回主界面，结束循环"); break; }
   }
 
-  if (checkMainUI()) {
+  if (isInMainUI()) {
     log.info("已返回主界面，自动剧情执行完成");
     await sleep(500);
     keyPress("V");
