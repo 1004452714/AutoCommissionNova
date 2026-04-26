@@ -18,10 +18,5 @@
     "name": "skipRecognition",
     "type": "checkbox",
     "label": "跳过委托识别（开发者选项,普通用户不用开）"
-  },
-  {
-    "name": "skipCommissions",
-    "type": "input-text",
-    "label": "跳过的委托名称（用逗号分隔，如：语言交流,诗歌交流）"
   }
 ]

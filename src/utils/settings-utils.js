@@ -13,9 +13,7 @@ export async function getSetting() {
     const prepare = settings.prepare || false;
     const team = settings.team || "";
     const elementTeam = settings.elementTeam || "";
-    const skipCommissions = "";
-
-    const result = { skipRecognition, prepare, team, elementTeam, skipCommissions };
+    const result = { skipRecognition, prepare, team, elementTeam };
     log.debug("setting:{index}", result);
     return result;
   } catch (error) {
@@ -25,7 +23,6 @@ export async function getSetting() {
       prepare: true,
       team: "",
       elementTeam: "",
-      skipCommissions: "",
     };
   }
 }

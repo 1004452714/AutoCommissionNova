@@ -4,7 +4,7 @@
  */
 import { GAME_RESOLUTION, PATHS } from "../config/index.js";
 import { getSetting } from "../utils/settings-utils.js";
-import { loadSupportedCommissions, saveCommissionsData, initSkipCommissionsList } from "../data/index.js";
+import { loadSupportedCommissions, saveCommissionsData } from "../data/index.js";
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
 import { prepareForCommission } from "./preparation.js";
 import { executeCommissionTracking } from "./commission-executor.js";
@@ -19,7 +19,6 @@ export async function identification() {
     setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
     await genshin.returnMainUi();
 
-    await initSkipCommissionsList();
     const supportedCommissions = await loadSupportedCommissions();
     await initCommissionReferenceData(supportedCommissions);
 

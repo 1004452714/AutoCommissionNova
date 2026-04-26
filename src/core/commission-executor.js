@@ -5,13 +5,12 @@
  * 执行流程：
  * 1. 加载委托数据文件
  * 2. 预统计已完成数量（用于后续完成状态判断）
- * 3. 遍历委托列表，过滤已跳过、已完成、缺少地点的委托
+ * 3. 遍历委托列表，过滤已完成、缺少地点的委托
  * 4. 按委托类型（对话/战斗）执行对应流程
  * 5. 执行后检查完成状态，支持重试机制
  */
 import { COMMISSION_TYPE, MAX_COMMISSION_RETRY_COUNT, PATHS } from "../config/index.js";
 import { isCompleted } from "../recognition/index.js";
-import { isCommissionSkipped } from "../data/index.js";
 import { executeTalkCommission } from "./talk-executor.js";
 import { executeFightCommission } from "./fight-executor.js";
 
@@ -65,11 +64,6 @@ export async function executeCommissionTracking(stepRegistry) {
 
     // 遍历执行每个委托
     for (const commission of commissions) {
-      // 过滤跳过的委托
-      if (isCommissionSkipped(commission.name)) {
-        log.info("委托 {name} 在跳过列表中，跳过执行", commission.name);
-        continue;
-      }
       // 过滤已完成的委托
       if (commission.location === "已完成") {
         log.info("委托 {name} 已完成，跳过", commission.name);

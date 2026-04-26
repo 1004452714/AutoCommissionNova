@@ -49,16 +49,3 @@ export function extractName(text) {
   }
   return null;
 }
-
-/**
- * 解析跳过的委托列表字符串
- * @param {string} str - 逗号分隔的委托名称字符串
- * @returns {string[]} 委托名称列表
- */
-export function parseSkipCommissions(str) {
-  if (!str || typeof str !== "string") return [];
-  return str
-    .split(/[,，]/)
-    .map((name) => name.trim())
-    .filter((name) => name.length > 0);
-}
