@@ -22,4 +22,5 @@ export const PATHS = {
   ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
   CHARACTER_IMAGE_DIR: "Data/characterimage/",
   AVATAR_DATA: "Data/avatar/combat_avatar.json",
+  CONFIG_BASE: "assets/config",
 };

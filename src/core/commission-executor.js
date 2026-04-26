@@ -15,6 +15,55 @@ import { executeTalkCommission } from "./talk-executor.js";
 import { executeFightCommission } from "./fight-executor.js";
 
 /**
+ * 更新分支完成进度
+ * 当委托任务成功完成时调用
+ * 
+ * @param {string} commissionName - 委托名称
+ * @param {Object} context - 执行上下文（包含 branchConfigCache 和 executedBranches）
+ */
+async function updateBranchCompletion(commissionName, context) {
+  try {
+    // 从缓存中获取配置（如果有的话）
+    const config = context.branchConfigCache;
+    if (!config) {
+      return; // 没有缓存配置，说明没有使用分支选择
+    }
+    
+    const commissionConfig = config[commissionName];
+    if (!commissionConfig) {
+      return; // 没有配置该委托的分支信息
+    }
+    
+    // 初始化 completed 数组
+    if (!commissionConfig.completed) {
+      commissionConfig.completed = [];
+    }
+    
+    // 获取本次执行的分支列表
+    const executedBranches = context.executedBranches || [];
+    
+    // 更新完成进度
+    let hasUpdate = false;
+    for (const branch of executedBranches) {
+      if (!commissionConfig.completed.includes(branch)) {
+        commissionConfig.completed.push(branch);
+        hasUpdate = true;
+        log.info("已更新分支完成进度: {branch}", branch);
+      }
+    }
+    
+    // 如果有更新，保存配置文件
+    if (hasUpdate) {
+      const configPath = PATHS.CONFIG_BASE + "/commission-branches.json";
+      file.writeTextSync(configPath, JSON.stringify(config, null, 2));
+      log.info("分支配置文件已更新");
+    }
+  } catch (error) {
+    log.error("更新分支完成进度时出错: {error}", error.message);
+  }
+}
+
+/**
  * 执行委托追踪（遍历+重试）
  * 
  * 遍历识别到的委托列表，按类型（对话/战斗）执行对应流程
@@ -88,11 +137,16 @@ export async function executeCommissionTracking(stepRegistry) {
 
         // 按类型执行
         if (commission.type === COMMISSION_TYPE.TALK) {
-          const talkSuccess = await executeTalkCommission(commission.name, commission.location, stepRegistry);
+          const talkResult = await executeTalkCommission(commission.name, commission.location, stepRegistry);
           dispatcher.ClearAllTriggers();
-          if (talkSuccess) {
+          if (talkResult.success) {
             const completed = await isCompleted(commission.name);
-            if (completed) { success = true; log.info("对话委托 {name} 执行完成", commission.name); }
+            if (completed) { 
+              success = true; 
+              log.info("对话委托 {name} 执行完成", commission.name); 
+              // 更新分支完成进度
+              await updateBranchCompletion(commission.name, talkResult.context); 
+            }
             else { log.warn("对话委托 {name} 执行后检查未完成，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT); }
           } else {
             log.warn("对话委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);

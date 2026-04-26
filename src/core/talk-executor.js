@@ -3,7 +3,6 @@
  * 负责对话委托的流程加载和执行
  */
 import { PATHS } from "../config/index.js";
-import { executeOptimizedAutoTalk } from "../dialog/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
 
 /**
@@ -48,15 +47,16 @@ export async function loadProcessFile(commissionName, location, processFileName 
  * @param {string} commissionName - 委托名称
  * @param {string} location - 委托地点
  * @param {Object} stepRegistry - 步骤处理器注册表
- * @returns {Promise<boolean>}
+ * @returns {Promise<Object>} 包含 success 和 context 的对象
  */
 export async function executeTalkCommission(commissionName, location, stepRegistry) {
   try {
     const processSteps = await loadProcessFile(commissionName, location, "process.json");
-    return await executeUnifiedTalkProcess(processSteps, commissionName, location, stepRegistry);
+    const result = await executeUnifiedTalkProcess(processSteps, commissionName, location, stepRegistry);
+    return { success: result.success, context: result.context };
   } catch (error) {
     log.error("执行对话委托时出错: {error}", error.message);
-    return false;
+    return { success: false, context: null };
   }
 }
 
@@ -66,20 +66,30 @@ export async function executeTalkCommission(commissionName, location, stepRegist
  * @param {string} commissionName - 委托名称
  * @param {string} location - 委托地点
  * @param {Object} stepRegistry - 步骤处理器注册表
- * @returns {Promise<boolean>}
+ * @returns {Promise<Object>} 包含 success 和 context 的对象
  */
 async function executeUnifiedTalkProcess(processSteps, commissionName, location, stepRegistry) {
   try {
     log.info("执行统一对话委托流程: {name}", commissionName);
     if (!processSteps || processSteps.length === 0) {
       log.warn("没有找到有效的流程步骤");
-      return false;
+      return { success: false, context: null };
     }
 
     let priorityOptions = [];
     let npcWhiteList = [];
 
     await findCommissionTarget(commissionName);
+
+    // 在循环外部创建共享 context，使所有步骤可以跨步骤传递缓存数据
+    const sharedContext = {
+      commissionName,
+      location,
+      processSteps,
+      priorityOptions,
+      npcWhiteList,
+      stepRegistry, // 传入 stepRegistry 供嵌套步骤调用
+    };
 
     for (let i = 0; i < processSteps.length; i++) {
       const step = processSteps[i];
@@ -89,16 +99,12 @@ async function executeUnifiedTalkProcess(processSteps, commissionName, location,
         priorityOptions = stepConfig.priorityOptions;
         npcWhiteList = stepConfig.npcWhiteList;
 
-        const context = {
-          commissionName,
-          location,
-          processSteps,
-          currentIndex: i,
-          priorityOptions,
-          npcWhiteList,
-        };
+        // 更新动态字段
+        sharedContext.currentIndex = i;
+        sharedContext.priorityOptions = priorityOptions;
+        sharedContext.npcWhiteList = npcWhiteList;
 
-        await stepRegistry.process(step, context);
+        await stepRegistry.process(step, sharedContext);
       } catch (stepError) {
         log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
       }
@@ -106,10 +112,10 @@ async function executeUnifiedTalkProcess(processSteps, commissionName, location,
     }
 
     log.info("统一对话委托流程执行完成: {name}", commissionName);
-    return true;
+    return { success: true, context: sharedContext };
   } catch (error) {
     log.error("执行统一对话委托流程时出错: {error}", error.message);
-    return false;
+    return { success: false, context: null };
   }
 }
 
