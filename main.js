@@ -5,15 +5,15 @@ import { checkVersion } from "./src/version/check-version.js";
 
 registerAllProcessors(stepRegistry);
 
-(async function() {
+(async function () {
   try {
+    //检查版本
     await checkVersion();
-    const startTime = Date.now();
+    //执行主流程
     await executeMainProcess(stepRegistry);
-    const totalTime = Math.round((Date.now() - startTime) / 1000);
-    log.info("脚本执行完成，总耗时: {time} 秒", totalTime);
+    log.info("自动委托执行完毕");
   } catch (error) {
-    log.error("脚本执行过程中发生错误: {error}", error.message);
+    log.error("自动委托执行过程中发生错误: {error}", error.message);
     throw error;
   }
 })();
