@@ -4,6 +4,7 @@
  */
 import { PATHS } from "../config/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
+import { processStepConfiguration } from "./process-executor.js";
 
 /**
  * 读取并解析流程文件
@@ -117,23 +118,4 @@ async function executeUnifiedTalkProcess(processSteps, commissionName, location,
     log.error("执行统一对话委托流程时出错: {error}", error.message);
     return { success: false, context: null };
   }
-}
-
-/**
- * 处理步骤配置（优先选项和NPC白名单）
- */
-function processStepConfiguration(step, defaultPriorityOptions, defaultNpcWhiteList) {
-  let priorityOptions = defaultPriorityOptions.slice();
-  let npcWhiteList = defaultNpcWhiteList.slice();
-  if (step.data && typeof step.data === "object") {
-    if (Array.isArray(step.data.priorityOptions)) {
-      priorityOptions = step.data.priorityOptions;
-      log.info("使用自定义优先选项: {options}", priorityOptions.join(", "));
-    }
-    if (Array.isArray(step.data.npcWhiteList)) {
-      npcWhiteList = step.data.npcWhiteList;
-      log.info("使用自定义NPC白名单: {npcs}", npcWhiteList.join(", "));
-    }
-  }
-  return { priorityOptions, npcWhiteList };
 }

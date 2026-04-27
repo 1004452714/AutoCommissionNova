@@ -1,0 +1,109 @@
+/**
+ * 测试执行模块
+ * 跳过识别流程，直接运行流程文件
+ * 
+ * 使用方式：修改下方 TEST_CONFIG 配置，运行 main.js 即可
+ */
+import { GAME_RESOLUTION, PATHS } from "../config/index.js";
+import { prepareForCommission } from "./preparation.js";
+import { loadProcessFile } from "./talk-executor.js";
+import { buildTestContext, executeProcessSteps } from "./process-executor.js";
+
+/**
+ * 测试配置区
+ * 修改这里的配置来切换测试模式
+ */
+const TEST_CONFIG = {
+  enabled: true,                       // 启用测试: true=执行测试, false=直接跳过
+  mode: "case",                         // 测试模式: "case"=测试用例, "commission"=真实委托
+  caseName: "用户分支选择测试",           // mode="case" 时生效，对应 test/process/ 下的目录名
+  commissionName: "语言交流",             // mode="commission" 时生效，对应 assets/process/ 下的目录名
+  location: "坠星山谷",                   // mode="commission" 时生效，委托地点
+  processFile: "process.json",          // mode="commission" 时生效，流程文件名
+};
+
+/**
+ * 执行测试
+ * @returns {Promise<boolean>} 执行是否成功
+ */
+export async function runTestCommission() {
+  if (!TEST_CONFIG.enabled) {
+    return false;
+  }
+
+  log.info("=== 测试模式已启用 ===");
+
+  if (TEST_CONFIG.mode === "case") {
+    return await runTestCase(TEST_CONFIG.caseName);
+  } else {
+    return await runCommission(TEST_CONFIG.commissionName, TEST_CONFIG.location, TEST_CONFIG.processFile);
+  }
+}
+
+/**
+ * 运行测试用例（从 test/process/ 加载）
+ * @param {string} caseName - 测试用例名称
+ * @returns {Promise<boolean>}
+ */
+async function runTestCase(caseName) {
+  const testCasePath = `test/process/${caseName}/process.json`;
+  log.info("=== 开始运行测试用例: {name} ===", caseName);
+
+  try {
+    const processContent = await file.readText(testCasePath);
+    const processSteps = JSON.parse(processContent);
+    log.info("加载流程步骤数量: {count}", processSteps.length);
+
+    const context = buildTestContext({
+      commissionName: caseName,
+      location: "测试位置",
+      processSteps,
+    });
+
+    const success = await executeProcessSteps(processSteps, context, 1000);
+    log.info("=== 测试用例执行完成: {success} ===", success ? "成功" : "失败");
+    return success;
+  } catch (error) {
+    log.error("测试用例执行失败: {error}", error.message);
+    return false;
+  }
+}
+
+/**
+ * 运行真实委托（从 assets/process/ 加载）
+ * @param {string} commissionName - 委托名称
+ * @param {string} location - 委托地点
+ * @param {string} processFile - 流程文件名
+ * @returns {Promise<boolean>}
+ */
+async function runCommission(commissionName, location, processFile) {
+  log.info("=== 开始测试委托: {name} ({location}) ===", commissionName, location);
+
+  try {
+    setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
+    await genshin.returnMainUi();
+    await prepareForCommission();
+
+    const processSteps = await loadProcessFile(commissionName, location, processFile);
+    if (!processSteps || processSteps.length === 0) {
+      log.error("未找到流程文件: {path}",
+        PATHS.TALK_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFile);
+      return false;
+    }
+
+    log.info("加载流程步骤数量: {count}", processSteps.length);
+
+    const context = buildTestContext({
+      commissionName,
+      location,
+      processSteps,
+    });
+
+    const success = await executeProcessSteps(processSteps, context);
+    log.info("=== 测试委托执行完成: {success} ===", success ? "成功" : "失败");
+    return success;
+  } catch (error) {
+    log.error("测试委托执行失败: {error}", error.message);
+    return false;
+  }
+}

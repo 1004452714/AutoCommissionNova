@@ -14,7 +14,7 @@ export function isInMainUI() {
     const ro = RecognitionObject.TemplateMatch(mat, 0, 0, genshin.width / 3.0, genshin.width / 5.0);
     const page = new BvPage();
     const results = page.Locator(ro).FindAll();
-    return results.length > 0;
+    return results.count > 0;
   } finally {
     mat.Dispose();
   }
@@ -30,7 +30,7 @@ export function isStoreUI() {
     const ro = RecognitionObject.TemplateMatch(mat, 0, 0, genshin.width / 3.0, genshin.width / 5.0);
     const page = new BvPage();
     const results = page.Locator(ro).FindAll();
-    return results.length > 0;
+    return results.count > 0;
   } finally {
     mat.Dispose();
   }
