@@ -1,7 +1,6 @@
 {
   "用户分支选择测试": {
     "selected": ["分支A", "分支B"],
-    "completed": [],
-    "default": "分支A"
+    "completed": []
   }
 }

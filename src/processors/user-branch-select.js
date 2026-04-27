@@ -6,8 +6,8 @@
  * 只在第一次时读取配置文件，后续从 context 缓存中获取
  * 
  * 分支选择逻辑：
- * 1. 如果 selected 为空，使用 default
- * 2. 如果 selected 中的分支都已完成，使用 default
+ * 1. 如果 selected 为空，使用 step.default
+ * 2. 如果 selected 中的分支都已完成，使用 step.default
  * 3. 否则，选择 selected 中第一个未完成的分支
  */
 import { PATHS } from "../config/index.js";
@@ -36,17 +36,23 @@ export function register(registry) {
         }
       }
       
-      // 2. 查找当前委托配置
-      const commissionConfig = config[context.commissionName];
-      if (!commissionConfig) {
-        log.warn("未找到委托 {name} 的分支配置，跳过", context.commissionName);
-        return;
+      // 2. 获取默认分支（从 step 定义中读取）
+      const defaultBranch = step.default;
+      if (!defaultBranch) {
+        log.warn("用户分支选择步骤未设置 default 字段");
       }
       
-      // 3. 确定要执行的分支
-      let selectedBranches = commissionConfig.selected || [];
-      const completed = commissionConfig.completed || [];
-      const defaultBranch = commissionConfig.default;
+      // 3. 查找当前委托配置
+      const commissionConfig = config[context.commissionName];
+      
+      // 4. 确定要执行的分支
+      let selectedBranches = [];
+      let completed = [];
+      
+      if (commissionConfig) {
+        selectedBranches = commissionConfig.selected || [];
+        completed = commissionConfig.completed || [];
+      }
       
       // 确保 selected 是数组
       if (!Array.isArray(selectedBranches)) {
@@ -75,7 +81,7 @@ export function register(registry) {
         log.info("选择第一个未完成的分支: {branch}", branchToExecute);
       }
       
-      // 4. 执行分支的 step
+      // 5. 执行分支的 step
       const branchStep = step.data[branchToExecute];
       if (!branchStep) {
         log.warn("未找到分支 {branch} 的step定义", branchToExecute);
