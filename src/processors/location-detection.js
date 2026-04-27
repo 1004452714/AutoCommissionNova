@@ -1,5 +1,9 @@
 /**
  * 地址检测步骤处理器
+ * 支持的数据格式: {x, y, tolerance?}
+ *   - x: number (浮点数) - 目标X坐标
+ *   - y: number (浮点数) - 目标Y坐标
+ *   - tolerance: number (浮点数) - 容差范围，默认 15，可选
  */
 import { calculateDistance } from "../navigation/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
@@ -9,15 +13,28 @@ export function register(registry) {
   registry.register("地址检测", async function(step, context) {
     try {
       log.info("执行地址检测");
-      if (!step.data || !Array.isArray(step.data) || step.data.length < 2) {
-        log.warn("地址检测步骤缺少有效的坐标数据");
+
+      // 验证数据格式必须为对象
+      if (!step.data || typeof step.data !== 'object' || Array.isArray(step.data)) {
+        log.error("地址检测步骤必须使用对象格式: {x, y, tolerance?}");
         return;
       }
 
-      const targetX = step.data[0];
-      const targetY = step.data[1];
-      const tolerance = step.data[2] || 15;
+      const targetX = step.data.x;
+      const targetY = step.data.y;
+      const tolerance = step.data.tolerance ?? 15;
       const executeFile = step.run;
+
+      // 类型校验
+      if (typeof targetX !== 'number' || typeof targetY !== 'number') {
+        log.error("地址检测坐标 x 和 y 必须是数字类型");
+        return;
+      }
+
+      if (typeof tolerance !== 'number') {
+        log.error("地址检测参数 tolerance 必须是数字类型");
+        return;
+      }
 
       log.info("地址检测: 目标({x}, {y}), 容差: {tolerance}", targetX, targetY, tolerance);
 
