@@ -58,10 +58,10 @@ export async function checkDetailPageEntered() {
 
 /**
  * 识别委托列表（4个委托）
- * 
+ *
  * 遍历委托界面4个位置，依次识别委托名称、状态和地点
  * 第4个委托需要翻页操作
- * 
+ *
  * 识别流程：
  * 1. 扫描委托名称（前3个直接识别，第4个需要翻页）
  * 2. 标准化委托名称（使用编辑距离算法匹配已知委托）
@@ -69,13 +69,13 @@ export async function checkDetailPageEntered() {
  * 4. 进入详情页识别地点
  * 5. 获取委托地图坐标
  * 6. 退出详情页
- * 
- * @param {Object} supportedCommissions - 支持的委托列表 { fight: [], talk: [] }
+ *
+ * @param {Object} supportedCommissions - 支持的委托列表 { basic: [], npc: [] }
  * @returns {Promise<Array>} 识别到的委托数组
- * 
+ *
  * @example
  * const commissions = await recognizeCommissions(supportedCommissions);
- * // 返回: [{ id: 1, name: "语言交流", supported: true, type: "talk", location: "蒙德城" }, ...]
+ * // 返回: [{ id: 1, name: "语言交流", supported: true, type: "NPC", location: "蒙德城" }, ...]
  */
 export async function recognizeCommissions(supportedCommissions) {
   try {
@@ -85,7 +85,7 @@ export async function recognizeCommissions(supportedCommissions) {
     for (let i = 0; i < 4; i++) {
       // 使用共享函数扫描委托名称
       const rawName = await scanCommissionAtPosition(i);
-      
+
       if (!rawName) {
         continue;
       }
@@ -93,7 +93,7 @@ export async function recognizeCommissions(supportedCommissions) {
       // 标准化委托名称
       const standardizedName = await standardizeCommissionName(rawName);
       const finalName = standardizedName || rawName;
-      
+
       if (standardizedName && standardizedName !== rawName) {
         log.info('第{index}个委托(标准化名称): {raw} -> {standard}', i + 1, rawName, standardizedName);
       } else if (!standardizedName) {
@@ -101,16 +101,16 @@ export async function recognizeCommissions(supportedCommissions) {
       }
 
       // 判断委托类型
-      const isFight = supportedCommissions.fight.includes(finalName);
-      const isTalk = supportedCommissions.talk.includes(finalName);
+      const isBasic = supportedCommissions.basic.includes(finalName);
+      const isNpc = supportedCommissions.npc.includes(finalName);
       const commission = {
         id: i + 1,
         name: finalName,
-        supported: isFight || isTalk,
-        type: isFight ? COMMISSION_TYPE.FIGHT : isTalk ? COMMISSION_TYPE.TALK : "",
+        supported: isBasic || isNpc,
+        type: isBasic ? COMMISSION_TYPE.BASIC : isNpc ? COMMISSION_TYPE.NPC : "",
         location: "",
       };
-      
+
       allCommissions.push(commission);
 
       try {
@@ -130,7 +130,7 @@ export async function recognizeCommissions(supportedCommissions) {
         const detailStatus = await checkDetailPageEntered();
         commission.country = detailStatus;
         let location = await recognizeCommissionLocation();
-        
+
         // 标准化地点
         const standardizedLocation = standardizeCommissionLocation(commission.name, location);
         if (standardizedLocation && standardizedLocation !== location) {
@@ -142,10 +142,10 @@ export async function recognizeCommissions(supportedCommissions) {
         if (commission.location !== "已完成") {
           const bigMapPosition = await getCommissionPosition();
           commission.CommissionPosition = bigMapPosition;
-          
+
           // 退出详情页
           await exitCommissionDetail(1200);
-          
+
           // 退出大地图（getPositionWithVoting操作了大地图，需要再次按ESC退出）
           keyDown("VK_ESCAPE");
           await sleep(300);

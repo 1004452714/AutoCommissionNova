@@ -1,12 +1,12 @@
 /**
  * 测试执行模块
  * 跳过识别流程，直接运行流程文件
- * 
+ *
  * 使用方式：修改下方 TEST_CONFIG 配置，运行 main.js 即可
  */
 import { GAME_RESOLUTION, PATHS } from "../config/index.js";
 import { prepareForCommission } from "./preparation.js";
-import { loadProcessFile } from "./talk-executor.js";
+import { loadNpcProcessFile } from "./npc-executor.js";
 import { buildTestContext, executeProcessSteps } from "./process-executor.js";
 
 /**
@@ -17,7 +17,7 @@ const TEST_CONFIG = {
   enabled: true,                       // 启用测试: true=执行测试, false=直接跳过
   mode: "case",                         // 测试模式: "case"=测试用例, "commission"=真实委托
   caseName: "用户分支选择测试",           // mode="case" 时生效，对应 test/process/ 下的目录名
-  commissionName: "语言交流",             // mode="commission" 时生效，对应 assets/process/ 下的目录名
+  commissionName: "语言交流",             // mode="commission" 时生效，对应 process/NPC/ 下的目录名
   location: "坠星山谷",                   // mode="commission" 时生效，委托地点
   processFile: "process.json",          // mode="commission" 时生效，流程文件名
 };
@@ -70,7 +70,7 @@ async function runTestCase(caseName) {
 }
 
 /**
- * 运行真实委托（从 assets/process/ 加载）
+ * 运行真实委托（从 process/NPC/ 加载）
  * @param {string} commissionName - 委托名称
  * @param {string} location - 委托地点
  * @param {string} processFile - 流程文件名
@@ -84,10 +84,10 @@ async function runCommission(commissionName, location, processFile) {
     await genshin.returnMainUi();
     await prepareForCommission();
 
-    const processSteps = await loadProcessFile(commissionName, location, processFile);
+    const processSteps = await loadNpcProcessFile(commissionName, location, processFile);
     if (!processSteps || processSteps.length === 0) {
       log.error("未找到流程文件: {path}",
-        PATHS.TALK_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFile);
+        PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFile);
       return false;
     }
 

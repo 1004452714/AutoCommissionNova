@@ -6,36 +6,36 @@ import { THRESHOLDS, PATHS } from "../config/index.js";
 import { getClosestMatch } from "./text-similarity.js";
 import { loadSupportedCommissions } from "../data/index.js";
 
-const referenceData = { fight: {}, talk: {} };
+const referenceData = { basic: {}, npc: {} };
 
 /**
  * 初始化委托名称和地点参考数据
- * @param {Object} [supportedCommissions] - 支持的委托列表 { fight: [], talk: [] }，不传参则从数据源加载
+ * @param {Object} [supportedCommissions] - 支持的委托列表 { basic: [], npc: [] }，不传参则从数据源加载
  */
 export async function initReferenceData(supportedCommissions) {
   try {
     if (!supportedCommissions) {
       supportedCommissions = await loadSupportedCommissions();
     }
-    referenceData.fight = buildFightReferenceMap(supportedCommissions.fight);
-    referenceData.talk = buildTalkReferenceMap(supportedCommissions.talk);
-    log.debug("战斗委托参考数据: {count} 个委托", Object.keys(referenceData.fight).length);
-    log.debug("对话委托参考数据: {count} 个委托", Object.keys(referenceData.talk).length);
+    referenceData.basic = buildBasicReferenceMap(supportedCommissions.basic);
+    referenceData.npc = buildNpcReferenceMap(supportedCommissions.npc);
+    log.debug("Basic委托参考数据: {count} 个委托", Object.keys(referenceData.basic).length);
+    log.debug("NPC委托参考数据: {count} 个委托", Object.keys(referenceData.npc).length);
   } catch (error) {
     log.error("初始化委托参考数据时出错: {error}", error.message);
   }
 }
 
 /**
- * 构建战斗委托名称-地点映射表
- * @param {string[]} fightCommissions - 战斗委托名称列表
+ * 构建Basic委托名称-地点映射表
+ * @param {string[]} basicCommissions - Basic委托名称列表
  * @returns {Object} { 委托名: [地点列表] }
  */
-function buildFightReferenceMap(fightCommissions) {
-  const fightList = {};
+function buildBasicReferenceMap(basicCommissions) {
+  const basicList = {};
   try {
-    const assetsPath = PATHS.FIGHT_SCRIPT_BASE;
-    for (const commissionName of fightCommissions) {
+    const assetsPath = PATHS.BASIC_SCRIPT_BASE;
+    for (const commissionName of basicCommissions) {
       try {
         const folderPath = assetsPath + "/" + commissionName;
         const items = Array.from(file.readPathSync(folderPath));
@@ -45,41 +45,41 @@ function buildFightReferenceMap(fightCommissions) {
           // 从 "{地点}-{编号}" 中提取地点部分
           return dirName.replace(/-(\d+)$/, "");
         });
-        fightList[commissionName] = cleanSubDirs;
+        basicList[commissionName] = cleanSubDirs;
       } catch (folderError) {
-        log.warn("无法读取战斗委托 {name} 的目录: {error}", commissionName, folderError.message);
+        log.warn("无法读取Basic委托 {name} 的目录: {error}", commissionName, folderError.message);
       }
     }
   } catch (error) {
-    log.error("构建战斗委托参考数据时出错: {error}", error.message);
+    log.error("构建Basic委托参考数据时出错: {error}", error.message);
   }
-  return fightList;
+  return basicList;
 }
 
 /**
- * 构建对话委托名称-地点映射表
- * @param {string[]} talkCommissions - 对话委托名称列表
+ * 构建NPC委托名称-地点映射表
+ * @param {string[]} npcCommissions - NPC委托名称列表
  * @returns {Object} { 委托名: [地点列表] }
  */
-function buildTalkReferenceMap(talkCommissions) {
-  const talkList = {};
+function buildNpcReferenceMap(npcCommissions) {
+  const npcList = {};
   try {
-    const processPath = PATHS.TALK_PROCESS_BASE;
-    for (const commissionName of talkCommissions) {
+    const processPath = PATHS.NPC_PROCESS_BASE;
+    for (const commissionName of npcCommissions) {
       try {
         const folderPath = processPath + "/" + commissionName;
         const subItems = Array.from(file.readPathSync(folderPath));
         const subFolders = subItems.filter((subItem) => file.isFolder(subItem));
         const cleanSubFolders = subFolders.map((subFolderPath) => subFolderPath.split("/").pop().split("\\").pop());
-        talkList[commissionName] = cleanSubFolders;
+        npcList[commissionName] = cleanSubFolders;
       } catch (folderError) {
-        log.warn("无法读取对话委托 {name} 的目录: {error}", commissionName, folderError.message);
+        log.warn("无法读取NPC委托 {name} 的目录: {error}", commissionName, folderError.message);
       }
     }
   } catch (error) {
-    log.error("构建对话委托参考数据时出错: {error}", error.message);
+    log.error("构建NPC委托参考数据时出错: {error}", error.message);
   }
-  return talkList;
+  return npcList;
 }
 
 /**
@@ -90,7 +90,7 @@ function buildTalkReferenceMap(talkCommissions) {
 export async function standardizeCommissionName(rawName) {
   //TODO 开发时BGI环境有bug，模块会重复初始化，后续修复后可以去掉initReferenceData
   await initReferenceData();
-  const allNames = [...Object.keys(referenceData.fight), ...Object.keys(referenceData.talk)];
+  const allNames = [...Object.keys(referenceData.basic), ...Object.keys(referenceData.npc)];
   return getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
 }
 
@@ -102,10 +102,10 @@ export async function standardizeCommissionName(rawName) {
  */
 export function standardizeCommissionLocation(commissionName, rawLocation) {
   let candidates = [];
-  if (referenceData.fight[commissionName]) {
-    candidates = referenceData.fight[commissionName];
-  } else if (referenceData.talk[commissionName]) {
-    candidates = referenceData.talk[commissionName];
+  if (referenceData.basic[commissionName]) {
+    candidates = referenceData.basic[commissionName];
+  } else if (referenceData.npc[commissionName]) {
+    candidates = referenceData.npc[commissionName];
   }
   if (candidates.length === 0) {
     log.warn("没有找到委托 {name} 的参考地点列表", commissionName);

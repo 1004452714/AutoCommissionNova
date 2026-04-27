@@ -3,7 +3,7 @@
  */
 import { OCR_REGIONS, PATHS } from "../config/index.js";
 import { ocrCaptureRegionText } from "../vision/index.js";
-import { loadProcessFile } from "../core/talk-executor.js";
+import { loadNpcProcessFile } from "../core/npc-executor.js";
 
 export function register(registry) {
   registry.register("委托描述检测", async function(step, context) {
@@ -42,13 +42,13 @@ export function register(registry) {
           } else if ((!useKeyword && ocrResult === targetDescription) || (useKeyword && ocrResult.includes(targetDescription))) {
             log.info("委托描述检测成功，执行后续步骤");
             if (executeFile && runType === "process") {
-              const nextSteps = await loadProcessFile(context.commissionName, context.location, executeFile);
+              const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);
               if (nextSteps && Array.isArray(nextSteps)) {
                 context.processSteps.splice(context.currentIndex + 1, 0, ...nextSteps);
                 log.info("已插入 {count} 个后续步骤", nextSteps.length);
               }
             } else if (executeFile && runType === "path") {
-              const filePath = PATHS.TALK_PROCESS_BASE + "/" + context.commissionName + "/" + context.location + "/" + executeFile;
+              const filePath = PATHS.NPC_PROCESS_BASE + "/" + context.commissionName + "/" + context.location + "/" + executeFile;
               try { await pathingScript.runFile(filePath); }
               catch (error) { log.warn("未找到地图追踪文件: {path}", filePath); return false; }
             }

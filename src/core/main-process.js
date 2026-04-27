@@ -22,11 +22,11 @@ export async function identification() {
     const supportedCommissions = await loadSupportedCommissions();
     await initCommissionReferenceData(supportedCommissions);
 
-    for (const commission of supportedCommissions.fight) {
-      ensureDirectoryExists(PATHS.FIGHT_SCRIPT_BASE + "/" + commission);
+    for (const commission of supportedCommissions.basic) {
+      ensureDirectoryExists(PATHS.BASIC_SCRIPT_BASE + "/" + commission);
     }
-    for (const commission of supportedCommissions.talk) {
-      ensureDirectoryExists(PATHS.TALK_PROCESS_BASE + "/" + commission);
+    for (const commission of supportedCommissions.npc) {
+      ensureDirectoryExists(PATHS.NPC_PROCESS_BASE + "/" + commission);
     }
 
     const enterSuccess = await enterCommissionScreen();

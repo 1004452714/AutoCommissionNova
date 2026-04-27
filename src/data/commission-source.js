@@ -1,79 +1,79 @@
 /**
  * 委托数据源模块
- * 从 name.json 白名单和 assets/ 目录扫描取交集，获取支持的委托列表
+ * 从 name.json 白名单和 process/ 目录扫描取交集，获取支持的委托列表
  */
 import { PATHS } from "../config/index.js";
 
 /**
  * 从 name.json 加载白名单
- * @returns {Object} 白名单 { fight: [], talk: [] }
+ * @returns {Object} 白名单 { basic: [], npc: [] }
  */
 function loadWhitelist() {
   try {
     const content = file.readTextSync(PATHS.SUPPORT_LIST);
     const data = JSON.parse(content);
     return {
-      fight: data.fight || [],
-      talk: data.talk || [],
+      basic: data.basic || [],
+      npc: data.npc || [],
     };
   } catch (error) {
     log.error("读取白名单文件失败: {error}", error.message);
-    return { fight: [], talk: [] };
+    return { basic: [], npc: [] };
   }
 }
 
 /**
- * 从 assets/ 目录扫描可用的战斗委托
- * @returns {string[]} 可用的战斗委托名称列表
+ * 从 process/Basic/ 目录扫描可用的Basic委托
+ * @returns {string[]} 可用的Basic委托名称列表
  */
-function scanFightCommissions() {
-  const fightList = [];
+function scanBasicCommissions() {
+  const basicList = [];
   try {
-    const assetsPath = PATHS.FIGHT_SCRIPT_BASE;
+    const assetsPath = PATHS.BASIC_SCRIPT_BASE;
     const items = Array.from(file.readPathSync(assetsPath));
-    const folders = items.filter((item) => file.isFolder(item) && !item.includes("process"));
+    const folders = items.filter((item) => file.isFolder(item));
     for (const folderPath of folders) {
-      const folderName = folderPath.replace(assetsPath + "/", "").replace(assetsPath + "\\", "");
-      fightList.push(folderName);
+      const folderName = folderPath.split("/").pop().split("\\").pop();
+      basicList.push(folderName);
     }
   } catch (error) {
-    log.error("扫描战斗委托目录时出错: {error}", error.message);
+    log.error("扫描Basic委托目录时出错: {error}", error.message);
   }
-  return fightList;
+  return basicList;
 }
 
 /**
- * 从 assets/process/ 目录扫描可用的对话委托
- * @returns {string[]} 可用的对话委托名称列表
+ * 从 process/NPC/ 目录扫描可用的NPC委托
+ * @returns {string[]} 可用的NPC委托名称列表
  */
-function scanTalkCommissions() {
-  const talkList = [];
+function scanNpcCommissions() {
+  const npcList = [];
   try {
-    const processPath = PATHS.TALK_PROCESS_BASE;
+    const processPath = PATHS.NPC_PROCESS_BASE;
     const items = Array.from(file.readPathSync(processPath));
     const folders = items.filter((item) => file.isFolder(item));
     for (const folderPath of folders) {
       const folderName = folderPath.split("/").pop().split("\\").pop();
-      talkList.push(folderName);
+      npcList.push(folderName);
     }
   } catch (error) {
-    log.error("扫描对话委托目录时出错: {error}", error.message);
+    log.error("扫描NPC委托目录时出错: {error}", error.message);
   }
-  return talkList;
+  return npcList;
 }
 
 /**
  * 加载支持的委托列表（白名单 ∩ 可用委托）
- * @returns {Promise<Object>} 支持的委托 { fight: [], talk: [] }
+ * @returns {Promise<Object>} 支持的委托 { basic: [], npc: [] }
  */
 export async function loadSupportedCommissions() {
   const whitelist = loadWhitelist();
-  const availableFight = scanFightCommissions();
-  const availableTalk = scanTalkCommissions();
+  const availableBasic = scanBasicCommissions();
+  const availableNpc = scanNpcCommissions();
 
   const supported = {
-    fight: whitelist.fight.filter((name) => availableFight.includes(name)),
-    talk: whitelist.talk.filter((name) => availableTalk.includes(name)),
+    basic: whitelist.basic.filter((name) => availableBasic.includes(name)),
+    npc: whitelist.npc.filter((name) => availableNpc.includes(name)),
   };
 
   return supported;

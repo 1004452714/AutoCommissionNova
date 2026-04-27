@@ -1,7 +1,7 @@
 /** 游戏相关常量 */
 export const COMMISSION_TYPE = {
-  FIGHT: "fight",
-  TALK: "talk",
+  BASIC: "BASIC",
+  NPC: "NPC",
 };
 
 export const COMMISSION_DETAIL_BUTTONS = [

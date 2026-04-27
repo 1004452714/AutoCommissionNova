@@ -1,6 +1,6 @@
 /**
  * 地图追踪步骤处理器
- * 支持对话委托和战斗委托两种路径解析方式
+ * 支持NPC委托和Basic委托两种路径解析方式
  */
 import { PATHS } from "../config/index.js";
 
@@ -9,12 +9,12 @@ export function register(registry) {
     const scriptName = step.data || step;
     let fullPath;
 
-    // 优先使用 processDir（战斗委托流程目录）
+    // 优先使用 processDir（Basic委托流程目录）
     if (context.processDir) {
       fullPath = context.processDir + "/" + scriptName;
     } else {
-      // 对话委托路径：assets/process/{委托名}/{地点}/
-      fullPath = PATHS.TALK_PROCESS_BASE + "/" + context.commissionName + "/" + context.location + "/" + scriptName;
+      // NPC委托路径：process/NPC/{委托名}/{地点}/
+      fullPath = PATHS.NPC_PROCESS_BASE + "/" + context.commissionName + "/" + context.location + "/" + scriptName;
     }
 
     log.info("执行地图追踪: {path}", fullPath);

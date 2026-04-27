@@ -1,23 +1,23 @@
 /**
  * 委托执行调度模块
  * 遍历委托列表，按类型调度执行，支持重试
- * 
+ *
  * 执行流程：
  * 1. 加载委托数据文件
  * 2. 预统计已完成数量（用于后续完成状态判断）
  * 3. 遍历委托列表，过滤已完成、缺少地点的委托
- * 4. 按委托类型（对话/战斗）执行对应流程
+ * 4. 按委托类型（NPC/Basic）执行对应流程
  * 5. 执行后检查完成状态，支持重试机制
  */
 import { COMMISSION_TYPE, MAX_COMMISSION_RETRY_COUNT, PATHS } from "../config/index.js";
 import { isCompleted } from "../recognition/index.js";
-import { executeTalkCommission } from "./talk-executor.js";
-import { executeFightCommission } from "./fight-executor.js";
+import { executeNpcCommission } from "./npc-executor.js";
+import { executeBasicCommission } from "./basic-executor.js";
 
 /**
  * 更新分支完成进度
  * 当委托任务成功完成时调用
- * 
+ *
  * @param {string} commissionName - 委托名称
  * @param {Object} context - 执行上下文（包含 branchConfigCache 和 executedBranches）
  */
@@ -28,20 +28,20 @@ async function updateBranchCompletion(commissionName, context) {
     if (!config) {
       return; // 没有缓存配置，说明没有使用分支选择
     }
-    
+
     const commissionConfig = config[commissionName];
     if (!commissionConfig) {
       return; // 没有配置该委托的分支信息
     }
-    
+
     // 初始化 completed 数组
     if (!commissionConfig.completed) {
       commissionConfig.completed = [];
     }
-    
+
     // 获取本次执行的分支列表
     const executedBranches = context.executedBranches || [];
-    
+
     // 更新完成进度
     let hasUpdate = false;
     for (const branch of executedBranches) {
@@ -51,7 +51,7 @@ async function updateBranchCompletion(commissionName, context) {
         log.info("已更新分支完成进度: {branch}", branch);
       }
     }
-    
+
     // 如果有更新，保存配置文件
     if (hasUpdate) {
       const configPath = PATHS.CONFIG_BASE + "/commission-branches.json";
@@ -65,13 +65,13 @@ async function updateBranchCompletion(commissionName, context) {
 
 /**
  * 执行委托追踪（遍历+重试）
- * 
- * 遍历识别到的委托列表，按类型（对话/战斗）执行对应流程
+ *
+ * 遍历识别到的委托列表，按类型（NPC/Basic）执行对应流程
  * 每个委托支持重试机制，执行完成后检查状态
- * 
+ *
  * @param {Object} stepRegistry - 步骤处理器注册表
  * @returns {Promise<boolean>} 是否有委托执行成功
- * 
+ *
  * @example
  * const success = await executeCommissionTracking(stepRegistry);
  * if (success) {
@@ -136,29 +136,29 @@ export async function executeCommissionTracking(stepRegistry) {
         }
 
         // 按类型执行
-        if (commission.type === COMMISSION_TYPE.TALK) {
-          const talkResult = await executeTalkCommission(commission.name, commission.location, stepRegistry);
+        if (commission.type === COMMISSION_TYPE.NPC) {
+          const npcResult = await executeNpcCommission(commission.name, commission.location, stepRegistry);
           dispatcher.ClearAllTriggers();
-          if (talkResult.success) {
+          if (npcResult.success) {
             const completed = await isCompleted(commission.name);
-            if (completed) { 
-              success = true; 
-              log.info("对话委托 {name} 执行完成", commission.name); 
+            if (completed) {
+              success = true;
+              log.info("NPC委托 {name} 执行完成", commission.name);
               // 更新分支完成进度
-              await updateBranchCompletion(commission.name, talkResult.context); 
+              await updateBranchCompletion(commission.name, npcResult.context);
             }
-            else { log.warn("对话委托 {name} 执行后检查未完成，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT); }
+            else { log.warn("NPC委托 {name} 执行后检查未完成，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT); }
           } else {
-            log.warn("对话委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
+            log.warn("NPC委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
           }
         } else {
-          const fightSuccess = await executeFightCommission(commission, stepRegistry);
-          if (fightSuccess) {
+          const basicSuccess = await executeBasicCommission(commission, stepRegistry);
+          if (basicSuccess) {
             const completed = await isCompleted(commission.name);
             if (completed) { success = true; log.info("委托 {name} 已完成", commission.name); }
             else { log.info("委托 {name} 未完成", commission.name); }
           } else {
-            log.warn("战斗委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
+            log.warn("Basic委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
           }
         }
 

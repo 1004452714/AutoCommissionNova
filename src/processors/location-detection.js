@@ -7,7 +7,7 @@
  */
 import { calculateDistance } from "../navigation/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
-import { loadProcessFile } from "../core/talk-executor.js";
+import { loadNpcProcessFile } from "../core/npc-executor.js";
 
 export function register(registry) {
   registry.register("地址检测", async function(step, context) {
@@ -50,7 +50,7 @@ export function register(registry) {
             if (executeFile) {
               log.info("加载并执行后续步骤文件: {file}", executeFile);
               try {
-                const nextSteps = await loadProcessFile(context.commissionName, context.location, executeFile);
+                const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);
                 if (nextSteps && nextSteps.length > 0) {
                   context.processSteps.splice(context.currentIndex + 1, 0, ...nextSteps);
                   log.info("已插入 {count} 个后续步骤", nextSteps.length);

@@ -2,8 +2,8 @@
 export const PATHS = {
   SUPPORT_LIST: "name.json",
   OUTPUT_DIR: "Data",
-  FIGHT_SCRIPT_BASE: "assets",
-  TALK_PROCESS_BASE: "assets/process",
+  BASIC_SCRIPT_BASE: "process/Basic",
+  NPC_PROCESS_BASE: "process/NPC",
   COMMISSIONS_DATA: "Data/commissions_data.json",
   COMPLETED_IMAGE: "Data/RecognitionObject/Completed.png",
   UNCOMPLETED_IMAGE: "Data/RecognitionObject/UnCompleted.png",
@@ -22,5 +22,5 @@ export const PATHS = {
   ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
   CHARACTER_IMAGE_DIR: "Data/characterimage/",
   AVATAR_DATA: "Data/avatar/combat_avatar.json",
-  CONFIG_BASE: "assets/config",
+  CONFIG_BASE: "process/config",
 };

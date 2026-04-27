@@ -1,5 +1,5 @@
 /**
- * 战斗流程加载器模块
+ * Basic流程加载器模块
  * 负责加载并解析 process.json 流程文件
  */
 
@@ -8,10 +8,10 @@
  * @param {string} processPath - 流程文件路径
  * @returns {Promise<Array|false>} 步骤数组，失败返回 false
  */
-export async function loadFightProcess(processPath) {
+export async function loadBasicProcess(processPath) {
   try {
     const processContent = await file.readText(processPath);
-    
+
     try {
       const jsonData = JSON.parse(processContent);
       if (Array.isArray(jsonData)) {
