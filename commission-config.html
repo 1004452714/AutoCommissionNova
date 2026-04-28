@@ -193,6 +193,31 @@
       margin-bottom: 8px;
     }
 
+    .detail-note {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .note-section {
+      background-color: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .note-label {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .note-content {
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+
     .detail-subtitle {
       color: var(--text-secondary);
       font-size: 14px;
@@ -648,24 +673,26 @@
               if (!commission.descriptions) {
                 commission.descriptions = {};
               }
+              
+              // 确保 note 是字符串
+              if (!commission.note) {
+                commission.note = '';
+              }
             });
 
             renderCommissionList();
             renderEmptyState();
             updateStatus();
-            showStatus('文件加载成功', 'success');
           } catch (error) {
             console.error('解析 JSON 失败:', error);
-            showStatus('文件解析失败: ' + error.message, 'error');
           }
         };
         reader.onerror = () => {
-          showStatus('文件读取失败', 'error');
+          console.error('文件读取失败');
         };
         reader.readAsText(file);
       } catch (error) {
         console.error('打开文件失败:', error);
-        showStatus('打开文件失败: ' + error.message, 'error');
       }
     }
 
@@ -684,11 +711,9 @@
             AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
             AppState.hasUnsavedChanges = false;
             updateStatus();
-            showStatus('已保存到原文件', 'success');
             return;
           } catch (error) {
             console.error('写入原文件失败:', error);
-            showStatus('无法写入原文件，尝试下载方式', 'warning');
           }
         }
 
@@ -710,11 +735,9 @@
             AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
             AppState.hasUnsavedChanges = false;
             updateStatus();
-            showStatus('文件已保存', 'success');
             return;
           } catch (err) {
             if (err.name === 'AbortError') {
-              showStatus('保存已取消', 'warning');
               return;
             }
             throw err;
@@ -735,10 +758,8 @@
         AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
         AppState.hasUnsavedChanges = false;
         updateStatus();
-        showStatus('文件已下载，请手动覆盖原文件', 'success');
       } catch (error) {
         console.error('保存失败:', error);
-        showStatus('保存失败: ' + error.message, 'error');
       }
     }
 
@@ -854,6 +875,13 @@
           <div class="detail-header">
             <div class="detail-title">${escapeHtml(name)}</div>
           </div>
+
+          ${config.note ? `
+          <div class="note-section">
+            <div class="note-label">说明</div>
+            <div class="note-content">${config.note}</div>
+          </div>
+          ` : ''}
 
           <div class="branches-section">
             ${commissionType === 'achievement' ? `

@@ -8,6 +8,7 @@
       "branch-2": "山腰",
       "branch-3": "山底"
     },
-    "default":"branch-2"
+    "note": "<div style=\"color: #ff0000;\">流程暂未支持,暂时先选择山腰（未达成成就条件）</div>",
+    "default": "branch-2"
   }
 }
