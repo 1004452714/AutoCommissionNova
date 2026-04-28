@@ -634,9 +634,9 @@
                 commission.type = 'achievement';
               }
               
-              // 初始化 all_completed 字段
-              if (!commission.all_completed) {
-                commission.all_completed = null;
+              // 初始化 default 字段
+              if (!commission.default) {
+                commission.default = null;
               }
               
               // 确保 completed 是数组
@@ -842,7 +842,7 @@
       
       // 生成 All Completed 选择器选项（显示value，保存key）
       const allCompletedOptions = branches.map(([branchId, description]) => {
-        const selected = config.all_completed === branchId ? 'selected' : '';
+        const selected = config.default === branchId ? 'selected' : '';
         return `<option value="${escapeHtml(branchId)}" ${selected}>${escapeHtml(description)}</option>`;
       }).join('');
       
@@ -901,7 +901,7 @@
     // 更新 All Completed
     function updateAllCompleted(branchId) {
       const config = AppState.data[AppState.selectedCommission];
-      config.all_completed = branchId || null;
+      config.default = branchId || null;
       AppState.hasUnsavedChanges = true;
       updateStatus();
     }

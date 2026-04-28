@@ -5,21 +5,67 @@
         "note": "寻路NPC接取任务"
     },
     {
-        "type": "对话",
+        "type": "用户分支选择",
         "data": {
-            "priorityOptions": [
-                "山底"
-            ],
-            "npcWhiteList": [
-                "查耶维奇"
-            ]
+            "branch-1": {
+                "type": "对话",
+                "data": {
+                    "priorityOptions": [
+                        "山底"
+                    ],
+                    "npcWhiteList": [
+                        "查耶维奇"
+                    ]
+                },
+                "note": "选择去山底"
+            },
+            "branch-2": {
+                "type": "对话",
+                "data": {
+                    "priorityOptions": [
+                        "山腰"
+                    ],
+                    "npcWhiteList": [
+                        "查耶维奇"
+                    ]
+                },
+                "note": "选择去山腰"
+            },
+            "branch-3": {
+                "type": "对话",
+                "data": {
+                    "priorityOptions": [
+                        "山底"
+                    ],
+                    "npcWhiteList": [
+                        "查耶维奇"
+                    ]
+                },
+                "note": "选择去山底"
+            }
         },
-        "note": "选择去山底"
+        "default": "branch-2"
     },
     {
-        "type": "地图追踪",
-        "data": "说到做到-2山底.json",
-        "note": "寻路到山底并清理怪物"
+        "type": "用户分支选择",
+        "data": {
+            "branch-1": {
+                "type": "地图追踪",
+                "data": "说到做到-2山顶.json",
+                "note": "寻路到山顶"
+            },
+            "branch-2": {
+                "type": "地图追踪",
+                "data": "说到做到-2山腰.json",
+                "note": "寻路到山腰"
+            },
+            "branch-3": {
+                "type": "地图追踪",
+                "data": "说到做到-2山底.json",
+                "note": "寻路到山底"
+            }
+        },
+        "default": "branch-2"
     },
     {
         "type": "地图追踪",

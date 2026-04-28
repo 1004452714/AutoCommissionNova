@@ -1,6 +1,13 @@
 {
-  "用户分支选择测试": {
-    "selected": ["分支A", "分支B"],
-    "completed": []
+  "说到做到": {
+    "type": "achievement",
+    "selected": ["branch-1", "branch-2", "branch-3"],
+    "completed": [],
+    "descriptions": {
+      "branch-1": "山顶",
+      "branch-2": "山腰",
+      "branch-3": "山底"
+    },
+    "default":"branch-2"
   }
 }

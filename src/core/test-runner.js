@@ -15,10 +15,10 @@ import { buildTestContext, executeProcessSteps } from "./process-executor.js";
  */
 const TEST_CONFIG = {
   enabled: true,                       // 启用测试: true=执行测试, false=直接跳过
-  mode: "case",                         // 测试模式: "case"=测试用例, "commission"=真实委托
+  mode: "commission",                         // 测试模式: "case"=测试用例, "commission"=真实委托
   caseName: "用户分支选择测试",           // mode="case" 时生效，对应 test/process/ 下的目录名
-  commissionName: "语言交流",             // mode="commission" 时生效，对应 process/NPC/ 下的目录名
-  location: "坠星山谷",                   // mode="commission" 时生效，委托地点
+  commissionName: "说到做到",             // mode="commission" 时生效，对应 process/NPC/ 下的目录名
+  location: "苍风高地",                   // mode="commission" 时生效，委托地点
   processFile: "process.json",          // mode="commission" 时生效，流程文件名
 };
 

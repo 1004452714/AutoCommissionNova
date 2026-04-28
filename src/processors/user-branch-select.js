@@ -1,13 +1,32 @@
 /**
+ * 获取分支的描述名称
+ * 如果 descriptions 中存在该分支的描述，返回描述值；否则返回分支 key
+ * 
+ * @param {Object} descriptions - 分支描述对象
+ * @param {string} branchKey - 分支标识
+ * @returns {string} 分支描述名称
+ */
+function getBranchName(descriptions, branchKey) {
+  if (descriptions && descriptions[branchKey]) {
+    return descriptions[branchKey];
+  }
+  return branchKey;
+}
+
+/**
  * 用户分支选择步骤处理器
  * 根据用户配置文件选择并执行对应的分支步骤
  * 
  * 支持同一 process 中多个分支选择 step 共享配置，
  * 只在第一次时读取配置文件，后续从 context 缓存中获取
  * 
+ * default 优先级逻辑：
+ * 1. 优先使用用户配置文件中的 default（commissionConfig.default）
+ * 2. 其次使用 step 定义中的 default（step.default）
+ * 
  * 分支选择逻辑：
- * 1. 如果 selected 为空，使用 step.default
- * 2. 如果 selected 中的分支都已完成，使用 step.default
+ * 1. 如果 selected 为空，使用 default
+ * 2. 如果 selected 中的分支都已完成，使用 default
  * 3. 否则，选择 selected 中第一个未完成的分支
  */
 import { PATHS } from "../config/index.js";
@@ -36,14 +55,29 @@ export function register(registry) {
         }
       }
       
-      // 2. 获取默认分支（从 step 定义中读取）
-      const defaultBranch = step.default;
-      if (!defaultBranch) {
-        log.warn("用户分支选择步骤未设置 default 字段");
+      // 2. 查找当前委托配置
+      const commissionConfig = config[context.commissionName];
+      const descriptions = commissionConfig ? commissionConfig.descriptions : {};
+      
+      // 3. 获取默认分支（用户配置优先，step 定义次之）
+      let defaultBranch = null;
+      
+      // 先查找用户配置的 default
+      if (commissionConfig && commissionConfig.default) {
+        defaultBranch = commissionConfig.default;
+        const branchName = getBranchName(descriptions, defaultBranch);
+        log.debug("使用用户配置的默认分支: {branch}", branchName);
+      } 
+      // 再查找 step 定义的 default
+      else if (step.default) {
+        defaultBranch = step.default;
+        const branchName = getBranchName(descriptions, defaultBranch);
+        log.debug("使用step定义的默认分支: {branch}", branchName);
       }
       
-      // 3. 查找当前委托配置
-      const commissionConfig = config[context.commissionName];
+      if (!defaultBranch) {
+        log.warn("未设置默认分支（用户配置和step均未设置）");
+      }
       
       // 4. 确定要执行的分支
       let selectedBranches = [];
@@ -70,7 +104,8 @@ export function register(registry) {
         // selected 为空或已全部完成，使用默认分支
         if (defaultBranch) {
           branchToExecute = defaultBranch;
-          log.info("selected为空或已全部完成，使用默认分支: {branch}", defaultBranch);
+          const branchName = getBranchName(descriptions, defaultBranch);
+          log.info("selected为空或已全部完成，使用默认分支: {branch}", branchName);
         } else {
           log.warn("未设置默认分支，跳过");
           return;
@@ -78,17 +113,20 @@ export function register(registry) {
       } else {
         // 选择第一个未完成的分支
         branchToExecute = unfinishedBranches[0];
-        log.info("选择第一个未完成的分支: {branch}", branchToExecute);
+        const branchName = getBranchName(descriptions, branchToExecute);
+        log.info("选择第一个未完成的分支: {branch}", branchName);
       }
       
       // 5. 执行分支的 step
       const branchStep = step.data[branchToExecute];
       if (!branchStep) {
-        log.warn("未找到分支 {branch} 的step定义", branchToExecute);
+        const branchName = getBranchName(descriptions, branchToExecute);
+        log.warn("未找到分支 {branch} 的step定义", branchName);
         return;
       }
       
-      log.info("执行用户选择的分支: {branch}", branchToExecute);
+      const branchName = getBranchName(descriptions, branchToExecute);
+      log.info("执行用户选择的分支: {branch}", branchName);
       await context.stepRegistry.process(branchStep, context);
       
       // 记录当前执行的分支到context中，用于委托完成时更新进度
