@@ -47,7 +47,6 @@
    {
     "type": "对话",
     "data": {
-      "skipCount": 5,
       "priorityOptions": [
         "莫娜",
         "不至于啦",
@@ -69,7 +68,6 @@
   {
     "type": "对话",
     "data": {
-      "skipCount": 5,
       "priorityOptions": [
         "请问你见过",
         "谢谢你"

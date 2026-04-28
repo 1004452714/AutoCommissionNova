@@ -8,7 +8,6 @@
     "type": "对话",
     "note": "执行对话步骤",
     "data": {
-      "skipCount": 3,
       "priorityOptions": ["热菜"],
       "npcWhiteList": ["汤米"]
     }

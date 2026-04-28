@@ -33,9 +33,6 @@ async function executeDialogStep(step, context) {
       if (Array.isArray(step.data.npcWhiteList)) {
         npcWhiteList = step.data.npcWhiteList;
       }
-      if (typeof step.data.skipCount === "number") {
-        log.debug("对话步骤包含 skipCount 参数: {count}，已忽略（新版使用自动检测）", step.data.skipCount);
-      }
     }
 
     await executeOptimizedAutoTalk({
