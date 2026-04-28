@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>委托分支配置工具</title>
+  <style>
+    /* CSS 变量定义 */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f5;
+      --bg-tertiary: #e8e8e8;
+      --text-primary: #333333;
+      --text-secondary: #666666;
+      --text-tertiary: #999999;
+      --border-color: #dddddd;
+      --accent-color: #4a90d9;
+      --accent-hover: #357abd;
+      --danger-color: #e74c3c;
+      --danger-hover: #c0392b;
+      --success-color: #27ae60;
+      --warning-color: #f39c12;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+      --radius: 8px;
+      --radius-sm: 4px;
+      --sidebar-width: 280px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 主容器 */
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.3s;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 8px 12px 8px 28px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-tertiary);
+      pointer-events: none;
+    }
+
+    .commission-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .commission-item {
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .commission-item:hover {
+      background-color: var(--bg-tertiary);
+    }
+
+    .commission-item.active {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .commission-name {
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .commission-progress {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-left: 8px;
+    }
+
+    .empty-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-tertiary);
+    }
+
+    /* 主内容区 */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: var(--bg-secondary);
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .toolbar-btn {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .detail-panel {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .detail-header {
+      margin-bottom: 24px;
+    }
+
+    .detail-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .detail-subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .branches-section {
+      background-color: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .branch-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .branch-item {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      background-color: var(--bg-primary);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      transition: border-color 0.2s;
+    }
+
+    .branch-item:hover {
+      border-color: var(--accent-color);
+    }
+
+    .branch-item.completed {
+      background-color: var(--bg-tertiary);
+    }
+
+    .branch-content {
+      flex: 1;
+    }
+
+    .branch-id {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin-bottom: 4px;
+    }
+
+    .branch-description {
+      font-size: 14px;
+      color: var(--text-primary);
+    }
+
+    .branch-item.completed .branch-description {
+      text-decoration: line-through;
+      color: var(--text-tertiary);
+    }
+
+    .branch-toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toggle-status-label {
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    .toggle-status-label.pending {
+      color: var(--text-secondary);
+    }
+
+    .toggle-status-label.completed {
+      color: var(--success-color);
+    }
+
+    /* 二态滑块开关样式 */
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background-color: var(--border-color);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    /* 未完成状态 - 灰色背景，圆点在左 */
+    .toggle-switch.pending {
+      background-color: var(--border-color);
+    }
+
+    .toggle-switch.pending::after {
+      transform: translateX(2px);
+    }
+
+    /* 已完成状态 - 绿色背景，圆点在右 */
+    .toggle-switch.completed {
+      background-color: var(--success-color);
+    }
+
+    .toggle-switch.completed::after {
+      transform: translateX(22px);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 0;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* All Completed 选择器样式 */
+    .all-completed-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .all-completed-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .all-completed-select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .all-completed-select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    /* 空状态 */
+    .empty-detail {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-tertiary);
+      text-align: center;
+    }
+
+    .empty-detail-icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+      border: 3px solid var(--border-color);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: var(--text-tertiary);
+    }
+
+    .empty-detail-text {
+      font-size: 16px;
+      margin-bottom: 24px;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+    }
+
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+
+    /* 状态栏 */
+    .status-bar {
+      padding: 8px 20px;
+      border-top: 1px solid var(--border-color);
+      background-color: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-bar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* 空状态 */
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--border-color);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-tertiary);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">委托分支配置</div>
+        <div class="search-box">
+          <span class="search-icon">Q</span>
+          <input type="text" id="searchInput" placeholder="搜索委托...">
+        </div>
+      </div>
+      <div class="commission-list" id="commissionList">
+        <!-- 委托列表将动态生成 -->
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <div class="toolbar">
+        <div class="toolbar-right">
+          <button class="btn btn-secondary toolbar-btn" id="openFileBtn">
+            打开文件
+          </button>
+          <button class="btn btn-primary toolbar-btn" id="saveBtn" disabled>
+            保存
+          </button>
+        </div>
+      </div>
+
+      <div class="content-area" id="contentArea">
+        <!-- 详情内容将动态生成 -->
+      </div>
+
+      <div class="status-bar">
+        <div class="status-bar-left">
+          <span id="commissionCount">共 0 个委托</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 应用状态
+    const AppState = {
+      data: {},
+      originalData: {},
+      selectedCommission: null,
+      hasUnsavedChanges: false,
+      fileLoaded: false,
+      fileHandle: null
+    };
+
+    // DOM 元素
+    const elements = {
+      commissionList: document.getElementById('commissionList'),
+      contentArea: document.getElementById('contentArea'),
+      searchInput: document.getElementById('searchInput'),
+      openFileBtn: document.getElementById('openFileBtn'),
+      saveBtn: document.getElementById('saveBtn'),
+      commissionCount: document.getElementById('commissionCount')
+    };
+
+    // 初始化
+    function init() {
+      // 绑定事件
+      bindEvents();
+
+      // 渲染初始空状态
+      renderCommissionList();
+      renderEmptyState();
+      updateStatus();
+    }
+
+    // 绑定事件
+    function bindEvents() {
+      // 搜索
+      elements.searchInput.addEventListener('input', () => {
+        renderCommissionList();
+      });
+
+      // 文件选择 - 使用 File System Access API
+      elements.openFileBtn.addEventListener('click', openFile);
+
+      // 保存
+      elements.saveBtn.addEventListener('click', saveFile);
+
+      // 离开页面提示
+      window.addEventListener('beforeunload', (e) => {
+        if (AppState.hasUnsavedChanges) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      });
+    }
+
+    // 检查浏览器是否支持 File System Access API
+    function isFileSystemAccessSupported() {
+      return 'showOpenFilePicker' in window && 'showSaveFilePicker' in window;
+    }
+
+    // 打开文件
+    async function openFile() {
+      try {
+        let file;
+        let fileHandle = null;
+
+        // 尝试使用 File System Access API
+        if (isFileSystemAccessSupported()) {
+          try {
+            [fileHandle] = await window.showOpenFilePicker({
+              types: [{
+                description: 'JSON Files',
+                accept: { 'application/json': ['.json'] }
+              }],
+              multiple: false
+            });
+            file = await fileHandle.getFile();
+          } catch (err) {
+            // 用户取消选择
+            if (err.name === 'AbortError') return;
+            throw err;
+          }
+        } else {
+          // 回退到传统 input file 方式
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.style.display = 'none';
+          document.body.appendChild(input);
+
+          file = await new Promise((resolve, reject) => {
+            input.addEventListener('change', (e) => {
+              if (e.target.files.length > 0) {
+                resolve(e.target.files[0]);
+              } else {
+                reject(new Error('未选择文件'));
+              }
+            });
+            input.click();
+          });
+
+          document.body.removeChild(input);
+        }
+
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const content = event.target.result;
+            AppState.data = JSON.parse(content);
+            AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
+            AppState.fileLoaded = true;
+            AppState.hasUnsavedChanges = false;
+            AppState.selectedCommission = null;
+            AppState.fileHandle = fileHandle; // 保存文件句柄（如果支持）
+
+            // 初始化数据字段
+            Object.values(AppState.data).forEach(commission => {
+              // 移除旧字段
+              delete commission.default;
+              delete commission.selected;
+              
+              // 初始化 type 字段（默认为 achievement）
+              if (!commission.type) {
+                commission.type = 'achievement';
+              }
+              
+              // 初始化 all_completed 字段
+              if (!commission.all_completed) {
+                commission.all_completed = null;
+              }
+              
+              // 确保 completed 是数组
+              if (!commission.completed) {
+                commission.completed = [];
+              }
+              
+              // 确保 descriptions 是对象
+              if (!commission.descriptions) {
+                commission.descriptions = {};
+              }
+            });
+
+            renderCommissionList();
+            renderEmptyState();
+            updateStatus();
+            showStatus('文件加载成功', 'success');
+          } catch (error) {
+            console.error('解析 JSON 失败:', error);
+            showStatus('文件解析失败: ' + error.message, 'error');
+          }
+        };
+        reader.onerror = () => {
+          showStatus('文件读取失败', 'error');
+        };
+        reader.readAsText(file);
+      } catch (error) {
+        console.error('打开文件失败:', error);
+        showStatus('打开文件失败: ' + error.message, 'error');
+      }
+    }
+
+    // 保存文件
+    async function saveFile() {
+      try {
+        const content = JSON.stringify(AppState.data, null, 2);
+
+        // 优先尝试写入原文件（如果支持 File System Access API）
+        if (AppState.fileHandle && isFileSystemAccessSupported()) {
+          try {
+            const writable = await AppState.fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+
+            AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
+            AppState.hasUnsavedChanges = false;
+            updateStatus();
+            showStatus('已保存到原文件', 'success');
+            return;
+          } catch (error) {
+            console.error('写入原文件失败:', error);
+            showStatus('无法写入原文件，尝试下载方式', 'warning');
+          }
+        }
+
+        // 回退：使用 File System Access API 的 save 对话框
+        if (isFileSystemAccessSupported()) {
+          try {
+            const newHandle = await window.showSaveFilePicker({
+              suggestedName: 'commission-branches.json',
+              types: [{
+                description: 'JSON Files',
+                accept: { 'application/json': ['.json'] }
+              }]
+            });
+            const writable = await newHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+
+            AppState.fileHandle = newHandle;
+            AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
+            AppState.hasUnsavedChanges = false;
+            updateStatus();
+            showStatus('文件已保存', 'success');
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') {
+              showStatus('保存已取消', 'warning');
+              return;
+            }
+            throw err;
+          }
+        }
+
+        // 最后回退：下载文件
+        const blob = new Blob([content], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'commission-branches.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        AppState.originalData = JSON.parse(JSON.stringify(AppState.data));
+        AppState.hasUnsavedChanges = false;
+        updateStatus();
+        showStatus('文件已下载，请手动覆盖原文件', 'success');
+      } catch (error) {
+        console.error('保存失败:', error);
+        showStatus('保存失败: ' + error.message, 'error');
+      }
+    }
+
+    // 渲染空状态
+    function renderEmptyState() {
+      if (!AppState.fileLoaded) {
+        elements.contentArea.innerHTML = `
+          <div class="empty-detail">
+            <div class="empty-detail-icon">[ ]</div>
+            <div class="empty-detail-text">请先打开 commission-branches.json 文件</div>
+            <button class="btn btn-primary" id="emptyOpenFileBtn">
+              选择文件
+            </button>
+          </div>
+        `;
+        // 绑定空状态的打开文件按钮
+        const emptyOpenFileBtn = document.getElementById('emptyOpenFileBtn');
+        if (emptyOpenFileBtn) {
+          emptyOpenFileBtn.addEventListener('click', openFile);
+        }
+      } else {
+        elements.contentArea.innerHTML = `
+          <div class="empty-detail">
+            <div class="empty-detail-icon">[=]</div>
+            <div class="empty-detail-text">请从左侧选择一个委托进行编辑</div>
+          </div>
+        `;
+      }
+    }
+
+    // 渲染委托列表
+    function renderCommissionList() {
+      if (!AppState.fileLoaded) {
+        elements.commissionList.innerHTML = `
+          <div class="empty-state">
+            请先打开 JSON 文件
+          </div>
+        `;
+        elements.commissionCount.textContent = '共 0 个委托';
+        return;
+      }
+
+      const searchTerm = elements.searchInput.value.toLowerCase();
+      const commissions = Object.entries(AppState.data)
+        .filter(([name]) => name.toLowerCase().includes(searchTerm))
+        .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'));
+
+      if (commissions.length === 0) {
+        elements.commissionList.innerHTML = `
+          <div class="empty-state">
+            ${searchTerm ? '未找到匹配的委托' : '暂无委托'}
+          </div>
+        `;
+      } else {
+        elements.commissionList.innerHTML = commissions.map(([name, config]) => {
+          const totalBranches = Object.keys(config.descriptions || {}).length;
+          const completedBranches = (config.completed || []).length;
+          const isActive = name === AppState.selectedCommission;
+
+          return `
+            <div class="commission-item ${isActive ? 'active' : ''}"
+                 data-name="${escapeHtml(name)}">
+              <span class="commission-name">${escapeHtml(name)}</span>
+              <span class="commission-progress">${completedBranches}/${totalBranches}</span>
+            </div>
+          `;
+        }).join('');
+
+        // 绑定点击事件
+        elements.commissionList.querySelectorAll('.commission-item').forEach(item => {
+          item.addEventListener('click', () => {
+            selectCommission(item.dataset.name);
+          });
+        });
+      }
+
+      elements.commissionCount.textContent = `共 ${commissions.length} 个委托`;
+    }
+
+    // 选择委托
+    function selectCommission(name) {
+      AppState.selectedCommission = name;
+      renderCommissionList();
+      renderDetailPanel();
+    }
+
+    // 渲染详情面板
+    function renderDetailPanel() {
+      if (!AppState.selectedCommission || !AppState.data[AppState.selectedCommission]) {
+        renderEmptyState();
+        return;
+      }
+
+      const name = AppState.selectedCommission;
+      const config = AppState.data[name];
+      const branches = Object.entries(config.descriptions || {});
+      const totalBranches = branches.length;
+      const completedBranches = (config.completed || []).length;
+      const pendingBranches = totalBranches - completedBranches;
+      const commissionType = config.type || 'achievement';
+      
+      // 生成 All Completed 选择器选项（显示value，保存key）
+      const allCompletedOptions = branches.map(([branchId, description]) => {
+        const selected = config.all_completed === branchId ? 'selected' : '';
+        return `<option value="${escapeHtml(branchId)}" ${selected}>${escapeHtml(description)}</option>`;
+      }).join('');
+      
+      // 根据类型确定标签文字
+      const allCompletedLabel = commissionType === 'basic' ? '选择分支' : '全部完成时默认分支';
+
+      elements.contentArea.innerHTML = `
+        <div class="detail-panel">
+          <div class="detail-header">
+            <div class="detail-title">${escapeHtml(name)}</div>
+          </div>
+
+          <div class="branches-section">
+            ${commissionType === 'achievement' ? `
+              <div class="section-title">分支配置</div>
+              <div class="branch-list">
+                ${branches.length === 0 ?
+                  '<div style="color: var(--text-tertiary); text-align: center; padding: 20px;">暂无分支配置</div>' :
+                  branches.map(([branchId, description]) => {
+                    const isCompleted = (config.completed || []).includes(branchId);
+                    const stateClass = isCompleted ? 'completed' : 'pending';
+                    const stateLabel = isCompleted ? '已完成' : '未完成';
+                    const labelClass = isCompleted ? 'completed' : 'pending';
+                    
+                    return `
+                      <div class="branch-item ${isCompleted ? 'completed' : ''}">
+                        <div class="branch-content">
+                          <div class="branch-description">${escapeHtml(description)}</div>
+                        </div>
+                        <div class="branch-toggle-wrapper">
+                          <span class="toggle-status-label ${labelClass}">${stateLabel}</span>
+                          <div class="toggle-switch ${stateClass}"
+                               onclick="toggleBranchState('${escapeHtml(branchId)}')"
+                               title="点击切换状态"></div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')
+                }
+              </div>
+            ` : ''}
+
+            <!-- All Completed 选择器 -->
+            <div class="all-completed-section">
+              <div class="all-completed-label">${allCompletedLabel}</div>
+              <select class="all-completed-select" id="allCompletedSelect" onchange="updateAllCompleted(this.value)">
+                <option value="">-- 请选择 --</option>
+                ${allCompletedOptions}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 更新 All Completed
+    function updateAllCompleted(branchId) {
+      const config = AppState.data[AppState.selectedCommission];
+      config.all_completed = branchId || null;
+      AppState.hasUnsavedChanges = true;
+      updateStatus();
+    }
+
+    // 切换分支状态
+    function toggleBranchState(branchId) {
+      const config = AppState.data[AppState.selectedCommission];
+      if (!config.completed) config.completed = [];
+
+      const isCompleted = config.completed.includes(branchId);
+
+      if (isCompleted) {
+        // 已完成 -> 未完成
+        config.completed = config.completed.filter(id => id !== branchId);
+      } else {
+        // 未完成 -> 已完成
+        config.completed.push(branchId);
+      }
+
+      AppState.hasUnsavedChanges = true;
+      renderCommissionList();
+      renderDetailPanel();
+      updateStatus();
+    }
+
+    // 更新状态栏
+    function updateStatus() {
+      elements.saveBtn.disabled = !AppState.fileLoaded;
+    }
+
+    // 显示状态信息
+    // HTML 转义
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // 启动应用
+    init();
+  </script>
+</body>
+</html>
