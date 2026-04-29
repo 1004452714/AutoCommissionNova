@@ -650,10 +650,6 @@
 
             // 初始化数据字段
             Object.values(AppState.data).forEach(commission => {
-              // 移除旧字段
-              delete commission.default;
-              delete commission.selected;
-              
               // 初始化 type 字段（默认为 achievement）
               if (!commission.type) {
                 commission.type = 'achievement';
@@ -662,6 +658,11 @@
               // 初始化 default 字段
               if (!commission.default) {
                 commission.default = null;
+              }
+              
+              // 确保 selected 是数组
+              if (!commission.selected) {
+                commission.selected = [];
               }
               
               // 确保 completed 是数组

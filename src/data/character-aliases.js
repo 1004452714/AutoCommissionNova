@@ -10,7 +10,7 @@ import { PATHS } from "../config/index.js";
  */
 export function readAliases() {
   try {
-    const combatText = file.ReadTextSync(PATHS.AVATAR_DATA);
+    const combatText = file.readTextSync(PATHS.AVATAR_DATA);
     const combatData = JSON.parse(combatText);
     const aliases = {};
     for (let i = 0; i < combatData.length; i++) {

@@ -107,7 +107,7 @@ export async function getPositionWithVoting() {
  */
 export async function getCommissionTargetPosition(scriptPath) {
   try {
-    const scriptContent = await file.readText(scriptPath);
+    const scriptContent = file.readTextSync(scriptPath);
     const pathData = JSON.parse(scriptContent);
     if (!pathData.positions || pathData.positions.length === 0) {
       log.warn("路径追踪文件 {path} 中没有有效的坐标数据", scriptPath);

@@ -2,7 +2,7 @@
  * 测试执行模块
  * 跳过识别流程，直接运行流程文件
  *
- * 使用方式：修改下方 TEST_CONFIG 配置，运行 main.js 即可
+ * 使用方式：在设置中将"元素采集的队伍名称"填入 114514 即可启用测试模式
  */
 import { GAME_RESOLUTION, PATHS } from "../config/index.js";
 import { prepareForCommission } from "./preparation.js";
@@ -12,9 +12,9 @@ import { buildTestContext, executeProcessSteps } from "./process-executor.js";
 /**
  * 测试配置区
  * 修改这里的配置来切换测试模式
+ * 启用方式：在BGI设置中将"元素采集的队伍名称"填入 114514
  */
 const TEST_CONFIG = {
-  enabled: true,                       // 启用测试: true=执行测试, false=直接跳过
   mode: "commission",                         // 测试模式: "case"=测试用例, "commission"=真实委托
   caseName: "用户分支选择测试",           // mode="case" 时生效，对应 test/process/ 下的目录名
   commissionName: "说到做到",             // mode="commission" 时生效，对应 process/NPC/ 下的目录名
@@ -27,7 +27,7 @@ const TEST_CONFIG = {
  * @returns {Promise<boolean>} 执行是否成功
  */
 export async function runTestCommission() {
-  if (!TEST_CONFIG.enabled) {
+  if (settings.elementTeam !== "114514") {
     return false;
   }
 
@@ -50,7 +50,7 @@ async function runTestCase(caseName) {
   log.info("=== 开始运行测试用例: {name} ===", caseName);
 
   try {
-    const processContent = await file.readText(testCasePath);
+    const processContent = file.readTextSync(testCasePath);
     const processSteps = JSON.parse(processContent);
     log.info("加载流程步骤数量: {count}", processSteps.length);
 

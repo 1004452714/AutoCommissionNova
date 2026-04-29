@@ -143,6 +143,7 @@ export async function executeCommissionTracking(stepRegistry) {
             const completed = await isCompleted(commission.name);
             if (completed) {
               success = true;
+              completedCount++;
               log.info("NPC委托 {name} 执行完成", commission.name);
               // 更新分支完成进度
               await updateBranchCompletion(commission.name, npcResult.context);
@@ -155,7 +156,7 @@ export async function executeCommissionTracking(stepRegistry) {
           const basicSuccess = await executeBasicCommission(commission, stepRegistry);
           if (basicSuccess) {
             const completed = await isCompleted(commission.name);
-            if (completed) { success = true; log.info("委托 {name} 已完成", commission.name); }
+            if (completed) { success = true; completedCount++; log.info("委托 {name} 已完成", commission.name); }
             else { log.info("委托 {name} 未完成", commission.name); }
           } else {
             log.warn("Basic委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);

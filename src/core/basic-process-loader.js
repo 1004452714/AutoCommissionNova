@@ -10,7 +10,7 @@
  */
 export async function loadBasicProcess(processPath) {
   try {
-    const processContent = await file.readText(processPath);
+    const processContent = file.readTextSync(processPath);
 
     try {
       const jsonData = JSON.parse(processContent);

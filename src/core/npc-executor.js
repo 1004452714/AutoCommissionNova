@@ -23,7 +23,7 @@ import { processStepConfiguration } from "./process-executor.js";
 export async function loadNpcProcessFile(commissionName, location, processFileName = "process.json") {
   const processFilePath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFileName;
   try {
-    const processContent = await file.readText(processFilePath);
+    const processContent = file.readTextSync(processFilePath);
     log.info("找到NPC委托流程文件: {path}", processFilePath);
     try {
       const jsonData = JSON.parse(processContent);
@@ -108,6 +108,8 @@ async function executeUnifiedNpcProcess(processSteps, commissionName, location, 
         await stepRegistry.process(step, sharedContext);
       } catch (stepError) {
         log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
+        dispatcher.ClearAllTriggers();
+        return { success: false, context: sharedContext };
       }
       await sleep(2000);
     }

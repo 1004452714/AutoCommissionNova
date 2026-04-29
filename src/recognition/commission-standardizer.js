@@ -88,8 +88,6 @@ function buildNpcReferenceMap(npcCommissions) {
  * @returns {Promise<string|null>} 标准化后的名称，未初始化或匹配失败时返回 null
  */
 export async function standardizeCommissionName(rawName) {
-  //TODO 开发时BGI环境有bug，模块会重复初始化，后续修复后可以去掉initReferenceData
-  await initReferenceData();
   const allNames = [...Object.keys(referenceData.basic), ...Object.keys(referenceData.npc)];
   return getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
 }
