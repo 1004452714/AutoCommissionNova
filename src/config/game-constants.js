@@ -18,22 +18,22 @@ export const COMMISSION_DETAIL_BUTTONS = [
 export const COMMISSION_CONFIG = [
   {
     index: 0,
-    ocrRegion: { X: 796, Y: 293, WIDTH: 440, HEIGHT: 40 },
+    ocrRegion: new OpenCvSharp.OpenCvSharp.Rect(796, 293, 440, 40),
     statusRegion: { x: 1550, y: 320, checkX: 1450, checkWidth: 150 },
   },
   {
     index: 1,
-    ocrRegion: { X: 796, Y: 401, WIDTH: 440, HEIGHT: 40 },
+    ocrRegion: new OpenCvSharp.OpenCvSharp.Rect(796, 401, 440, 40),
     statusRegion: { x: 1550, y: 440, checkX: 1450, checkWidth: 150 },
   },
   {
     index: 2,
-    ocrRegion: { X: 796, Y: 509, WIDTH: 440, HEIGHT: 40 },
+    ocrRegion: new OpenCvSharp.OpenCvSharp.Rect(796, 509, 440, 40),
     statusRegion: { x: 1550, y: 530, checkX: 1500, checkWidth: 100 },
   },
   {
     index: 3,
-    ocrRegion: { X: 796, Y: 544, WIDTH: 440, HEIGHT: 40 },
+    ocrRegion: new OpenCvSharp.OpenCvSharp.Rect(796, 544, 440, 40),
     statusRegion: { x: 1550, y: 560, checkX: 1450, checkWidth: 150 },
   },
 ];

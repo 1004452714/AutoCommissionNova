@@ -3,7 +3,7 @@
  * 自动处理对话流程：识别NPC、选择对话选项、跳过剧情
  */
 import { PATHS } from "../config/index.js";
-import { ocrCaptureRegion, templateMatchCaptureRegion } from "../vision/index.js";
+import { bvPageOcrRegion, templateMatchCaptureRegion } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isInMainUI } from "../vision/ui-detector.js";
 
@@ -20,8 +20,8 @@ export async function executeOptimizedAutoTalk(options) {
   keyPress("V");
 
   let extractedName = null;
-  const nameRegion = { X: 75, Y: 240, WIDTH: 225, HEIGHT: 60 };
-  const nameResults = await ocrCaptureRegion(nameRegion);
+  const nameRegion = new OpenCvSharp.OpenCvSharp.Rect(75, 240, 225, 60);
+  const nameResults = bvPageOcrRegion(nameRegion);
   for (let i = 0; i < nameResults.count; i++) {
     const text = nameResults[i].text;
     log.info("任务区域识别文本: {text}", text);
@@ -33,9 +33,9 @@ export async function executeOptimizedAutoTalk(options) {
     }
   }
 
-  const dialogRegion = { X: 1150, Y: 300, WIDTH: 350, HEIGHT: 400 };
+  const dialogRegion = new OpenCvSharp.OpenCvSharp.Rect(1150, 300, 350, 400);
   const talkIconRegion = { X: 1260, Y: 300, WIDTH: 90, HEIGHT: 550 };
-  const dialogResults = await ocrCaptureRegion(dialogRegion);
+  const dialogResults = bvPageOcrRegion(dialogRegion);
   let clickedWhitelistNPC = false;
   let clickedExtractedName = false;
 
@@ -98,8 +98,8 @@ export async function executeOptimizedAutoTalk(options) {
     if (isInMainUI()) { log.info("检测到已返回主界面，结束循环"); break; }
 
     let foundPriorityOption = false;
-    const dialogOptionsRegion = { X: 1250, Y: 250, WIDTH: 550, HEIGHT: 600 };
-    const ocrResults = await ocrCaptureRegion(dialogOptionsRegion);
+    const dialogOptionsRegion = new OpenCvSharp.OpenCvSharp.Rect(1250, 250, 550, 600);
+    const ocrResults = bvPageOcrRegion(dialogOptionsRegion);
     if (ocrResults.count > 0) {
       for (let i = 0; i < ocrResults.count; i++) {
         const ocrText = ocrResults[i].text;

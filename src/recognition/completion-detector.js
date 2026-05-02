@@ -4,7 +4,7 @@
  */
 import { COMMISSION_CONFIG } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
-import { ocrCaptureRegionText } from "../vision/ocr-utils.js";
+import { bvPageOcrRegionText } from "../vision/index.js";
 import { detectCommissionStatusByImage } from "./status-detector.js";
 
 /**
@@ -25,7 +25,7 @@ export async function isCompleted(commissionName) {
     // 遍历4个委托位置，找到对应的委托名
     for (let i = 0; i < 4; i++) {
       const config = COMMISSION_CONFIG[i];
-      const ocrResult = await ocrCaptureRegionText(config.ocrRegion);
+      const ocrResult = bvPageOcrRegionText(config.ocrRegion);
       
       if (ocrResult && ocrResult.trim() === commissionName) {
         // 找到匹配的委托，检测其完成状态

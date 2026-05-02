@@ -4,7 +4,7 @@
  * 避免代码重复，提高可维护性
  */
 import { OCR_REGIONS, COMMISSION_DETAIL_BUTTONS, MIN_TEXT_LENGTH } from "../config/index.js";
-import { ocrCaptureRegion, pageScroll } from "../vision/index.js";
+import { bvPageOcrRegion, pageScroll } from "../vision/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { getPositionWithVoting } from "../navigation/position-utils.js";
 
@@ -25,7 +25,7 @@ export async function scanCommissionAtPosition(positionIndex) {
   const region = OCR_REGIONS.COMMISSION_NAME[positionIndex];
   
   try {
-    const results = await ocrCaptureRegion(region);
+    const results = bvPageOcrRegion(region);
     
     for (let i = 0; i < results.count; i++) {
       const text = cleanText(results[i].text);

@@ -3,7 +3,7 @@
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
 import { COMMISSION_TYPE, OCR_REGIONS } from "../config/index.js";
-import { ocrCaptureRegion, ocrCaptureRegionText } from "../vision/index.js";
+import { bvPageOcrRegion, bvPageOcrRegionText } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { detectCommissionStatusByImage } from "./status-detector.js";
 import { scanCommissionAtPosition, clickCommissionDetail, exitCommissionDetail, getCommissionPosition } from "./commission-scanner.js";
@@ -14,7 +14,7 @@ import { scanCommissionAtPosition, clickCommissionDetail, exitCommissionDetail, 
  */
 export async function recognizeCommissionLocation() {
   try {
-    const location = await ocrCaptureRegionText(OCR_REGIONS.LOCATION);
+    const location = bvPageOcrRegionText(OCR_REGIONS.LOCATION);
     if (location && location.trim()) return location.trim();
     return "未知地点";
   } catch (error) {
@@ -30,7 +30,7 @@ export async function recognizeCommissionLocation() {
 export async function checkDetailPageEntered() {
   try {
     for (let i = 0; i < 3; i++) {
-      const results = await ocrCaptureRegion(OCR_REGIONS.DETAIL_COUNTRY);
+      const results = bvPageOcrRegion(OCR_REGIONS.DETAIL_COUNTRY);
       if (results.count > 0) {
         for (let j = 0; j < results.count; j++) {
           const text = results[j].text.trim();

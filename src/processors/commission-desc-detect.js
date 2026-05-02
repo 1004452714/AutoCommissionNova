@@ -2,7 +2,7 @@
  * 委托描述检测步骤处理器
  */
 import { OCR_REGIONS, PATHS } from "../config/index.js";
-import { ocrCaptureRegionText } from "../vision/index.js";
+import { bvPageOcrRegionText } from "../vision/index.js";
 import { loadNpcProcessFile } from "../core/npc-executor.js";
 
 export function register(registry) {
@@ -35,7 +35,7 @@ export function register(registry) {
 
       for (let c = 0; c < 13; c++) {
         try {
-          const ocrResult = await ocrCaptureRegionText(OCR_REGIONS.COMMISSION_DETAIL);
+          const ocrResult = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
           if (ocrResult === context.commissionName || ocrResult === "") {
             await sleep(1000);
             log.debug("检测到委托名称或空文本，继续等待...");
