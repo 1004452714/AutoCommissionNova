@@ -69,13 +69,6 @@ export async function checkDetailPageEntered() {
  * 4. 进入详情页识别地点
  * 5. 获取委托地图坐标
  * 6. 退出详情页
- *
- * @param {Object} supportedCommissions - 支持的委托列表 { basic: [], npc: [] }
- * @returns {Promise<Array>} 识别到的委托数组
- *
- * @example
- * const commissions = await recognizeCommissions(supportedCommissions);
- * // 返回: [{ id: 1, name: "语言交流", supported: true, type: "NPC", location: "蒙德城" }, ...]
  */
 export async function recognizeCommissions(supportedCommissions) {
   try {
@@ -92,20 +85,13 @@ export async function recognizeCommissions(supportedCommissions) {
 
       // 标准化委托名称
       const standardizedName = await standardizeCommissionName(rawName);
-      const finalName = standardizedName || rawName;
-
-      if (standardizedName && standardizedName !== rawName) {
-        log.info('第{index}个委托(标准化名称): {raw} -> {standard}', i + 1, rawName, standardizedName);
-      } else if (!standardizedName) {
-        log.warn('第{index}个委托标准化失败，使用OCR原始结果: "{text}"', i + 1, rawName);
-      }
 
       // 判断委托类型
-      const isBasic = supportedCommissions.basic.includes(finalName);
-      const isNpc = supportedCommissions.npc.includes(finalName);
+      const isBasic = supportedCommissions.basic.includes(standardizedName);
+      const isNpc = supportedCommissions.npc.includes(standardizedName);
       const commission = {
         id: i + 1,
-        name: finalName,
+        name: standardizedName,
         supported: isBasic || isNpc,
         type: isBasic ? COMMISSION_TYPE.BASIC : isNpc ? COMMISSION_TYPE.NPC : "",
         location: "",
@@ -115,7 +101,7 @@ export async function recognizeCommissions(supportedCommissions) {
 
       try {
         // 检测委托状态
-        const status = await detectCommissionStatusByImage(i, finalName);
+        const status = await detectCommissionStatusByImage(i, standardizedName);
         if (status === "completed") {
           commission.location = "已完成";
           continue;

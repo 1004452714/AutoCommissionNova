@@ -16,29 +16,28 @@ import { enterCommissionScreen } from "../vision/ui-detector.js";
  */
 export async function identification() {
   try {
+    // 设置游戏分辨率和DPI指标
     setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
+    // 返回游戏主界面
     await genshin.returnMainUi();
 
+    // 加载支持的委托列表
     const supportedCommissions = await loadSupportedCommissions();
+    // 加载标准的委托名称和对应地点名称
     await initCommissionReferenceData(supportedCommissions);
 
-    for (const commission of supportedCommissions.basic) {
-      ensureDirectoryExists(PATHS.BASIC_SCRIPT_BASE + "/" + commission);
-    }
-    for (const commission of supportedCommissions.npc) {
-      ensureDirectoryExists(PATHS.NPC_PROCESS_BASE + "/" + commission);
-    }
-
+    // 尝试进入委托界面
     const enterSuccess = await enterCommissionScreen();
     if (!enterSuccess) {
       log.error("无法进入委托界面，脚本终止");
       return [];
     }
-    await sleep(1000);
 
+    // 执行委托列表识别（名称、状态、地点）
     const commissions = await recognizeCommissions(supportedCommissions);
 
     if (commissions && commissions.length > 0) {
+      // 保存识别到的委托数据
       await saveCommissionsData(commissions);
       log.info("委托识别完成，共识别到 {total} 个委托，其中 {supported} 个受支持",
         commissions.length, commissions.filter(function(c) { return c.supported; }).length);
@@ -80,13 +79,3 @@ export async function executeMainProcess(stepRegistry) {
   }
 }
 
-
-function ensureDirectoryExists(dirPath) {
-  try {
-    const tempFilePath = dirPath + "/.temp";
-    file.writeTextSync(tempFilePath, "");
-    return true;
-  } catch (error) {
-    return false;
-  }
-}

@@ -63,8 +63,15 @@ function scanNpcCommissions() {
 }
 
 /**
- * 加载支持的委托列表（白名单 ∩ 可用委托）
- * @returns {Promise<Object>} 支持的委托 { basic: [], npc: [] }
+ * 加载支持的委托列表
+ * 
+ * 确保只有同时满足以下两个条件的委托才会被执行：
+ * 1. 在 name.json 白名单中声明
+ * 2. 在 process/ 目录下有对应的流程文件
+ * 
+ * @returns {Promise<Object>} 支持的委托列表
+ * @returns {string[]} returns.basic - 支持的 Basic 委托名称列表
+ * @returns {string[]} returns.npc - 支持的 NPC 委托名称列表
  */
 export async function loadSupportedCommissions() {
   const whitelist = loadWhitelist();

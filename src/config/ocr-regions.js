@@ -1,6 +1,7 @@
 /** OCR 识别区域坐标常量 */
 export const OCR_REGIONS = {
-  Main_Dev: [
+  /** 委托名称OCR识别区域（4个委托） */
+  COMMISSION_NAME: [
     { X: 796, Y: 293, WIDTH: 440, HEIGHT: 40 },
     { X: 796, Y: 401, WIDTH: 440, HEIGHT: 40 },
     { X: 796, Y: 509, WIDTH: 440, HEIGHT: 40 },

@@ -24,7 +24,7 @@ export async function findCommissionTarget(commissionName) {
       await sleep(1000);
 
       for (let regionIndex = 0; regionIndex < 3; regionIndex++) {
-        const region = OCR_REGIONS.Main_Dev[regionIndex];
+        const region = OCR_REGIONS.COMMISSION_NAME[regionIndex];
         try {
           const results = await ocrCaptureRegion(region);
           for (let i = 0; i < results.count; i++) {
@@ -51,7 +51,7 @@ export async function findCommissionTarget(commissionName) {
       try {
         log.info("前3个委托中未找到，检查第4个委托");
         await pageScroll(1);
-        const region = OCR_REGIONS.Main_Dev[3];
+        const region = OCR_REGIONS.COMMISSION_NAME[3];
         const results = await ocrCaptureRegion(region);
         for (let i = 0; i < results.count; i++) {
           const text = cleanText(results[i].text);

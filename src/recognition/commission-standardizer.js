@@ -10,7 +10,12 @@ const referenceData = { basic: {}, npc: {} };
 
 /**
  * 初始化委托名称和地点参考数据
- * @param {Object} [supportedCommissions] - 支持的委托列表 { basic: [], npc: [] }，不传参则从数据源加载
+ * 
+ * 构建 用于将 OCR 识别的原始文本标准化为已知的委托名称和地点的数据
+ * 
+ * @param {Object} [supportedCommissions] - 支持的委托列表
+ * @param {string[]} [supportedCommissions.basic] - Basic 委托名称列表，不传则从数据源加载
+ * @param {string[]} [supportedCommissions.npc] - NPC 委托名称列表，不传则从数据源加载
  */
 export async function initReferenceData(supportedCommissions) {
   try {
@@ -27,9 +32,9 @@ export async function initReferenceData(supportedCommissions) {
 }
 
 /**
- * 构建Basic委托名称-地点映射表
- * @param {string[]} basicCommissions - Basic委托名称列表
- * @returns {Object} { 委托名: [地点列表] }
+ * 构建Basic委托名称到地点列表的映射表
+ * @param {string[]} basicCommissions - Basic 委托名称列表
+ * @returns {Object} Basic 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
  */
 function buildBasicReferenceMap(basicCommissions) {
   const basicList = {};
@@ -57,9 +62,10 @@ function buildBasicReferenceMap(basicCommissions) {
 }
 
 /**
- * 构建NPC委托名称-地点映射表
- * @param {string[]} npcCommissions - NPC委托名称列表
- * @returns {Object} { 委托名: [地点列表] }
+ * 构建NPC委托名称到地点列表的映射表
+ * 
+ * @param {string[]} npcCommissions - NPC 委托名称列表
+ * @returns {Object} NPC 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
  */
 function buildNpcReferenceMap(npcCommissions) {
   const npcList = {};
@@ -84,19 +90,30 @@ function buildNpcReferenceMap(npcCommissions) {
 
 /**
  * 标准化委托名称
- * @param {string} rawName - OCR 识别的原始名称
- * @returns {Promise<string|null>} 标准化后的名称，未初始化或匹配失败时返回 null
+ * 
+ * 使用编辑距离算法将 OCR 识别的原始名称与已知委托列表进行模糊匹配，
+ * 找到最接近的已知委托名称作为标准化结果。
+ *
+ * @param {string} rawName - OCR 识别的原始委托名称，可能包含识别错误
+ * @returns {Promise<string>} 标准化后的委托名称，如果未找到匹配或相似度低于阈值则返回原始名称
  */
 export async function standardizeCommissionName(rawName) {
   const allNames = [...Object.keys(referenceData.basic), ...Object.keys(referenceData.npc)];
-  return getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
+  const match = getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
+  if (match && match !== rawName) {
+    log.debug('委托名称标准化: {raw} -> {standard}', rawName, match);
+  }
+  return match || rawName;
 }
 
 /**
  * 标准化委托地点
- * @param {string} commissionName - 标准化后的委托名称
- * @param {string} rawLocation - OCR 识别的原始地点
- * @returns {string} 标准化后的地点
+ * 
+ * 根据已知委托名称和对应的地点列表，使用编辑距离算法将 OCR 识别的原始地点标准化为已知地点。
+ * 
+ * @param {string} commissionName - 标准化后的委托名称（已通过 standardizeCommissionName 处理）
+ * @param {string} rawLocation - OCR 识别的原始地点名称，可能包含识别错误
+ * @returns {string} 标准化后的地点名称，如果未找到匹配或相似度低于阈值则返回原始地点
  */
 export function standardizeCommissionLocation(commissionName, rawLocation) {
   let candidates = [];
@@ -106,13 +123,13 @@ export function standardizeCommissionLocation(commissionName, rawLocation) {
     candidates = referenceData.npc[commissionName];
   }
   if (candidates.length === 0) {
-    log.warn("没有找到委托 {name} 的参考地点列表", commissionName);
+    log.error("没有找到委托 {name} 的参考地点列表", commissionName);
     return rawLocation;
   }
   const closestLocation = getClosestMatch(rawLocation, candidates, THRESHOLDS.LOCATION);
   if (closestLocation) {
     return closestLocation;
   }
-  log.info("地点相似度未达阈值，保持原地点: {raw}", rawLocation);
+  log.warn("地点相似度未达阈值，保持原地点: {raw}", rawLocation);
   return rawLocation;
 }

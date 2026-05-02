@@ -12,18 +12,9 @@ import { getPositionWithVoting } from "../navigation/position-utils.js";
  * 扫描指定位置的委托名称
  * 
  * 对委托界面指定位置进行OCR识别，返回识别到的委托名称
- * 委托界面共显示4个委托，前3个直接可见，第4个需要翻页
  * 
  * @param {number} positionIndex - 委托位置索引（0-3）
  * @returns {Promise<string|null>} 识别到的委托名称，失败返回null
- * 
- * @example
- * // 识别第1个委托
- * const name = await scanCommissionAtPosition(0);
- * 
- * @example
- * // 识别第4个委托（会自动翻页）
- * const name = await scanCommissionAtPosition(3);
  */
 export async function scanCommissionAtPosition(positionIndex) {
   // 第4个委托需要翻页
@@ -31,7 +22,7 @@ export async function scanCommissionAtPosition(positionIndex) {
     await pageScroll(1);
   }
   
-  const region = OCR_REGIONS.Main_Dev[positionIndex];
+  const region = OCR_REGIONS.COMMISSION_NAME[positionIndex];
   
   try {
     const results = await ocrCaptureRegion(region);

@@ -47,6 +47,7 @@ export async function enterCommissionScreen() {
     click(300, 350);
     await sleep(100);
     click(300, 350);
+    await sleep(1000);
     return true;
   } catch (error) {
     log.error("进入委托界面失败: {error}", error);
