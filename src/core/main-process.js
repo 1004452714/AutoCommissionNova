@@ -2,7 +2,6 @@
  * 主流程模块
  * 脚本的主入口逻辑
  */
-import { GAME_RESOLUTION, PATHS } from "../config/index.js";
 import { getSetting } from "../utils/settings-utils.js";
 import { loadSupportedCommissions, saveCommissionsData } from "../data/index.js";
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
@@ -16,8 +15,6 @@ import { enterCommissionScreen } from "../vision/ui-detector.js";
  */
 export async function identification() {
   try {
-    // 设置游戏分辨率和DPI指标
-    setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
     // 返回游戏主界面
     await genshin.returnMainUi();
 

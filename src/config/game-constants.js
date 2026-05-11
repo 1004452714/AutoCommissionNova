@@ -38,8 +38,6 @@ export const COMMISSION_CONFIG = [
   },
 ];
 
-export const GAME_RESOLUTION = { WIDTH: 1920, HEIGHT: 1080, DPI: 1 };
-
 export const MIN_TEXT_LENGTH = 3;
 
 export const MAX_COMMISSION_RETRY_COUNT = 1;

@@ -2,7 +2,6 @@
  * 准备逻辑模块
  * 委托执行前的准备工作
  */
-import { GAME_RESOLUTION } from "../config/index.js";
 import { getSetting } from "../utils/settings-utils.js";
 
 /**
@@ -10,7 +9,6 @@ import { getSetting } from "../utils/settings-utils.js";
  */
 export async function prepareForCommission() {
   log.info("开始执行委托前准备");
-  setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
   try {
     await genshin.returnMainUi();
     const setting = await getSetting();

@@ -4,7 +4,7 @@
  *
  * 使用方式：在设置中将"元素采集的队伍名称"填入 114514 即可启用测试模式
  */
-import { GAME_RESOLUTION, PATHS } from "../config/index.js";
+import {  PATHS } from "../config/index.js";
 import { prepareForCommission } from "./preparation.js";
 import { loadNpcProcessFile } from "./npc-executor.js";
 import { buildTestContext, executeProcessSteps } from "./process-executor.js";
@@ -80,7 +80,6 @@ async function runCommission(commissionName, location, processFile) {
   log.info("=== 开始测试委托: {name} ({location}) ===", commissionName, location);
 
   try {
-    setGameMetrics(GAME_RESOLUTION.WIDTH, GAME_RESOLUTION.HEIGHT, GAME_RESOLUTION.DPI);
     await genshin.returnMainUi();
     await prepareForCommission();
 
