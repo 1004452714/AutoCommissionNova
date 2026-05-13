@@ -18,13 +18,13 @@ export function register(registry) {
 
 /**
  * 执行对话步骤（使用 DialogProcessor）
- * 优先使用步骤数据中的配置，回退到上下文中的配置
+ * 从步骤数据中读取 priorityOptions 和 npcWhiteList 配置
  */
 async function executeDialogStep(step, context) {
   try {
     log.info("执行对话步骤");
-    let priorityOptions = context.priorityOptions || [];
-    let npcWhiteList = context.npcWhiteList || [];
+    let priorityOptions = [];
+    let npcWhiteList = [];
 
     if (step.data && typeof step.data === "object") {
       if (Array.isArray(step.data.priorityOptions)) {
