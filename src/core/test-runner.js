@@ -5,7 +5,7 @@
  * 使用方式：在设置中将"元素采集的队伍名称"填入 114514 即可启用测试模式
  */
 import {  PATHS } from "../config/index.js";
-import { prepareForCommission } from "./preparation.js";
+import { prepareForCommission } from "./main-process.js";
 import { loadNpcProcessFile } from "./npc-executor.js";
 import { buildTestContext, executeProcessSteps } from "./process-executor.js";
 
@@ -17,8 +17,8 @@ import { buildTestContext, executeProcessSteps } from "./process-executor.js";
 const TEST_CONFIG = {
   mode: "commission",                         // 测试模式: "case"=测试用例, "commission"=真实委托
   caseName: "用户分支选择测试",           // mode="case" 时生效，对应 test/process/ 下的目录名
-  commissionName: "说到做到",             // mode="commission" 时生效，对应 process/NPC/ 下的目录名
-  location: "苍风高地",                   // mode="commission" 时生效，委托地点
+  commissionName: "餐品订单",             // mode="commission" 时生效，对应 process/NPC/ 下的目录名
+  location: "蒙德城",                   // mode="commission" 时生效，委托地点
   processFile: "process.json",          // mode="commission" 时生效，流程文件名
 };
 

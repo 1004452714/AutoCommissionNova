@@ -97,7 +97,7 @@ function buildNpcReferenceMap(npcCommissions) {
  * @param {string} rawName - OCR 识别的原始委托名称，可能包含识别错误
  * @returns {Promise<string>} 标准化后的委托名称，如果未找到匹配或相似度低于阈值则返回原始名称
  */
-export async function standardizeCommissionName(rawName) {
+export function standardizeCommissionName(rawName) {
   const allNames = [...Object.keys(referenceData.basic), ...Object.keys(referenceData.npc)];
   const match = getClosestMatch(rawName, allNames, THRESHOLDS.COMMISSION_NAME);
   if (match && match !== rawName) {
@@ -123,10 +123,13 @@ export function standardizeCommissionLocation(commissionName, rawLocation) {
     candidates = referenceData.npc[commissionName];
   }
   if (candidates.length === 0) {
-    log.error("没有找到委托 {name} 的参考地点列表", commissionName);
+    log.warn("没有找到委托 {name} 的参考地点列表", commissionName);
     return rawLocation;
   }
   const closestLocation = getClosestMatch(rawLocation, candidates, THRESHOLDS.LOCATION);
+  if (closestLocation && closestLocation !== rawLocation) {
+    log.debug('地点标准化: {raw} -> {standard}', rawLocation, closestLocation);
+  }
   if (closestLocation) {
     return closestLocation;
   }

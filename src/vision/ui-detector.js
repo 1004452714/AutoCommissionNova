@@ -42,16 +42,18 @@ export function isStoreUI() {
  */
 export async function enterCommissionScreen() {
   try {
-    keyPress("VK_F1");
-    await sleep(1000);
-    click(300, 350);
-    await sleep(100);
-    click(300, 350);
-    await sleep(1000);
-    return true;
+    const page = new BvPage();
+    const rect1 = new OpenCvSharp.OpenCvSharp.Rect(260, 317, 89, 47);
+    const rect2 = new OpenCvSharp.OpenCvSharp.Rect(427, 345, 142, 36);
+    
+    // 确保打开冒险之证界面
+    await page.Locator("委托", rect1).withRetryAction(() => keyPress("VK_F1")).waitFor();
+    
+    // 确保进入委托界面，否则点击委托标签进入
+    await page.Locator("每日委托奖励", rect2).withRetryAction(() => click(300, 350)).waitFor();
+    log.info("已进入委托界面");
   } catch (error) {
-    log.error("进入委托界面失败: {error}", error);
-    return false;
+    log.error("进入委托界面失败: {error}", error.message);
   }
 }
 

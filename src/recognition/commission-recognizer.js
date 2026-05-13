@@ -3,23 +3,30 @@
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
 import { COMMISSION_TYPE, OCR_REGIONS } from "../config/index.js";
-import { bvPageOcrRegion, bvPageOcrRegionText } from "../vision/index.js";
+import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { detectCommissionStatusByImage } from "./status-detector.js";
-import { scanCommissionAtPosition, clickCommissionDetail, exitCommissionDetail, getCommissionPosition } from "./commission-scanner.js";
-
+import { getCommissionPosition } from "./commission-scanner.js";
+import { COMMISSION_STATUS_REGIONS } from "../config/index.js";
+import { PATHS } from "../config/index.js";
 /**
  * 识别委托地点
  * @returns {Promise<string>} 地点名称
  */
-export async function recognizeCommissionLocation() {
+export async function recognizeCommissionLocation(country) {
   try {
-    const location = bvPageOcrRegionText(OCR_REGIONS.LOCATION);
-    if (location && location.trim()) return location.trim();
+    const ocrRegion = country === "挪德卡莱" ? OCR_REGIONS.LOCATION_IN_NOD_KRAI : OCR_REGIONS.LOCATION_IN_OTHER_COUNTRY;
+    const location = bvPageOcrRegionText(ocrRegion);
+
+    if (location && location.trim()) {
+      return location.trim();
+    }
+
     return "未知地点";
+
   } catch (error) {
     log.error("识别委托地点时出错: {error}", error.message);
-    return "识别失败";
+    return "未知地点";
   }
 }
 
@@ -34,15 +41,23 @@ export async function checkDetailPageEntered() {
       if (results.count > 0) {
         for (let j = 0; j < results.count; j++) {
           const text = results[j].text.trim();
-          if (text.includes("蒙德")) {
-            log.info("检测到蒙德委托，成功进入详情界面");
-            return "蒙德";
-          } else if (text === "") {
-            log.info("未检测到地区文本，可能是已完成委托");
-            return "已完成";
-          } else if (text.length >= 2) {
-            log.info("检测到其他地区委托: {text}", text);
-            return text;
+          switch (true) {
+            case text.includes("蒙德"):
+              return "蒙德";
+            case text.includes("璃月"):
+              return "璃月";
+            case text.includes("稻妻"):
+              return "稻妻";
+            case text.includes("须弥"):
+              return "须弥";
+            case text.includes("枫丹"):
+              return "枫丹";
+            case text.includes("纳塔"):
+              return "纳塔";
+            case text.includes("挪德"):
+              return "挪德卡莱";
+            case text.length >= 1:
+              return text;
           }
         }
       }
@@ -73,87 +88,87 @@ export async function checkDetailPageEntered() {
 export async function recognizeCommissions(supportedCommissions) {
   try {
     const allCommissions = [];
-
+    const page = new BvPage();
+    const Rect = OpenCvSharp.OpenCvSharp.Rect;
+    let commission;
     // 遍历4个委托位置
     for (let i = 0; i < 4; i++) {
-      // 使用共享函数扫描委托名称
-      const rawName = await scanCommissionAtPosition(i);
-
-      if (!rawName) {
-        continue;
-      }
-
-      // 标准化委托名称
-      const standardizedName = await standardizeCommissionName(rawName);
-
-      // 判断委托类型
-      const isBasic = supportedCommissions.basic.includes(standardizedName);
-      const isNpc = supportedCommissions.npc.includes(standardizedName);
-      const commission = {
-        id: i + 1,
-        name: standardizedName,
-        supported: isBasic || isNpc,
-        type: isBasic ? COMMISSION_TYPE.BASIC : isNpc ? COMMISSION_TYPE.NPC : "",
-        location: "",
-      };
-
-      allCommissions.push(commission);
-
       try {
+        commission = {};
+        if (i === 3) { await pageScroll(1) };  // 第4个委托需要翻页
+        const id = i + 1;
+        const rawName = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_NAME[i]);
+        log.info("识别到第{id}个委托名称: {name}", id, rawName);
+
+        // 标准化委托名称
+        const standardizedName = standardizeCommissionName(rawName);
+        // 判断委托类型
+        const isBasic = supportedCommissions.basic.includes(standardizedName);
+        const isNpc = supportedCommissions.npc.includes(standardizedName);
+        commission = {
+          id: id,
+          name: standardizedName,
+          supported: isBasic || isNpc,
+          type: isBasic ? COMMISSION_TYPE.BASIC : isNpc ? COMMISSION_TYPE.NPC : "",
+          location: "",
+        };
+        allCommissions.push(commission);
         // 检测委托状态
-        const status = await detectCommissionStatusByImage(i, standardizedName);
+        const status = await detectCommissionStatusByImage(i);
+        log.info("第{id}个委托状态: {status}", id, status);
         if (status === "completed") {
           commission.location = "已完成";
           continue;
         }
 
         // 进入委托详情
-        log.info("查看第{id}个委托详情: {name}", commission.id, commission.name);
-        await clickCommissionDetail(i);
-        await sleep(700);
+        log.info("查看第{id}个委托详情: {name}", id, standardizedName);
 
-        // 识别详情信息
-        const detailStatus = await checkDetailPageEntered();
-        commission.country = detailStatus;
-        let location = await recognizeCommissionLocation();
+        //尝试点击委托的追踪按钮跳转到大地图，直到追踪按钮出现
+        const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...[1428, 965, 87, 86]);
+        const trackLo = page.locator(trackRo);
+        await trackLo.withRetryAction(async () => {
+          const button = COMMISSION_POSITIONING_BUTTONS[i];
+          click(button.x, button.y);
+          await sleep(500); //打开大地图跳转有些微延迟
+        }).waitFor();
 
-        // 标准化地点
-        const standardizedLocation = standardizeCommissionLocation(commission.name, location);
-        if (standardizedLocation && standardizedLocation !== location) {
-          location = standardizedLocation;
-        }
-        commission.location = location;
 
-        // 获取委托坐标（未完成的委托需要）
-        if (commission.location !== "已完成") {
-          const bigMapPosition = await getCommissionPosition();
-          commission.CommissionPosition = bigMapPosition;
+        // 识别国家
+        const country = await checkDetailPageEntered();
+        commission.country = country;
 
-          // 退出详情页
-          await exitCommissionDetail(1200);
+        // 识别地点并标准化地点
+        let location = await recognizeCommissionLocation(country);
+        commission.location = standardizeCommissionLocation(commission.name, location);
 
-          // 退出大地图（getPositionWithVoting操作了大地图，需要再次按ESC退出）
-          keyDown("VK_ESCAPE");
-          await sleep(300);
-          keyUp("VK_ESCAPE");
-          await sleep(1200);
-        }
-      } catch (commissionError) {
-        log.error("处理委托{id} {name} 时出错: {error}", commission.id, commission.name, commissionError.message);
+        // 获取委托任务所在位置坐标
+        const bigMapPosition = await getCommissionPosition();
+        commission.CommissionPosition = bigMapPosition;
+
+        // 返回冒险之证-委托页面
+        const rect = new OpenCvSharp.OpenCvSharp.Rect(427, 345, 142, 36);
+        await page.Locator("每日委托奖励", rect).withRetryAction(async () => {
+          log.info("尝试从地图返回委托页面");
+          keyPress("VK_ESCAPE"); //关闭详情页
+          await sleep(500);
+          keyPress("VK_ESCAPE");//关闭大地图
+          await sleep(1000); //关闭大地图跳转有些微延迟
+        }).waitFor();
+
+      } catch (error) {
+        log.error("处理第 {id} 个委托 {name} 时出错: {error}", commission.id, commission.name, error.message);
+        log.debug("错误详情:{error}", error);
         commission.location = "处理失败";
         commission.country = "未知";
-        try {
-          // 错误恢复：确保退出详情页
-          await exitCommissionDetail(1200);
-        } catch (escapeError) {
-          log.warn("尝试退出详情页面时出错: {error}", escapeError.message);
-        }
+
       }
     }
 
     return allCommissions;
   } catch (error) {
     log.error("委托识别出错: {error}", error.message);
+    log.debug("错误详情:{error}", error);
     return [];
   }
 }

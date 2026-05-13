@@ -20,6 +20,7 @@ export const PATHS = {
   ICON_BIGMAP_COMMISSION: "Data/RecognitionObject/IconBigmapCommission.jpg",
   ICON_QUESTION_COMMISSION: "Data/RecognitionObject/IconQuestionCommission.png",
   ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
+  TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",
   CHARACTER_IMAGE_DIR: "Data/characterimage/",
   AVATAR_DATA: "Data/avatar/combat_avatar.json",
   CONFIG_BASE: "process/config",

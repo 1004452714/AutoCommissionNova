@@ -30,7 +30,7 @@ export async function isCompleted(commissionName) {
       if (ocrResult && ocrResult.trim() === commissionName) {
         // 找到匹配的委托，检测其完成状态
         log.info("找到委托 {name}，检测完成状态", commissionName);
-        const status = await detectCommissionStatusByImage(i, commissionName);
+        const status = await detectCommissionStatusByImage(i);
         return status === "completed";
       }
     }

@@ -4,7 +4,7 @@
  */
 import { OCR_REGIONS } from "../config/index.js";
 import { bvPageOcrRegionText, enterCommissionScreen } from "../vision/index.js";
-import { findCommissionIndex, clickCommissionDetail, exitCommissionDetail, getCommissionPosition } from "../recognition/commission-scanner.js";
+import { findCommissionIndex, exitCommissionDetail, getCommissionPosition } from "../recognition/commission-scanner.js";
 
 /**
  * 寻找委托目标位置并追踪
@@ -13,40 +13,38 @@ import { findCommissionIndex, clickCommissionDetail, exitCommissionDetail, getCo
  */
 export async function findCommissionTarget(commissionName) {
   try {
+    const page = new BvPage();
     log.info("开始寻找委托目标位置: {name}", commissionName);
     await genshin.returnMainUi();
 
-    const enterSuccess = await enterCommissionScreen();
-    if (!enterSuccess) { log.error("无法进入委托界面"); return null; }
-    await sleep(1000);
+    await enterCommissionScreen();
 
-    const foundIndex = await findCommissionIndex(commissionName);
+    const foundIndex = findCommissionIndex(commissionName);
     if (foundIndex === -1) {
       log.warn("未找到委托: {name}", commissionName);
       return null;
     }
 
     let currentCommissionPosition = null;
-    try {
-      await clickCommissionDetail(foundIndex);
-      await sleep(2000);
 
-      const trackingResult = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_TRACKING);
-      if (trackingResult === "追踪") {
-        log.info("发现追踪按钮，点击追踪");
-        click(1693, 1000);
-        await sleep(1000);
-      }
+    const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...[1428, 965, 87, 86]);
+    const trackLo = page.locator(trackRo);
+    await trackLo.withRetryAction(async () => {
+      const button = COMMISSION_POSITIONING_BUTTONS[foundIndex];
+      click(button.x, button.y);
+      await sleep(500); //打开大地图跳转有些微延迟
+    }).waitFor();
 
-      await exitCommissionDetail(1200);
-      currentCommissionPosition = await getCommissionPosition();
-      await genshin.returnMainUi();
-    } catch (error) {
-      log.error("findCommissionTarget第2步失败: {error}", error.message);
-    }
+    await page.locator("取消追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryAction(() => click(1693, 1000)).waitFor();
+    await page.locator("取消追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryAction(() => keyPress("VK_ESCAPE")).waitForDisappear();
+
+    currentCommissionPosition = await getCommissionPosition();
+    await genshin.returnMainUi();
+
     return currentCommissionPosition;
   } catch (error) {
     log.error("寻找委托目标位置时出错: {error}", error.message);
+    log.debug("错误详情:", error);
     return null;
   }
 }

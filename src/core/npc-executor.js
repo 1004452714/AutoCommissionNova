@@ -73,12 +73,9 @@ async function executeUnifiedNpcProcess(processSteps, commissionName, location, 
   try {
     log.info("执行统一NPC委托流程: {name}", commissionName);
     if (!processSteps || processSteps.length === 0) {
-      log.warn("没有找到有效的流程步骤");
+      log.error("没有找到有效的流程步骤");
       return { success: false, context: null };
     }
-
-    let priorityOptions = [];
-    let npcWhiteList = [];
 
     await findCommissionTarget(commissionName);
 
@@ -87,37 +84,25 @@ async function executeUnifiedNpcProcess(processSteps, commissionName, location, 
       commissionName,
       location,
       processSteps,
-      priorityOptions,
-      npcWhiteList,
-      stepRegistry, // 传入 stepRegistry 供嵌套步骤调用
+      stepRegistry,
     };
 
     for (let i = 0; i < processSteps.length; i++) {
-      const step = processSteps[i];
-      log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
       try {
-        const stepConfig = processStepConfiguration(step, priorityOptions, npcWhiteList);
-        priorityOptions = stepConfig.priorityOptions;
-        npcWhiteList = stepConfig.npcWhiteList;
-
-        // 更新动态字段
-        sharedContext.currentIndex = i;
-        sharedContext.priorityOptions = priorityOptions;
-        sharedContext.npcWhiteList = npcWhiteList;
-
+        log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
+        const step = processSteps[i];
+        sharedContext.currentIndex = i + 1;
         await stepRegistry.process(step, sharedContext);
       } catch (stepError) {
         log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
-        dispatcher.ClearAllTriggers();
-        return { success: false, context: sharedContext };
+        return { success: false, context: null };
       }
-      await sleep(2000);
+      await sleep(250);
     }
-
-    log.info("统一NPC委托流程执行完成: {name}", commissionName);
+    log.info("NPC委托流程执行完成: {name}", commissionName);
     return { success: true, context: sharedContext };
   } catch (error) {
-    log.error("执行统一NPC委托流程时出错: {error}", error.message);
+    log.error("执行NPC委托流程时出错: {error}", error.message);
     return { success: false, context: null };
   }
 }

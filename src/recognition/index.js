@@ -3,4 +3,4 @@ export { initReferenceData as initCommissionReferenceData, standardizeCommission
 export { detectCommissionStatusByImage } from "./status-detector.js";
 export { isCompleted } from "./completion-detector.js";
 export { recognizeCommissions, recognizeCommissionLocation, checkDetailPageEntered } from "./commission-recognizer.js";
-export { scanCommissionAtPosition, findCommissionIndex, clickCommissionDetail, exitCommissionDetail, getCommissionPosition } from "./commission-scanner.js";
+export { scanCommissionAtPosition, findCommissionIndex, exitCommissionDetail, getCommissionPosition } from "./commission-scanner.js";

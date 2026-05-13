@@ -5,7 +5,7 @@
  * 执行流程：
  * 1. 加载委托数据文件
  * 2. 预统计已完成数量（用于后续完成状态判断）
- * 3. 遍历委托列表，过滤已完成、缺少地点的委托
+ * 3. 遍历委托列表，过滤已完成、缺少地点、不支持的委托
  * 4. 按委托类型（NPC/Basic）执行对应流程
  * 5. 执行后检查完成状态，支持重试机制
  */
@@ -82,97 +82,77 @@ export async function executeCommissionTracking(stepRegistry) {
   try {
     log.info("开始执行委托追踪");
     await genshin.returnMainUi();
-    await sleep(1000);
 
     // 加载委托数据
     let commissions = [];
-    try {
-      const commissionsDataContent = file.readTextSync(PATHS.COMMISSIONS_DATA);
-      const commissionsData = JSON.parse(commissionsDataContent);
-      if (commissionsData && commissionsData.commissions && Array.isArray(commissionsData.commissions)) {
-        commissions = commissionsData.commissions.filter((c) => c.supported);
-      } else {
-        log.error("委托数据文件格式错误");
-        return false;
-      }
-    } catch (error) {
-      log.error("读取委托数据失败: {error}", error.message);
+    let completedCount = 0;
+
+    const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
+    if (Array.isArray(commissionsData?.commissions)) {
+      // 过滤条件：支持的委托 + 非未知地点 + 未完成
+      commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成');
+      // 统计已完成的委托数量
+      const completedCommissions = commissionsData.commissions.filter((c) => c.location === '已完成');
+      completedCount = completedCommissions.length;
+    } else {
+      log.error("委托数据文件格式错误");
       return false;
     }
 
     if (commissions.length === 0) {
-      log.warn("没有找到支持的委托，请先运行识别脚本");
+      log.info("已完成委托数量: {count}，剩余可执行的委托为空", completedCount);
       return false;
     }
 
-    // 预统计已完成数量，用于后续完成状态判断的基准值
-    let completedCount = 0;
-    for (const commission of commissions) {
-      if (commission.location === "已完成") { completedCount++; continue; }
-    }
-
     // 遍历执行每个委托
-    for (const commission of commissions) {
-      // 过滤已完成的委托
-      if (commission.location === "已完成") {
-        log.info("委托 {name} 已完成，跳过", commission.name);
-        continue;
-      }
-      // 过滤缺少地点信息的委托
-      if (!commission.location || commission.location === "未知地点" || commission.location === "识别失败") {
-        log.warn("委托 {name} 缺少地点信息，跳过", commission.name);
-        continue;
-      }
+    for (const comm of commissions) {
+      log.info("开始执行委托：{name} ({location}) [{type}]", comm.name, comm.location, comm.type);
 
-      log.info("开始执行委托: {name} ({location}) [{type}]", commission.name, commission.location, commission.type || "未知类型");
 
-      let success = false;
-      let retryCount = 0;
+      for (let tryCount = 0, success = false;
+        tryCount <= MAX_COMMISSION_RETRY_COUNT && !success;
+        tryCount++) {
+        log.info("第 {try} 次尝试执行委托 {name} ", tryCount, comm.name);
 
-      // 重试循环
-      while (retryCount <= MAX_COMMISSION_RETRY_COUNT && !success) {
-        if (retryCount > 0) {
-          log.info("委托 {name} 第 {retry} 次重试执行", commission.name, retryCount);
-        }
 
         // 按类型执行
-        if (commission.type === COMMISSION_TYPE.NPC) {
-          const npcResult = await executeNpcCommission(commission.name, commission.location, stepRegistry);
+        if (comm.type === COMMISSION_TYPE.NPC) {
+          const npcResult = await executeNpcCommission(comm.name, comm.location, stepRegistry);
           dispatcher.ClearAllTriggers();
           if (npcResult.success) {
-            const completed = await isCompleted(commission.name);
+            const completed = await isCompleted(comm.name);
             if (completed) {
               success = true;
               completedCount++;
-              log.info("NPC委托 {name} 执行完成", commission.name);
+              log.info("NPC委托 {name} 执行完成", comm.name);
               // 更新分支完成进度
-              await updateBranchCompletion(commission.name, npcResult.context);
+              await updateBranchCompletion(comm.name, npcResult.context);
             }
-            else { log.warn("NPC委托 {name} 执行后检查未完成，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT); }
+            else { log.warn("NPC委托 {name} 执行后检查未完成，重试次数: {try}/{max}", comm.name, tryCount, MAX_COMMISSION_RETRY_COUNT); }
           } else {
-            log.warn("NPC委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
+            log.warn("NPC委托 {name} 执行失败，重试次数: {try}/{max}", comm.name, tryCount, MAX_COMMISSION_RETRY_COUNT);
           }
-        } else {
-          const basicSuccess = await executeBasicCommission(commission, stepRegistry);
+        }
+        else if (comm.type === COMMISSION_TYPE.BASIC) {
+          const basicSuccess = await executeBasicCommission(comm, stepRegistry);
           if (basicSuccess) {
-            const completed = await isCompleted(commission.name);
-            if (completed) { success = true; completedCount++; log.info("委托 {name} 已完成", commission.name); }
-            else { log.info("委托 {name} 未完成", commission.name); }
+            const completed = await isCompleted(comm.name);
+            if (completed) { success = true; completedCount++; log.info("委托 {name} 已完成", comm.name); }
+            else { log.info("委托 {name} 未完成", comm.name); }
           } else {
-            log.warn("Basic委托 {name} 执行失败，重试次数: {retry}/{max}", commission.name, retryCount, MAX_COMMISSION_RETRY_COUNT);
+            log.warn("Basic委托 {name} 执行失败，重试次数: {try}/{max}", comm.name, tryCount, MAX_COMMISSION_RETRY_COUNT);
           }
         }
 
-        retryCount++;
-        if (!success && retryCount <= MAX_COMMISSION_RETRY_COUNT) {
+        if (!success && tryCount < MAX_COMMISSION_RETRY_COUNT) {
           await sleep(1000);
         }
       }
 
       if (!success) {
-        log.warn("委托 {name} 重试 {retry} 次后仍未完成，跳过该委托", commission.name, MAX_COMMISSION_RETRY_COUNT);
+        log.warn("委托 {name} 重试 {try} 次后仍未完成，跳过该委托", comm.name, MAX_COMMISSION_RETRY_COUNT);
       } else {
-        log.info("委托 {name} 执行成功", commission.name);
+        log.info("委托 {name} 执行成功", comm.name);
       }
     }
 
