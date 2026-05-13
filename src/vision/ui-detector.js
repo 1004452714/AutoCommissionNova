@@ -2,7 +2,7 @@
  * UI 检测与操作工具
  * 使用 BvPage 检测游戏界面状态，提供通用 UI 操作
  */
-import { PATHS } from "../config/index.js";
+import { PATHS, COMMISSION_STATUS_REGIONS } from "../config/index.js";
 
 /**
  * 检测是否在主界面
@@ -17,6 +17,25 @@ export function isInMainUI() {
     return results.count > 0;
   } finally {
     mat.Dispose();
+  }
+}
+
+/**
+ * 检测委托完成状态（使用图像识别）
+ * @param {number} buttonIndex - 委托按钮索引（0-3）
+ * @param {string} [commissionName] - 委托名称（用于日志输出）
+ * @returns {Promise<string>} "completed" | "uncompleted" | "unknown"
+ */
+export async function detectCommissionStatusByImage(buttonIndex) {
+  try {
+    const page = new BvPage();
+    const completedRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.COMPLETED_IMAGE), ...COMMISSION_STATUS_REGIONS[buttonIndex]);
+    const uncompletedRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.UNCOMPLETED_IMAGE), ...COMMISSION_STATUS_REGIONS[buttonIndex]);
+    if (page.locator(completedRo).isExist()) return "completed";
+    if (page.locator(uncompletedRo).isExist()) return "uncompleted";
+  } catch (error) {
+    log.error("检测第{x}个委托完成状态时出错：{error}", buttonIndex + 1, error.message);
+    return "unknown";
   }
 }
 

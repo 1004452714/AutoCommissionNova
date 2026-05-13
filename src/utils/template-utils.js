@@ -21,12 +21,12 @@
 export async function templateMatchCaptureRegion(imgPath, ocrRegion, useMask = false) {
   try {
     if (!ocrRegion || typeof ocrRegion !== "object") {
-      log.error("TemplateMatch区域参数不能为空且必须是对象");
+      log.error("TemplateMatch 区域参数不能为空且必须是对象");
       return { count: 0 };
     }
     const { X, Y, WIDTH, HEIGHT } = ocrRegion;
     if (typeof X !== "number" || typeof Y !== "number" || typeof WIDTH !== "number" || typeof HEIGHT !== "number") {
-      log.error("TemplateMatch区域的X、Y、WIDTH、HEIGHT必须都是数字");
+      log.error("TemplateMatch 区域的 X、Y、WIDTH、HEIGHT 必须都是数字");
       return { count: 0 };
     }
 
@@ -45,15 +45,15 @@ export async function templateMatchCaptureRegion(imgPath, ocrRegion, useMask = f
       mat.Dispose();
     }
   } catch (error) {
-    log.error("TemplateMatch识别出错: {error}", error.message);
+    log.error("TemplateMatch 识别出错：{error}", error.message);
     return { count: 0 };
   }
 }
 
 /**
- * BvPage模板匹配识别
+ * BvPage 模板匹配识别
  * 
- * 使用BvPage进行模板匹配，支持等待超时
+ * 使用 BvPage 进行模板匹配，支持等待超时
  * 适用于需要等待特定元素出现的场景
  * 
  * @param {string} imgPath - 模板图片路径

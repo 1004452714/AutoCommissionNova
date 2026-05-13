@@ -68,3 +68,46 @@ export const THRESHOLDS = {
   /** 地区名称标准化阈值，用于将 OCR 识别错的地区名称标准化为正确的地区名称 */
   LOCATION: 0.6,
 };
+
+/** 文件路径常量 */
+export const PATHS = {
+  SUPPORT_LIST: "name.json",
+  BASIC_SCRIPT_BASE: "process/Basic",
+  NPC_PROCESS_BASE: "process/NPC",
+  COMMISSIONS_DATA: "Data/commissions_data.json",
+  COMPLETED_IMAGE: "Data/RecognitionObject/Completed.png",
+  UNCOMPLETED_IMAGE: "Data/RecognitionObject/UnCompleted.png",
+  TALK_EXIT_IMAGE: "Data/RecognitionObject/TalkExit.png",
+  TALK_ICON_IMAGE: "Data/RecognitionObject/TalkIcon.png",
+  F_ICON_IMAGE: "Data/RecognitionObject/F.png",
+  PAIMON_MENU_IMAGE: "Data/RecognitionObject/paimon_menu.png",
+  TEAM_IMAGE: "Data/RecognitionObject/team.png",
+  REPLACE_IMAGE: "Data/RecognitionObject/更换.png",
+  JOIN_IMAGE: "Data/RecognitionObject/加入.png",
+  TEAM_CONFIG_IMAGE: "Data/RecognitionObject/队伍配置.png",
+  DISABLED_UI_IMAGE: "Data/RecognitionObject/disabled_ui.png",
+  ICON_BIGMAP_COMMISSION: "Data/RecognitionObject/IconBigmapCommission.jpg",
+  ICON_QUESTION_COMMISSION: "Data/RecognitionObject/IconQuestionCommission.png",
+  ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
+  TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",
+  CHARACTER_IMAGE_DIR: "Data/characterimage/",
+  AVATAR_DATA: "Data/avatar/combat_avatar.json",
+  CONFIG_BASE: "process/config",
+};
+
+/** OCR 识别区域坐标常量 */
+export const OCR_REGIONS = {
+  /** 冒险之证 - 委托界面 - 委托名称 */
+  COMMISSION_NAME: [
+    new rect(810, 293, 440, 40),
+    new rect(810, 401, 440, 40),
+    new rect(810, 509, 440, 40),
+    new rect(810, 544, 440, 40),
+  ],
+  LOCATION_IN_OTHER_COUNTRY: new rect(1530, 100, 250, 30),
+  LOCATION_IN_NOD_KRAI: new rect(1580, 100, 250, 30),
+  DETAIL_COUNTRY: new rect(1480, 100, 55, 30),
+  /** 大地图 - 选中委托后 - 取消追踪按钮 */
+  COMMISSION_TRACKING: new rect(1626, 987, 127, 40),
+  COMMISSION_DETAIL: new rect(76, 239, 280, 43),
+};

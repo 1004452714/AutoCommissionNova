@@ -1,3 +1,3 @@
-export { bvPageOcrRegion, bvPageOcrRegionText } from "./ocr-utils.js";
-export { templateMatchCaptureRegion, bvPageTemplateMatch } from "./template-utils.js";
-export { isInMainUI, enterCommissionScreen, pageScroll } from "./ui-detector.js";
+export { bvPageOcrRegion, bvPageOcrRegionText } from "../utils/ocr-utils.js";
+export { templateMatchCaptureRegion, bvPageTemplateMatch } from "../utils/template-utils.js";
+export { isInMainUI, enterCommissionScreen, pageScroll, detectCommissionStatusByImage } from "./ui-detector.js";

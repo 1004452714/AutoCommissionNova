@@ -1,5 +1,3 @@
-export { OCR_REGIONS } from "./ocr-regions.js";
-export { PATHS } from "./paths.js";
 export {
   COMMISSION_TYPE,
   COMMISSION_POSITIONING_BUTTONS,
@@ -9,4 +7,6 @@ export {
   POSITION_COORDINATES,
   COMMISSION_STATUS_REGIONS,
   THRESHOLDS,
+  PATHS,
+  OCR_REGIONS,
 } from "./game-constants.js";

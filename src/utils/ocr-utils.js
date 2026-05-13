@@ -1,8 +1,8 @@
 /**
- * BvPage区域OCR识别
+ * BvPage 区域 OCR 识别
  * 
- * 使用BvPage进行区域OCR识别，支持指定区域或全屏
- * 适用于需要高性能OCR识别的场景，不需要手动管理截图资源
+ * 使用 BvPage 进行区域 OCR 识别，支持指定区域或全屏
+ * 适用于需要高性能 OCR 识别的场景，不需要手动管理截图资源
  * 
  * @param {Rect} rect - 区域（可选，默认全屏），类型为 OpenCvSharp.OpenCvSharp.Rect 实例
  * @returns {Array} OCR 结果列表
@@ -25,9 +25,9 @@ export function bvPageOcrRegion(rect) {
 }
 
 /**
- * BvPage区域OCR识别（返回第一个结果的文本）
+ * BvPage 区域 OCR 识别（返回第一个结果的文本）
  * 
- * 对指定游戏区域进行OCR识别，仅返回第一个识别到的文本
+ * 对指定游戏区域进行 OCR 识别，仅返回第一个识别到的文本
  * 适用于只需要单个文本结果的场景
  * 
  * @param {Rect} rect - 区域（可选，默认全屏），类型为 OpenCvSharp.OpenCvSharp.Rect 实例
