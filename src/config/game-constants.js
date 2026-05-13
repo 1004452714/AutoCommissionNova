@@ -5,16 +5,9 @@ export const COMMISSION_TYPE = {
   NPC: "NPC",
 };
 
-export const COMMISSION_DETAIL_BUTTONS = [
-  { id: 1, x: 1550, y: 320, checkX: 1450, checkWidth: 150 },
-  { id: 2, x: 1550, y: 440, checkX: 1450, checkWidth: 150 },
-  { id: 3, x: 1550, y: 530, checkX: 1500, checkWidth: 100 },
-  { id: 4, x: 1550, y: 560, checkX: 1450, checkWidth: 150 },
-];
-
 /**
- * 委托统一配置（OCR区域 + 状态检查区域）
- * 每个配置项包含委托名OCR识别区域和完成状态检测区域
+ * 委托统一配置（OCR 区域 + 状态检查区域）
+ * 每个配置项包含委托名 OCR 识别区域和完成状态检测区域
  */
 export const COMMISSION_CONFIG = [
   {
@@ -67,3 +60,11 @@ export const COMMISSION_POSITIONING_BUTTONS = [
   {x: 1550, y: 530 },
   {x: 1550, y: 560 },
 ];
+
+
+export const THRESHOLDS = {
+  /** 委托名称标准化阈值，用于将 OCR 识别错的委托名称标准化为正确的委托名称 */
+  COMMISSION_NAME: 0.6,
+  /** 地区名称标准化阈值，用于将 OCR 识别错的地区名称标准化为正确的地区名称 */
+  LOCATION: 0.6,
+};

@@ -1,7 +1,6 @@
 /** 文件路径常量 */
 export const PATHS = {
   SUPPORT_LIST: "name.json",
-  OUTPUT_DIR: "Data",
   BASIC_SCRIPT_BASE: "process/Basic",
   NPC_PROCESS_BASE: "process/NPC",
   COMMISSIONS_DATA: "Data/commissions_data.json",
@@ -12,7 +11,6 @@ export const PATHS = {
   F_ICON_IMAGE: "Data/RecognitionObject/F.png",
   PAIMON_MENU_IMAGE: "Data/RecognitionObject/paimon_menu.png",
   TEAM_IMAGE: "Data/RecognitionObject/team.png",
-  STORE_IMAGE: "Data/RecognitionObject/商店.png",
   REPLACE_IMAGE: "Data/RecognitionObject/更换.png",
   JOIN_IMAGE: "Data/RecognitionObject/加入.png",
   TEAM_CONFIG_IMAGE: "Data/RecognitionObject/队伍配置.png",

@@ -2,7 +2,7 @@
  * 模板匹配工具
  * 封装 Mat + BvPage 混合的模板匹配操作
  */
-import { PATHS, THRESHOLDS } from "../config/index.js";
+
 
 /**
  * 模板匹配识别（手动截图模式）

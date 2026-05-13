@@ -21,22 +21,6 @@ export function isInMainUI() {
 }
 
 /**
- * 检测是否在商店界面
- * @returns {boolean}
- */
-export function isStoreUI() {
-  const mat = file.ReadImageMatSync(PATHS.STORE_IMAGE);
-  try {
-    const ro = RecognitionObject.TemplateMatch(mat, 0, 0, genshin.width / 3.0, genshin.width / 5.0);
-    const page = new BvPage();
-    const results = page.Locator(ro).FindAll();
-    return results.count > 0;
-  } finally {
-    mat.Dispose();
-  }
-}
-
-/**
  * 进入委托界面（F1快捷键 + 点击委托标签）
  * @returns {Promise<boolean>}
  */

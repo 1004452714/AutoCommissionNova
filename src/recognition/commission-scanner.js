@@ -3,7 +3,7 @@
  * 提取 commission-recognizer.js 和 commission-finder.js 中的公共逻辑
  * 避免代码重复，提高可维护性
  */
-import { OCR_REGIONS, COMMISSION_DETAIL_BUTTONS, MIN_TEXT_LENGTH, COMMISSION_STATUS_REGIONS,COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
+import { OCR_REGIONS, MIN_TEXT_LENGTH } from "../config/index.js";
 import { bvPageOcrRegion, pageScroll } from "../vision/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { getPositionWithVoting } from "../navigation/position-utils.js";

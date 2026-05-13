@@ -1,13 +1,12 @@
 export { OCR_REGIONS } from "./ocr-regions.js";
 export { PATHS } from "./paths.js";
-export { THRESHOLDS } from "./thresholds.js";
 export {
   COMMISSION_TYPE,
-  COMMISSION_DETAIL_BUTTONS,
   COMMISSION_POSITIONING_BUTTONS,
   COMMISSION_CONFIG,
   MIN_TEXT_LENGTH,
   MAX_COMMISSION_RETRY_COUNT,
   POSITION_COORDINATES,
   COMMISSION_STATUS_REGIONS,
+  THRESHOLDS,
 } from "./game-constants.js";

@@ -2,7 +2,7 @@
  * 委托完成检测模块
  * 检查委托是否已完成
  */
-import { COMMISSION_CONFIG } from "../config/index.js";
+import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
 import { detectCommissionStatusByImage } from "./status-detector.js";
@@ -22,10 +22,10 @@ export async function isCompleted(commissionName) {
     }
     await sleep(900);
 
-    // 遍历4个委托位置，找到对应的委托名
+    // 遍历 4 个委托位置，找到对应的委托名
     for (let i = 0; i < 4; i++) {
-      const config = COMMISSION_CONFIG[i];
-      const ocrResult = bvPageOcrRegionText(config.ocrRegion);
+      const ocrRegion = OCR_REGIONS.COMMISSION_NAME[i];
+      const ocrResult = bvPageOcrRegionText(ocrRegion);
       
       if (ocrResult && ocrResult.trim() === commissionName) {
         // 找到匹配的委托，检测其完成状态
