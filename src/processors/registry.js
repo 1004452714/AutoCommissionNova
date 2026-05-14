@@ -44,21 +44,6 @@ export class StepProcessorRegistry {
    * 
    * @param {Object|string} step - 原始步骤
    * @returns {Object} 标准化后的步骤对象 { type: string, data: any }
-   * 
-   * @example
-   * // 路径追踪文件
-   * normalizeStep("蒙德城-1.json");
-   * // 返回: { type: "地图追踪", data: "蒙德城-1.json" }
-   * 
-   * @example
-   * // 对话交互
-   * normalizeStep("F");
-   * // 返回: { type: "对话", data: {} }
-   * 
-   * @example
-   * // 已为对象格式，直接返回
-   * normalizeStep({ type: "等待", data: { ms: 1000 } });
-   * // 返回: { type: "等待", data: { ms: 1000 } }
    */
   normalizeStep(step) {
     if (typeof step === "string") {

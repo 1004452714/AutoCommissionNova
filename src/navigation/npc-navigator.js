@@ -29,14 +29,6 @@ import { isInMainUI } from "../vision/ui-detector.js";
  * @param {string} [options.iconType] - 图标类型 "Bigmap"|"Question"|"Task"
  * @param {boolean} [options.autoTalk] - 到达后是否自动对话
  * @returns {Promise<void>}
- * 
- * @example
- * // 导航到"提米"并自动对话
- * await autoNavigateToTalk({ npcName: "提米", iconType: "question", autoTalk: true });
- * 
- * @example
- * // 仅导航，不对话
- * await autoNavigateToTalk({ npcName: "艾琳", iconType: "bigmap" });
  */
 export async function autoNavigateToTalk(options = {}) {
   const { npcName = "", iconType = "", autoTalk = false } = options;

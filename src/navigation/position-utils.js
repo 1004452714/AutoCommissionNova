@@ -9,14 +9,6 @@
  * @param {Object} point1 - 点1坐标 { X, Y } 或 { x, y }
  * @param {Object} point2 - 点2坐标 { X, Y } 或 { x, y }
  * @returns {number} 两点间距离，无效数据返回 Infinity
- * 
- * @example
- * const distance = calculateDistance({ x: 100, y: 200 }, { x: 150, y: 250 });
- * // 返回: 70.71...
- * 
- * @example
- * // 兼容大写键名
- * const distance = calculateDistance({ X: 100, Y: 200 }, { X: 150, Y: 250 });
  */
 export function calculateDistance(point1, point2) {
   if (!point1 || !point2) return Infinity;
@@ -43,10 +35,6 @@ export function calculateDistance(point1, point2) {
  * 
  * @returns {Promise<Object>} 位置对象 { x, y }
  * @throws {Error} 无法从大地图中识别位置时抛出异常
- * 
- * @example
- * const position = await getPositionWithVoting();
- * console.log("坐标:", position.x, position.y);
  */
 export async function getPositionWithVoting() {
   let scale = 2.0;
@@ -98,12 +86,6 @@ export async function getPositionWithVoting() {
  * 
  * @param {string} scriptPath - 路径追踪文件路径（_path.json）
  * @returns {Promise<Object|null>} 目标坐标 { x, y }，失败返回null
- * 
- * @example
- * const position = await getCommissionTargetPosition("assets/语言交流/蒙德城/_path.json");
- * if (position) {
- *   console.log("目标坐标:", position.x, position.y);
- * }
  */
 export async function getCommissionTargetPosition(scriptPath) {
   try {

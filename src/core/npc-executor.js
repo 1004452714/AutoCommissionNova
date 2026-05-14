@@ -15,9 +15,6 @@ import { findCommissionTarget } from "../navigation/index.js";
  * @param {string} location - 委托地点
  * @param {string} processFileName - 流程文件名，默认为"process.json"
  * @returns {Promise<Array|false>} 步骤数组，失败返回false
- *
- * @example
- * const steps = await loadNpcProcessFile("语言交流", "蒙德城");
  */
 export async function loadNpcProcessFile(commissionName, location, processFileName = "process.json") {
   const processFilePath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFileName;

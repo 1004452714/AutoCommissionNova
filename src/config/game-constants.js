@@ -95,6 +95,34 @@ export const PATHS = {
   CONFIG_BASE: "process/config",
 };
 
+/** 对话相关区域常量 */
+export const DIALOG_REGIONS = {
+  /** 对话NPC名称识别区域 */
+  NPC_NAME: new rect(75, 240, 225, 60),
+  /** 对话选项列表识别区域 */
+  DIALOG_OPTIONS: new rect(1150, 300, 350, 400),
+  /** 对话气泡图标模板匹配区域 [x, y, width, height] */
+  TALK_ICON: [1260, 300, 90, 550],
+  /** 对话选项OCR识别区域 */
+  DIALOG_OPTIONS_OCR: new rect(1250, 250, 550, 600),
+};
+
+/** UI界面相关区域常量 */
+export const UI_REGIONS = {
+  /** 冒险之证-委托标签区域 */
+  COMMISSION_TAB: new rect(260, 317, 89, 47),
+  /** 每日委托奖励区域 */
+  DAILY_COMMISSION_REWARD: new rect(427, 345, 142, 36),
+  /** 追踪按钮模板匹配区域 [x, y, width, height] */
+  TRACK_BUTTON: [1428, 965, 87, 86],
+  /** 剧情图标识别区域 [x, y, width, height] */
+  STORY_ICON: [265, 37, 30, 22],
+  /** F图标识别区域 [x, y, width, height] */
+  F_ICON: [1207, 0, 43, 850],
+  /** 主界面派蒙菜单搜索区域 [x, y, width, height] */
+  PAIMON_MENU_SEARCH: [0, 0, 500, 500],
+};
+
 /** OCR 识别区域坐标常量 */
 export const OCR_REGIONS = {
   /** 冒险之证 - 委托界面 - 委托名称 */

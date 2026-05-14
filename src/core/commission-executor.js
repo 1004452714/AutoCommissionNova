@@ -71,12 +71,6 @@ async function updateBranchCompletion(commissionName, context) {
  *
  * @param {Object} stepRegistry - 步骤处理器注册表
  * @returns {Promise<boolean>} 是否有委托执行成功
- *
- * @example
- * const success = await executeCommissionTracking(stepRegistry);
- * if (success) {
- *   console.log("至少完成一个委托");
- * }
  */
 export async function executeCommissionTracking(stepRegistry) {
   try {

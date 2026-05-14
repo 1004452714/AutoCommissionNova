@@ -9,4 +9,6 @@ export {
   THRESHOLDS,
   PATHS,
   OCR_REGIONS,
+  DIALOG_REGIONS,
+  UI_REGIONS,
 } from "./game-constants.js";

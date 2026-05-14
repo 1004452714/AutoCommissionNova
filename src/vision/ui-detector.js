@@ -2,19 +2,21 @@
  * UI 检测与操作工具
  * 使用 BvPage 检测游戏界面状态，提供通用 UI 操作
  */
-import { PATHS, COMMISSION_STATUS_REGIONS } from "../config/index.js";
+import { PATHS, COMMISSION_STATUS_REGIONS, UI_REGIONS } from "../config/index.js";
 
 /**
  * 检测是否在主界面
- * @returns {boolean}
+ * 
+ * 通过模板匹配派蒙菜单图标判断当前是否在游戏主界面
+ * 
+ * @returns {boolean} 是否在主界面
  */
 export function isInMainUI() {
-  const mat = file.ReadImageMatSync(PATHS.PAIMON_MENU_IMAGE);
   try {
-    const ro = RecognitionObject.TemplateMatch(mat, 0, 0, genshin.width / 3.0, genshin.width / 5.0);
+    const mat = file.ReadImageMatSync(PATHS.PAIMON_MENU_IMAGE);
+    const ro = RecognitionObject.TemplateMatch(mat, 0, 0, 500, 500);
     const page = new BvPage();
-    const results = page.Locator(ro).FindAll();
-    return results.count > 0;
+    return page.locator(ro).isExist();
   } finally {
     mat.Dispose();
   }
@@ -41,19 +43,18 @@ export async function detectCommissionStatusByImage(buttonIndex) {
 
 /**
  * 进入委托界面（F1快捷键 + 点击委托标签）
- * @returns {Promise<boolean>}
+ * 
+ * 通过 F1 键打开冒险之证，并点击委托标签进入委托界面
+ * 
+ * @returns {Promise<boolean>} 是否成功进入委托界面
  */
 export async function enterCommissionScreen() {
   try {
     const page = new BvPage();
-    const rect1 = new OpenCvSharp.OpenCvSharp.Rect(260, 317, 89, 47);
-    const rect2 = new OpenCvSharp.OpenCvSharp.Rect(427, 345, 142, 36);
-    
-    // 确保打开冒险之证界面
-    await page.Locator("委托", rect1).withRetryAction(() => keyPress("VK_F1")).waitFor();
-    
-    // 确保进入委托界面，否则点击委托标签进入
-    await page.Locator("每日委托奖励", rect2).withRetryAction(() => click(300, 350)).waitFor();
+
+    await page.Locator("委托", UI_REGIONS.COMMISSION_TAB).withRetryAction(() => keyPress("VK_F1")).waitFor();
+
+    await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(() => click(300, 350)).waitFor();
     log.info("已进入委托界面");
   } catch (error) {
     log.error("进入委托界面失败: {error}", error.message);
@@ -62,8 +63,11 @@ export async function enterCommissionScreen() {
 
 /**
  * 委托列表翻页（模拟鼠标拖拽）
+ * 
+ * 通过鼠标拖拽操作实现委托列表页面的滚动
+ * 
  * @param {number} scrollCount - 滚动次数
- * @returns {Promise<boolean>}
+ * @returns {Promise<boolean>} 是否成功
  */
 export async function pageScroll(scrollCount) {
   try {

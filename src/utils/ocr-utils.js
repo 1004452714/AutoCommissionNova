@@ -5,16 +5,7 @@
  * 适用于需要高性能 OCR 识别的场景，不需要手动管理截图资源
  * 
  * @param {Rect} rect - 区域（可选，默认全屏），类型为 OpenCvSharp.OpenCvSharp.Rect 实例
- * @returns {Array} OCR 结果列表
- * 
- * @example
- * // 使用 Rect 对象
- * const rect = new OpenCvSharp.OpenCvSharp.Rect(100, 200, 300, 50);
- * const results = bvPageOcrRegion(rect);
- * 
- * @example
- * // 全屏识别
- * const results = bvPageOcrRegion();
+ * @returns {BvPageOcrResult} OCR 结果对象
  */
 export function bvPageOcrRegion(rect) {
   const page = new BvPage();
@@ -32,10 +23,6 @@ export function bvPageOcrRegion(rect) {
  * 
  * @param {Rect} rect - 区域（可选，默认全屏），类型为 OpenCvSharp.OpenCvSharp.Rect 实例
  * @returns {string} 识别到的文本，未识别到返回空字符串
- * 
- * @example
- * const text = bvPageOcrRegionText(OCR_REGIONS.LOCATION);
- * console.log("识别结果:", text);
  */
 export function bvPageOcrRegionText(rect) {
   const results = bvPageOcrRegion(rect);

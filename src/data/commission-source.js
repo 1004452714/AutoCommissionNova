@@ -6,6 +6,7 @@ import { PATHS } from "../config/index.js";
 
 /**
  * 从 name.json 加载白名单
+ * 
  * @returns {Object} 白名单 { basic: [], npc: [] }
  */
 function loadWhitelist() {

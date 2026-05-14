@@ -2,7 +2,7 @@
  * 委托识别主模块
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
-import { COMMISSION_TYPE, OCR_REGIONS } from "../config/index.js";
+import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
 import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { detectCommissionStatusByImage } from "./status-detector.js";
@@ -84,6 +84,9 @@ export async function checkDetailPageEntered() {
  * 4. 进入详情页识别地点
  * 5. 获取委托地图坐标
  * 6. 退出详情页
+ *
+ * @param {Object} supportedCommissions - 支持的委托列表
+ * @returns {Promise<Array>} 委托信息数组
  */
 export async function recognizeCommissions(supportedCommissions) {
   try {
@@ -125,7 +128,7 @@ export async function recognizeCommissions(supportedCommissions) {
         log.info("查看第{id}个委托详情: {name}", id, standardizedName);
 
         //尝试点击委托的追踪按钮跳转到大地图，直到追踪按钮出现
-        const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...[1428, 965, 87, 86]);
+        const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...UI_REGIONS.TRACK_BUTTON);
         const trackLo = page.locator(trackRo);
         await trackLo.withRetryAction(async () => {
           const button = COMMISSION_POSITIONING_BUTTONS[i];
@@ -147,8 +150,7 @@ export async function recognizeCommissions(supportedCommissions) {
         commission.CommissionPosition = bigMapPosition;
 
         // 返回冒险之证-委托页面
-        const rect = new OpenCvSharp.OpenCvSharp.Rect(427, 345, 142, 36);
-        await page.Locator("每日委托奖励", rect).withRetryAction(async () => {
+        await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(async () => {
           log.info("尝试从地图返回委托页面");
           keyPress("VK_ESCAPE"); //关闭详情页
           await sleep(500);

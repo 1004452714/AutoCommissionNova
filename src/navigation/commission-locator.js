@@ -2,7 +2,7 @@
  * 委托目标查找模块
  * 在委托界面中查找指定委托并获取其地图位置
  */
-import { OCR_REGIONS } from "../config/index.js";
+import { OCR_REGIONS, UI_REGIONS } from "../config/index.js";
 import { bvPageOcrRegionText, enterCommissionScreen } from "../vision/index.js";
 import { findCommissionIndex, exitCommissionDetail, getCommissionPosition } from "../recognition/commission-scanner.js";
 
@@ -27,7 +27,7 @@ export async function findCommissionTarget(commissionName) {
 
     let currentCommissionPosition = null;
 
-    const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...[1428, 965, 87, 86]);
+    const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...UI_REGIONS.TRACK_BUTTON);
     const trackLo = page.locator(trackRo);
     await trackLo.withRetryAction(async () => {
       const button = COMMISSION_POSITIONING_BUTTONS[foundIndex];

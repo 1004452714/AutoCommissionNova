@@ -51,12 +51,6 @@ export async function scanCommissionAtPosition(positionIndex) {
  * 
  * @param {string} targetName - 目标委托名称
  * @returns {Promise<number>} 委托位置索引（0-3），未找到返回-1
- * 
- * @example
- * const index = await findCommissionIndex("语言交流");
- * if (index !== -1) {
- *   console.log("委托在第", index + 1, "个位置");
- * }
  */
 export async function findCommissionIndex(targetName) {
 
@@ -86,14 +80,6 @@ export async function findCommissionIndex(targetName) {
  * 
  * @param {number} [waitMs=1200] - 退出后等待的毫秒数，默认1200
  * @returns {Promise<void>}
- * 
- * @example
- * // 退出详情界面
- * await exitCommissionDetail();
- * 
- * @example
- * // 退出并等待2秒
- * await exitCommissionDetail(2000);
  */
 export async function exitCommissionDetail(waitMs = 1200) {
   keyDown("VK_ESCAPE");
@@ -109,12 +95,6 @@ export async function exitCommissionDetail(waitMs = 1200) {
  * 用于战斗委托流程的距离匹配
  * 
  * @returns {Promise<Object|null>} 坐标对象 {x, y}，失败返回null
- * 
- * @example
- * const position = await getCommissionPosition();
- * if (position) {
- *   console.log("委托坐标:", position.x, position.y);
- * }
  */
 export async function getCommissionPosition() {
   try {
