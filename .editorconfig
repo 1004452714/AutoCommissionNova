@@ -1,0 +1,31 @@
+# EditorConfig 配置文件
+# 用于统一代码格式规范
+
+root = true
+
+# JavaScript 文件
+[*.js]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JSON 文件
+[*.json]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# 文本文件
+[*.txt]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
