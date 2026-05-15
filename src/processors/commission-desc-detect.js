@@ -1,7 +1,7 @@
 /**
  * 委托描述检测步骤处理器
  */
-import { OCR_REGIONS, PATHS } from "../config/index.js";
+import { OCR_REGIONS } from "../config/index.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 
@@ -48,7 +48,7 @@ export function register(registry) {
                                 log.info("已插入 {count} 个后续步骤", nextSteps.length);
                             }
                         } else if (executeFile && runType === "path") {
-                            const filePath = PATHS.NPC_PROCESS_BASE + "/" + context.commissionName + "/" + context.location + "/" + executeFile;
+                            const filePath = context.resolveResource(executeFile);
                             try { await pathingScript.runFile(filePath); }
                             catch (error) { log.warn("未找到地图追踪文件: {path}", filePath); return false; }
                         }

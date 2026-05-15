@@ -1,21 +1,11 @@
 /**
  * 地图追踪步骤处理器
- * 支持NPC委托和Basic委托两种路径解析方式
+ * 路径通过 context.resolveResource 解析，自动适配 NPC / Basic 委托
  */
-import { PATHS } from "../config/index.js";
-
 export function register(registry) {
     registry.register("地图追踪", async function(step, context) {
         const scriptName = step.data || step;
-        let fullPath;
-
-        // 优先使用 processDir（Basic委托流程目录）
-        if (context.processDir) {
-            fullPath = context.processDir + "/" + scriptName;
-        } else {
-            // NPC委托路径：process/NPC/{委托名}/{地点}/
-            fullPath = PATHS.NPC_PROCESS_BASE + "/" + context.commissionName + "/" + context.location + "/" + scriptName;
-        }
+        const fullPath = context.resolveResource(scriptName);
 
         log.info("执行地图追踪: {path}", fullPath);
         try {

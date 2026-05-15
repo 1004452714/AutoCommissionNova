@@ -8,6 +8,22 @@
  *   locationDetected   — 位置检测命中标志（location-detection）
  *   detectedPosition   — 位置检测命中的坐标（location-detection）
  */
+import { COMMISSION_TYPE, PATHS } from "../config/index.js";
+
+/**
+ * 构造 resolveResource 解析器
+ * NPC 委托解析 process/NPC/{commissionName}/{location}/{filename}
+ * Basic 委托解析 {processDir}/{filename}
+ *
+ * 处理器只需调 context.resolveResource(filename) 取得绝对路径，
+ * 不再各自硬编码 PATHS.NPC_PROCESS_BASE 拼接逻辑
+ */
+function createResolveResource({ type, commissionName, location, processDir }) {
+    if (type === COMMISSION_TYPE.BASIC) {
+        return (filename) => processDir + "/" + filename;
+    }
+    return (filename) => PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + filename;
+}
 
 /**
  * 创建委托执行上下文
@@ -29,5 +45,6 @@ export function createCommissionContext({ type, commissionName, location, proces
         processDir,
         stepRegistry,
         currentIndex: 0,
+        resolveResource: createResolveResource({ type, commissionName, location, processDir }),
     };
 }
