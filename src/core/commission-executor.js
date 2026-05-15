@@ -128,10 +128,16 @@ export async function executeCommissionTracking(stepRegistry) {
                     }
                 }
                 else if (comm.type === COMMISSION_TYPE.BASIC) {
-                    const basicSuccess = await executeBasicCommission(comm, stepRegistry);
-                    if (basicSuccess) {
+                    const basicResult = await executeBasicCommission(comm, stepRegistry);
+                    if (basicResult.success) {
                         const completed = await isCompleted(comm.name);
-                        if (completed) { success = true; completedCount++; log.info("委托 {name} 已完成", comm.name); }
+                        if (completed) {
+                            success = true;
+                            completedCount++;
+                            log.info("委托 {name} 已完成", comm.name);
+                            // 更新分支完成进度
+                            await updateBranchCompletion(comm.name, basicResult.context);
+                        }
                         else { log.info("委托 {name} 未完成", comm.name); }
                     } else {
                         log.warn("Basic委托 {name} 执行失败，重试次数: {try}/{max}", comm.name, tryCount, MAX_COMMISSION_RETRY_COUNT);

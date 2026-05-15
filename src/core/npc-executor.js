@@ -2,8 +2,9 @@
  * NPC委托执行模块
  * 负责NPC委托的流程加载和执行
  */
-import { PATHS } from "../config/index.js";
+import { COMMISSION_TYPE, PATHS } from "../config/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
+import { createCommissionContext } from "./commission-context.js";
 
 /**
  * 读取并解析流程文件
@@ -76,18 +77,19 @@ async function executeUnifiedNpcProcess(processSteps, commissionName, location, 
         await findCommissionTarget(commissionName);
 
         // 在循环外部创建共享 context，使所有步骤可以跨步骤传递缓存数据
-        const sharedContext = {
+        const sharedContext = createCommissionContext({
+            type: COMMISSION_TYPE.NPC,
             commissionName,
             location,
             processSteps,
             stepRegistry,
-        };
+        });
 
         for (let i = 0; i < processSteps.length; i++) {
             try {
                 const step = processSteps[i];
                 log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
-                sharedContext.currentIndex = i + 1;
+                sharedContext.currentIndex = i;
                 await stepRegistry.process(step, sharedContext);
             } catch (stepError) {
                 log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
