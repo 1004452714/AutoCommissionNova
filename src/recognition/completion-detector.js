@@ -5,7 +5,7 @@
 import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
-import { detectCommissionStatusByImage } from "./status-detector.js";
+import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 
 /**
  * 检查指定委托是否已完成

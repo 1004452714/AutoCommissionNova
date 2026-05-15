@@ -2,13 +2,11 @@
  * 委托识别主模块
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
-import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
+import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS, COMMISSION_POSITIONING_BUTTONS, PATHS } from "../config/index.js";
 import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
-import { detectCommissionStatusByImage } from "./status-detector.js";
+import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 import { getCommissionPosition } from "./commission-scanner.js";
-import { COMMISSION_STATUS_REGIONS } from "../config/index.js";
-import { PATHS } from "../config/index.js";
 /**
  * 识别委托地点
  * @returns {Promise<string>} 地点名称

@@ -1,3 +1,4 @@
+.agents/*
 .vscode/*
 .idea/*
 .trae/*
@@ -8,3 +9,4 @@ CLAUDE.md
 AutoCommission - 副本/
 Data/commissions_data.json
 TODO
+skills-lock.json

@@ -87,6 +87,7 @@ export async function executeMainProcess(stepRegistry) {
         //执行委托
         await executeCommissionTracking(stepRegistry);
 
+        const setting = await getSetting();
         if (!setting.prepare) {
             log.info("前往安全地点");
             await genshin.tpToStatueOfTheSeven();

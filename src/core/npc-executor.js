@@ -85,8 +85,8 @@ async function executeUnifiedNpcProcess(processSteps, commissionName, location, 
 
         for (let i = 0; i < processSteps.length; i++) {
             try {
-                log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
                 const step = processSteps[i];
+                log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
                 sharedContext.currentIndex = i + 1;
                 await stepRegistry.process(step, sharedContext);
             } catch (stepError) {
