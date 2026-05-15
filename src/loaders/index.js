@@ -4,3 +4,4 @@
  */
 export { loadNpcProcessFile } from "./npc-process-loader.js";
 export { loadBasicProcess } from "./basic-process-loader.js";
+export { validateAllProcesses } from "./validate-processes.js";

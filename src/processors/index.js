@@ -44,8 +44,8 @@ const processors = [
 export function registerAllProcessors(registry) {
     for (const proc of processors) {
         const items = Array.isArray(proc) ? proc : [proc];
-        for (const { type, handler } of items) {
-            registry.register(type, handler);
+        for (const { type, handler, schema } of items) {
+            registry.register(type, handler, schema);
         }
     }
 }

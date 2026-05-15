@@ -72,6 +72,8 @@ function validateSchema(data, schema, stepType) {
     return { ok: true, value: result };
 }
 
+export { validateSchema };
+
 /**
  * 执行 run 函数，按 retry 配置自动重试
  * @returns {{ok: true, value: any} | {ok: false, error: Error}}
@@ -141,8 +143,8 @@ function buildHandler({ type, schema, run, swallow, retry, retryOn }) {
 export function defineStep({ type, types, schema, run, swallow = false, retry = 0, retryOn = "throw" }) {
     if (Array.isArray(types)) {
         const handler = buildHandler({ type: types[0], schema, run, swallow, retry, retryOn });
-        return types.map(t => ({ type: t, handler }));
+        return types.map(t => ({ type: t, handler, schema }));
     }
-    return { type, handler: buildHandler({ type, schema, run, swallow, retry, retryOn }) };
+    return { type, handler: buildHandler({ type, schema, run, swallow, retry, retryOn }), schema };
 }
 

@@ -1,5 +1,6 @@
 import { stepRegistry } from "./src/processors/registry.js";
 import { registerAllProcessors } from "./src/processors/index.js";
+import { validateAllProcesses } from "./src/loaders/index.js";
 import { executeMainProcess } from "./src/core/main-process.js";
 import { checkVersion } from "./src/version/check-version.js";
 import { runTestCommission } from "./src/core/test-runner.js";
@@ -10,6 +11,8 @@ registerAllProcessors(stepRegistry);
     try {
         //检查版本
         await checkVersion();
+        //静态校验所有流程文件
+        await validateAllProcesses(stepRegistry);
         //执行测试
         await runTestCommission();
         //执行主流程
