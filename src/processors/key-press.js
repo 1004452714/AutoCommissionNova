@@ -1,8 +1,9 @@
 /**
  * 按键步骤处理器
  */
-export function register(registry) {
-    registry.register("按键", async function(step, context) {
+export default {
+    type: "按键",
+    handler: async function(step, context) {
         if (!step.data) {
             log.warn("按键步骤缺少数据");
             return;
@@ -22,5 +23,5 @@ export function register(registry) {
                 keyPress(step.data.key);
             }
         }
-    });
-}
+    },
+};

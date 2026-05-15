@@ -9,8 +9,9 @@ import { calculateDistance } from "../navigation/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 
-export function register(registry) {
-    registry.register("地址检测", async function(step, context) {
+export default {
+    type: "地址检测",
+    handler: async function(step, context) {
         try {
             log.info("执行地址检测");
 
@@ -78,5 +79,5 @@ export function register(registry) {
             log.error("执行地址检测步骤时出错: {error}", error.message);
             throw error;
         }
-    });
-}
+    },
+};

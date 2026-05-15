@@ -1,8 +1,9 @@
 /**
  * 切换队伍步骤处理器
  */
-export function register(registry) {
-    registry.register("切换队伍", async function(step, context) {
+export default {
+    type: "切换队伍",
+    handler: async function(step, context) {
         try {
             log.info("执行切换队伍操作");
             if (!step.data) { log.warn("切换队伍步骤缺少数据"); return false; }
@@ -36,5 +37,5 @@ export function register(registry) {
             log.error("执行切换队伍步骤时出错: {error}", error.message);
             throw error;
         }
-    });
-}
+    },
+};

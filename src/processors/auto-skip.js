@@ -7,15 +7,20 @@ import { isInMainUI } from "../vision/ui-detector.js";
 import { bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 
-export function register(registry) {
-    registry.register("AutoSkip", async function(step, context) {
-        await executeAutoSkipLogic(step.data || {}, "AutoSkip");
-    });
-
-    registry.register("对话", async function(step, context) {
-        await executeDialogStep(step, context);
-    });
-}
+export default [
+    {
+        type: "AutoSkip",
+        handler: async function(step, context) {
+            await executeAutoSkipLogic(step.data || {}, "AutoSkip");
+        },
+    },
+    {
+        type: "对话",
+        handler: async function(step, context) {
+            await executeDialogStep(step, context);
+        },
+    },
+];
 
 /**
  * 执行优化的自动对话

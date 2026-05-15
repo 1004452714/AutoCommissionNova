@@ -27,8 +27,9 @@ function readAliases() {
     }
 }
 
-export function register(registry) {
-    registry.register("切换角色", async function(step, context) {
+export default {
+    type: "切换角色",
+    handler: async function(step, context) {
         try {
             log.info("执行切换角色操作");
             if (!step.data) { log.warn("切换角色步骤缺少数据"); return; }
@@ -150,8 +151,8 @@ export function register(registry) {
             log.error("执行切换角色步骤时出错: {error}", error.message);
             throw error;
         }
-    });
-}
+    },
+};
 
 async function scrollPage(totalDistance, stepDistance, delayMs) {
     stepDistance = stepDistance || 10;

@@ -1,8 +1,9 @@
 /**
  * 自动任务步骤处理器
  */
-export function register(registry) {
-    registry.register("自动任务", async function(step, context) {
+export default {
+    type: "自动任务",
+    handler: async function(step, context) {
         try {
             const action = step.data && step.data.action;
             const taskType = (step.data && step.data.taskType) || "default";
@@ -37,5 +38,5 @@ export function register(registry) {
             log.error("处理自动任务步骤时出错: {error}", error.message);
             return false;
         }
-    });
-}
+    },
+};

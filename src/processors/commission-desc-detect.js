@@ -5,8 +5,9 @@ import { OCR_REGIONS } from "../config/index.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 
-export function register(registry) {
-    registry.register("委托描述检测", async function(step, context) {
+export default {
+    type: "委托描述检测",
+    handler: async function(step, context) {
         try {
             log.info("执行委托描述检测");
 
@@ -66,5 +67,5 @@ export function register(registry) {
             log.error("执行委托描述检测步骤时出错: {error}", error.message);
             throw error;
         }
-    });
-}
+    },
+};

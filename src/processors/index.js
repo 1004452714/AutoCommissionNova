@@ -1,39 +1,40 @@
 /**
  * 步骤处理器汇总注册入口
- * 统一导入所有步骤处理器并注册到注册表
+ * 每个处理器文件 default export 单个 {type, handler} 或数组 [{type, handler}, ...]
+ * 新增处理器：实现文件后在此处 import + 加入 processors 数组即可
  */
-import { register as registerWait } from "./wait.js";
-import { register as registerWaitMainUi } from "./wait-main-ui.js";
-import { register as registerKeyPress } from "./key-press.js";
-import { register as registerKeyMouseScript } from "./key-mouse-script.js";
-import { register as registerMapTracking } from "./map-tracking.js";
-import { register as registerTeleport } from "./teleport.js";
-import { register as registerAutoSkip } from "./auto-skip.js";
-import { register as registerAutoFight } from "./auto-fight.js";
-import { register as registerAutoTask } from "./auto-task.js";
-import { register as registerSwitchTeam } from "./switch-team.js";
-import { register as registerSwitchRole } from "./switch-role.js";
-import { register as registerCommissionTracking } from "./commission-tracking.js";
-import { register as registerLocationDetection } from "./location-detection.js";
-import { register as registerCommissionDescDetect } from "./commission-desc-detect.js";
-import { register as registerUserBranchSelect } from "./user-branch-select.js";
+import wait from "./wait.js";
+import waitMainUi from "./wait-main-ui.js";
+import keyPress from "./key-press.js";
+import keyMouseScript from "./key-mouse-script.js";
+import mapTracking from "./map-tracking.js";
+import teleport from "./teleport.js";
+import autoSkip from "./auto-skip.js";
+import autoFight from "./auto-fight.js";
+import autoTask from "./auto-task.js";
+import switchTeam from "./switch-team.js";
+import switchRole from "./switch-role.js";
+import commissionTracking from "./commission-tracking.js";
+import locationDetection from "./location-detection.js";
+import commissionDescDetect from "./commission-desc-detect.js";
+import userBranchSelect from "./user-branch-select.js";
 
-const allProcessors = [
-    registerWait,
-    registerWaitMainUi,
-    registerKeyPress,
-    registerKeyMouseScript,
-    registerMapTracking,
-    registerTeleport,
-    registerAutoSkip,
-    registerAutoFight,
-    registerAutoTask,
-    registerSwitchTeam,
-    registerSwitchRole,
-    registerCommissionTracking,
-    registerLocationDetection,
-    registerCommissionDescDetect,
-    registerUserBranchSelect,
+const processors = [
+    wait,
+    waitMainUi,
+    keyPress,
+    keyMouseScript,
+    mapTracking,
+    teleport,
+    autoSkip,
+    autoFight,
+    autoTask,
+    switchTeam,
+    switchRole,
+    commissionTracking,
+    locationDetection,
+    commissionDescDetect,
+    userBranchSelect,
 ];
 
 /**
@@ -41,7 +42,10 @@ const allProcessors = [
  * @param {Object} registry - StepProcessorRegistry 实例
  */
 export function registerAllProcessors(registry) {
-    for (const registerFn of allProcessors) {
-        registerFn(registry);
+    for (const proc of processors) {
+        const items = Array.isArray(proc) ? proc : [proc];
+        for (const { type, handler } of items) {
+            registry.register(type, handler);
+        }
     }
 }

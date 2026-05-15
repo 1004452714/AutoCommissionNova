@@ -31,8 +31,9 @@ function getBranchName(descriptions, branchKey) {
  */
 import { PATHS } from "../config/index.js";
 
-export function register(registry) {
-    registry.register("用户分支选择", async function(step, context) {
+export default {
+    type: "用户分支选择",
+    handler: async function(step, context) {
         try {
             // 1. 读取或获取缓存的配置文件
             let config;
@@ -54,50 +55,50 @@ export function register(registry) {
                     context.branchConfigCache = config;
                 }
             }
-      
+
             // 2. 查找当前委托配置
             const commissionConfig = config[context.commissionName];
             const descriptions = commissionConfig ? commissionConfig.descriptions : {};
-      
+
             // 3. 获取默认分支（用户配置优先，step 定义次之）
             let defaultBranch = null;
-      
+
             // 先查找用户配置的 default
             if (commissionConfig && commissionConfig.default) {
                 defaultBranch = commissionConfig.default;
                 const branchName = getBranchName(descriptions, defaultBranch);
                 log.debug("使用用户配置的默认分支: {branch}", branchName);
-            } 
+            }
             // 再查找 step 定义的 default
             else if (step.default) {
                 defaultBranch = step.default;
                 const branchName = getBranchName(descriptions, defaultBranch);
                 log.debug("使用step定义的默认分支: {branch}", branchName);
             }
-      
+
             if (!defaultBranch) {
                 log.warn("未设置默认分支（用户配置和step均未设置）");
             }
-      
+
             // 4. 确定要执行的分支
             let selectedBranches = [];
             let completed = [];
-      
+
             if (commissionConfig) {
                 selectedBranches = commissionConfig.selected || [];
                 completed = commissionConfig.completed || [];
             }
-      
+
             // 确保 selected 是数组
             if (!Array.isArray(selectedBranches)) {
                 selectedBranches = [selectedBranches];
             }
-      
+
             // 过滤出未完成的分支
             const unfinishedBranches = selectedBranches.filter(
                 branch => !completed.includes(branch)
             );
-      
+
             // 确定最终要执行的分支
             let branchToExecute;
             if (unfinishedBranches.length === 0) {
@@ -116,7 +117,7 @@ export function register(registry) {
                 const branchName = getBranchName(descriptions, branchToExecute);
                 log.info("选择第一个未完成的分支: {branch}", branchName);
             }
-      
+
             // 5. 执行分支的 step
             const branchStep = step.data[branchToExecute];
             if (!branchStep) {
@@ -124,19 +125,19 @@ export function register(registry) {
                 log.warn("未找到分支 {branch} 的step定义", branchName);
                 return;
             }
-      
+
             const branchName = getBranchName(descriptions, branchToExecute);
             log.info("执行用户选择的分支: {branch}", branchName);
             await context.stepRegistry.process(branchStep, context);
-      
+
             // 记录当前执行的分支到context中，用于委托完成时更新进度
             if (!context.executedBranches) {
                 context.executedBranches = [];
             }
             context.executedBranches.push(branchToExecute);
-      
+
         } catch (error) {
             log.error("执行用户分支选择步骤时出错: {error}", error.message);
         }
-    });
-}
+    },
+};
