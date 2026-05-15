@@ -2,17 +2,14 @@
  * 键鼠脚本步骤处理器
  * 路径通过 context.resolveResource 解析，自动适配 NPC / Basic 委托
  */
-export default {
+import { defineStep } from "./define-step.js";
+
+export default defineStep({
     type: "键鼠脚本",
-    handler: async function(step, context) {
+    run: async (step, context) => {
         log.info("执行键鼠脚本: {path}", step.data);
         const fullPath = context.resolveResource(step.data);
-        try {
-            await keyMouseScript.runFile(fullPath);
-            log.info("键鼠脚本执行完成");
-        } catch (error) {
-            log.error("执行键鼠脚本时出错: {error}", error.message);
-            throw error;
-        }
+        await keyMouseScript.runFile(fullPath);
+        log.info("键鼠脚本执行完成");
     },
-};
+});

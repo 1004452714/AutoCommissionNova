@@ -1,6 +1,8 @@
 /**
  * 等待步骤处理器
  */
+import { defineStep } from "./define-step.js";
+
 function resolveWaitTime(data) {
     if (typeof data === "number") return data;
     if (typeof data === "string") return parseInt(data) || 1000;
@@ -8,11 +10,11 @@ function resolveWaitTime(data) {
     return 1000;
 }
 
-export default {
+export default defineStep({
     type: "等待",
-    handler: async function(step, context) {
+    run: async (step, context) => {
         const waitTime = resolveWaitTime(step.data);
         log.info("等待 {time}ms", waitTime);
         await sleep(waitTime);
     },
-};
+});

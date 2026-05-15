@@ -2,8 +2,9 @@
  * 等待返回主界面步骤处理器
  */
 import { isInMainUI } from "../vision/ui-detector.js";
+import { defineStep } from "./define-step.js";
 
-const handler = async function(step, context) {
+const run = async (step, context) => {
     log.info("等待返回主界面");
     let maxWaitTime = 120000;
     let checkInterval = 1000;
@@ -27,7 +28,7 @@ const handler = async function(step, context) {
     }
 };
 
-export default [
-    { type: "等待返回主界面", handler },
-    { type: "等待主界面", handler },
-];
+export default defineStep({
+    types: ["等待返回主界面", "等待主界面"],
+    run,
+});

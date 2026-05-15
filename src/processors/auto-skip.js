@@ -7,19 +7,21 @@ import { isInMainUI } from "../vision/ui-detector.js";
 import { bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 
+import { defineStep } from "./define-step.js";
+
 export default [
-    {
+    defineStep({
         type: "AutoSkip",
-        handler: async function(step, context) {
+        run: async (step, context) => {
             await executeAutoSkipLogic(step.data || {}, "AutoSkip");
         },
-    },
-    {
+    }),
+    defineStep({
         type: "对话",
-        handler: async function(step, context) {
+        run: async (step, context) => {
             await executeDialogStep(step, context);
         },
-    },
+    }),
 ];
 
 /**

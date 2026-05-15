@@ -2,6 +2,7 @@
  * 切换角色步骤处理器
  */
 import { PATHS, POSITION_COORDINATES } from "../config/index.js";
+import { defineStep } from "./define-step.js";
 
 /**
  * 读取角色别名映射表
@@ -27,9 +28,9 @@ function readAliases() {
     }
 }
 
-export default {
+export default defineStep({
     type: "切换角色",
-    handler: async function(step, context) {
+    run: async (step, context) => {
         try {
             log.info("执行切换角色操作");
             if (!step.data) { log.warn("切换角色步骤缺少数据"); return; }
@@ -152,7 +153,7 @@ export default {
             throw error;
         }
     },
-};
+});
 
 async function scrollPage(totalDistance, stepDistance, delayMs) {
     stepDistance = stepDistance || 10;

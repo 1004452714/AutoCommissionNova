@@ -4,10 +4,11 @@
 import { OCR_REGIONS } from "../config/index.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
+import { defineStep } from "./define-step.js";
 
-export default {
+export default defineStep({
     type: "委托描述检测",
-    handler: async function(step, context) {
+    run: async (step, context) => {
         try {
             log.info("执行委托描述检测");
 
@@ -68,4 +69,4 @@ export default {
             throw error;
         }
     },
-};
+});

@@ -1,9 +1,11 @@
 /**
  * 按键步骤处理器
  */
-export default {
+import { defineStep } from "./define-step.js";
+
+export default defineStep({
     type: "按键",
-    handler: async function(step, context) {
+    run: async (step, context) => {
         if (!step.data) {
             log.warn("按键步骤缺少数据");
             return;
@@ -24,4 +26,4 @@ export default {
             }
         }
     },
-};
+});
