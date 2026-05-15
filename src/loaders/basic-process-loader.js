@@ -1,10 +1,10 @@
 /**
- * Basic流程加载器模块
- * 负责加载并解析 process.json 流程文件
+ * Basic 委托流程文件加载器
+ * 加载并解析 process.json 流程文件
  */
 
 /**
- * 加载并解析流程文件
+ * 加载并解析 Basic 流程文件
  * @param {string} processPath - 流程文件路径
  * @returns {Promise<Array|false>} 步骤数组，失败返回 false
  */

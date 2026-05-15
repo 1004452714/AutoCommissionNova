@@ -3,7 +3,7 @@
  */
 import { OCR_REGIONS, PATHS } from "../config/index.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
-import { loadNpcProcessFile } from "../core/npc-executor.js";
+import { loadNpcProcessFile } from "../loaders/index.js";
 
 export function register(registry) {
     registry.register("委托描述检测", async function(step, context) {

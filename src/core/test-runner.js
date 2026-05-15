@@ -6,7 +6,7 @@
  */
 import {  PATHS } from "../config/index.js";
 import { prepareForCommission } from "./main-process.js";
-import { loadNpcProcessFile } from "./npc-executor.js";
+import { loadNpcProcessFile } from "../loaders/index.js";
 import { buildTestContext, executeProcessSteps } from "./process-executor.js";
 
 /**

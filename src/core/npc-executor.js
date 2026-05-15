@@ -2,43 +2,10 @@
  * NPC委托执行模块
  * 负责NPC委托的流程加载和执行
  */
-import { COMMISSION_TYPE, PATHS } from "../config/index.js";
+import { COMMISSION_TYPE } from "../config/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
+import { loadNpcProcessFile } from "../loaders/index.js";
 import { createCommissionContext } from "./commission-context.js";
-
-/**
- * 读取并解析流程文件
- *
- * 从指定路径加载并解析流程文件
- * 支持JSON数组格式和纯文本行格式
- *
- * @param {string} commissionName - 委托名称
- * @param {string} location - 委托地点
- * @param {string} processFileName - 流程文件名，默认为"process.json"
- * @returns {Promise<Array|false>} 步骤数组，失败返回false
- */
-export async function loadNpcProcessFile(commissionName, location, processFileName = "process.json") {
-    const processFilePath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFileName;
-    try {
-        const processContent = file.readTextSync(processFilePath);
-        log.info("找到NPC委托流程文件: {path}", processFilePath);
-        try {
-            const jsonData = JSON.parse(processContent);
-            if (Array.isArray(jsonData)) {
-                log.debug("JSON流程解析成功");
-                return jsonData;
-            }
-            log.error("JSON流程格式错误，应为数组");
-            return false;
-        } catch (jsonError) {
-            const lines = processContent.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-            return lines;
-        }
-    } catch (error) {
-        log.warn("未找到NPC委托 {name} 在 {location} 的流程文件: {path}", commissionName, location, processFilePath);
-        return false;
-    }
-}
 
 /**
  * 执行NPC委托

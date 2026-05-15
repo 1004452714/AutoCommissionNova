@@ -4,7 +4,7 @@
  */
 import { COMMISSION_TYPE } from "../config/index.js";
 import { findNearestBasicProcess } from "./basic-process-matcher.js";
-import { loadBasicProcess } from "./basic-process-loader.js";
+import { loadBasicProcess } from "../loaders/index.js";
 import { createCommissionContext } from "./commission-context.js";
 
 /**

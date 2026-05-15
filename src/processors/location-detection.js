@@ -7,7 +7,7 @@
  */
 import { calculateDistance } from "../navigation/index.js";
 import { findCommissionTarget } from "../navigation/index.js";
-import { loadNpcProcessFile } from "../core/npc-executor.js";
+import { loadNpcProcessFile } from "../loaders/index.js";
 
 export function register(registry) {
     registry.register("地址检测", async function(step, context) {
