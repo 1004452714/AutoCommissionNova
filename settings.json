@@ -27,5 +27,11 @@
             "默认",
             "测试"
         ]
+    },
+    {
+        "name": "showConfigEditor",
+        "type": "checkbox",
+        "label": "启动时显示分支配置面板",
+        "default": true
     }
 ]

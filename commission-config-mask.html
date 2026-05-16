@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>委托分支配置工具</title>
+  <style>
+    :root {
+      --bg-primary: rgba(40, 40, 40, 0.92);
+      --bg-secondary: rgba(30, 30, 30, 0.92);
+      --bg-tertiary: rgba(60, 60, 60, 0.85);
+      --bg-item: rgba(255, 255, 255, 0.05);
+      --text-primary: #f0f0f0;
+      --text-secondary: #c0c0c0;
+      --text-tertiary: #888888;
+      --border-color: rgba(255, 255, 255, 0.12);
+      --accent-color: #4a90d9;
+      --accent-hover: #357abd;
+      --success-color: #27ae60;
+      --warning-color: #f39c12;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --sidebar-width: 240px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      font-family: "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: rgba(0, 0, 0, 0.3);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: background-color 0.2s;
+    }
+
+    /* 主容器：70vw x 70vh */
+    .app-container {
+      width: 70vw;
+      height: 70vh;
+      display: flex;
+      background-color: rgba(20, 20, 20, 0.6);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+      width: var(--sidebar-width);
+      background-color: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 7px 10px 7px 26px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: rgba(0, 0, 0, 0.3);
+      color: var(--text-primary);
+      font-size: 13px;
+      transition: border-color 0.2s;
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 9px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      color: var(--text-tertiary);
+      pointer-events: none;
+    }
+
+    .commission-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .commission-item {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background-color 0.15s;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+    }
+
+    .commission-item:hover {
+      background-color: rgba(26, 115, 232, 0.18);
+      color: var(--text-primary);
+    }
+
+    .commission-item.active {
+      background-color: rgba(26, 115, 232, 0.32);
+      color: #ffffff;
+      border-color: var(--accent-color);
+    }
+
+    .commission-name {
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .commission-progress {
+      font-size: 11px;
+      opacity: 0.75;
+      margin-left: 8px;
+      flex-shrink: 0;
+    }
+
+    .empty-state {
+      padding: 30px 16px;
+      text-align: center;
+      color: var(--text-tertiary);
+      font-size: 13px;
+    }
+
+    /* 主内容区 */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-color: var(--bg-primary);
+    }
+
+    .toolbar {
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background-color: rgba(0, 0, 0, 0.2);
+      min-height: 44px;
+    }
+
+    .toolbar-hint {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
+    }
+
+    .save-indicator {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      transition: color 0.2s;
+    }
+
+    .save-indicator.saving {
+      color: var(--warning-color);
+    }
+
+    .save-indicator.saved {
+      color: var(--success-color);
+    }
+
+    .save-indicator.error {
+      color: #e74c3c;
+    }
+
+    .btn-close {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+      background-color: var(--success-color);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background-color 0.15s, transform 0.1s;
+    }
+
+    .btn-close:hover {
+      background-color: #1e8e4e;
+    }
+
+    .btn-close:active {
+      transform: scale(0.97);
+    }
+
+    .btn-close:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+    }
+
+    .detail-panel {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .detail-header {
+      margin-bottom: 18px;
+    }
+
+    .detail-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+
+    .note-section {
+      background-color: var(--bg-item);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+    }
+
+    .note-label {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .note-content {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .branches-section {
+      background-color: var(--bg-item);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-primary);
+    }
+
+    .branch-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .branch-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background-color: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      transition: border-color 0.2s;
+    }
+
+    .branch-item:hover {
+      border-color: var(--accent-color);
+    }
+
+    .branch-item.completed {
+      background-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .branch-content {
+      flex: 1;
+    }
+
+    .branch-description {
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .branch-item.completed .branch-description {
+      text-decoration: line-through;
+      color: var(--text-tertiary);
+    }
+
+    .branch-toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toggle-status-label {
+      font-size: 12px;
+      font-weight: 500;
+      min-width: 44px;
+      text-align: right;
+    }
+
+    .toggle-status-label.pending {
+      color: var(--text-tertiary);
+    }
+
+    .toggle-status-label.completed {
+      color: var(--success-color);
+    }
+
+    /* 二态滑块开关 */
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 11px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch.pending {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .toggle-switch.pending::after {
+      transform: translateX(2px);
+    }
+
+    .toggle-switch.completed {
+      background-color: var(--success-color);
+    }
+
+    .toggle-switch.completed::after {
+      transform: translateX(20px);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      top: 2px;
+      left: 0;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .all-completed-section {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .all-completed-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .all-completed-select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 13px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: rgba(0, 0, 0, 0.35);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .all-completed-select option {
+      background-color: #2a2a2a;
+      color: var(--text-primary);
+    }
+
+    .all-completed-select:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    /* 空状态 */
+    .empty-detail {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-tertiary);
+      text-align: center;
+    }
+
+    .empty-detail-icon {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 14px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--text-tertiary);
+    }
+
+    .empty-detail-text {
+      font-size: 14px;
+    }
+
+    /* 状态栏 */
+    .status-bar {
+      padding: 6px 18px;
+      border-top: 1px solid var(--border-color);
+      background-color: rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container" id="appContainer">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">委托分支配置</div>
+        <div class="search-box">
+          <span class="search-icon">Q</span>
+          <input type="text" id="searchInput" placeholder="搜索委托...">
+        </div>
+      </div>
+      <div class="commission-list" id="commissionList"></div>
+    </aside>
+
+    <main class="main-content">
+      <div class="toolbar">
+        <div class="toolbar-hint">按 ~ 键切换显示 / 隐藏</div>
+        <div class="toolbar-right">
+          <span class="save-indicator" id="saveIndicator">就绪</span>
+          <button class="btn-close" id="closeBtn" type="button">关闭并继续</button>
+        </div>
+      </div>
+
+      <div class="content-area" id="contentArea"></div>
+
+      <div class="status-bar">
+        <span id="commissionCount">共 0 个委托</span>
+        <span id="filePath">commission-branches.json</span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const AppState = {
+      data: {},
+      selectedCommission: null,
+      loaded: false
+    };
+
+    const elements = {
+      appContainer: document.getElementById('appContainer'),
+      commissionList: document.getElementById('commissionList'),
+      contentArea: document.getElementById('contentArea'),
+      searchInput: document.getElementById('searchInput'),
+      saveIndicator: document.getElementById('saveIndicator'),
+      commissionCount: document.getElementById('commissionCount'),
+      closeBtn: document.getElementById('closeBtn')
+    };
+
+    let saveTimer = null;
+
+    function init() {
+      bindEvents();
+      renderCommissionList();
+      renderEmptyState();
+    }
+
+    function bindEvents() {
+      elements.searchInput.addEventListener('input', renderCommissionList);
+      elements.closeBtn.addEventListener('click', requestClose);
+    }
+
+    // 关闭面板:先确保挂起的保存完成,再请求主机关闭窗口
+    async function requestClose() {
+      if (!window.htmlMask) return;
+
+      elements.closeBtn.disabled = true;
+
+      // 若有挂起的防抖保存,立即触发并等待完成
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        try {
+          await saveConfigNow();
+        } catch (e) {
+          // 保存失败也允许关闭,避免用户卡住
+          console.error('关闭前保存失败:', e);
+        }
+      }
+
+      try {
+        await window.htmlMask.request('/close', {});
+      } catch (err) {
+        console.error('关闭请求失败:', err);
+        elements.closeBtn.disabled = false;
+      }
+    }
+
+    // 规范化每个委托的字段
+    function normalizeData(data) {
+      Object.values(data || {}).forEach(commission => {
+        if (!commission.type) commission.type = 'achievement';
+        if (commission.default === undefined) commission.default = null;
+        if (!Array.isArray(commission.selected)) commission.selected = [];
+        if (!Array.isArray(commission.completed)) commission.completed = [];
+        if (!commission.descriptions || typeof commission.descriptions !== 'object') {
+          commission.descriptions = {};
+        }
+        if (typeof commission.note !== 'string') commission.note = '';
+      });
+      return data;
+    }
+
+    function setSaveStatus(state, text) {
+      elements.saveIndicator.className = 'save-indicator ' + (state || '');
+      elements.saveIndicator.textContent = text;
+    }
+
+    // 防抖保存:状态变化后 300ms 内无新修改则触发保存
+    function scheduleSave() {
+      setSaveStatus('saving', '修改中...');
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        saveTimer = null;
+        saveConfigNow().catch(err => console.error('保存失败:', err));
+      }, 300);
+    }
+
+    function saveConfigNow() {
+      if (!window.htmlMask) {
+        setSaveStatus('error', '运行环境不支持保存');
+        return Promise.reject(new Error('no htmlMask'));
+      }
+      setSaveStatus('saving', '保存中...');
+      const content = JSON.stringify(AppState.data, null, 4);
+      return window.htmlMask.request('/saveConfig', { content: content })
+        .then(function () {
+          setSaveStatus('saved', '已保存');
+        })
+        .catch(function (err) {
+          setSaveStatus('error', '保存失败');
+          throw err;
+        });
+    }
+
+    function renderEmptyState() {
+      if (!AppState.loaded) {
+        elements.contentArea.innerHTML =
+          '<div class="empty-detail">' +
+            '<div class="empty-detail-icon">...</div>' +
+            '<div class="empty-detail-text">正在加载配置文件...</div>' +
+          '</div>';
+      } else {
+        elements.contentArea.innerHTML =
+          '<div class="empty-detail">' +
+            '<div class="empty-detail-icon">[=]</div>' +
+            '<div class="empty-detail-text">请从左侧选择一个委托进行编辑</div>' +
+          '</div>';
+      }
+    }
+
+    function renderCommissionList() {
+      if (!AppState.loaded) {
+        elements.commissionList.innerHTML = '<div class="empty-state">正在加载...</div>';
+        elements.commissionCount.textContent = '共 0 个委托';
+        return;
+      }
+
+      const searchTerm = elements.searchInput.value.toLowerCase();
+      const commissions = Object.entries(AppState.data)
+        .filter(([name]) => name.toLowerCase().includes(searchTerm))
+        .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'));
+
+      if (commissions.length === 0) {
+        elements.commissionList.innerHTML =
+          '<div class="empty-state">' + (searchTerm ? '未找到匹配的委托' : '暂无委托') + '</div>';
+      } else {
+        elements.commissionList.innerHTML = commissions.map(([name, config]) => {
+          const totalBranches = Object.keys(config.descriptions || {}).length;
+          const completedBranches = (config.completed || []).length;
+          const isActive = name === AppState.selectedCommission;
+          return '<div class="commission-item ' + (isActive ? 'active' : '') + '" data-name="' + escapeHtml(name) + '">' +
+                   '<span class="commission-name">' + escapeHtml(name) + '</span>' +
+                   '<span class="commission-progress">' + completedBranches + '/' + totalBranches + '</span>' +
+                 '</div>';
+        }).join('');
+
+        elements.commissionList.querySelectorAll('.commission-item').forEach(item => {
+          item.addEventListener('click', () => selectCommission(item.dataset.name));
+        });
+      }
+
+      elements.commissionCount.textContent = '共 ' + commissions.length + ' 个委托';
+    }
+
+    function selectCommission(name) {
+      AppState.selectedCommission = name;
+      renderCommissionList();
+      renderDetailPanel();
+    }
+
+    function renderDetailPanel() {
+      if (!AppState.selectedCommission || !AppState.data[AppState.selectedCommission]) {
+        renderEmptyState();
+        return;
+      }
+
+      const name = AppState.selectedCommission;
+      const config = AppState.data[name];
+      const branches = Object.entries(config.descriptions || {});
+      const commissionType = config.type || 'achievement';
+
+      const allCompletedOptions = branches.map(([branchId, description]) => {
+        const selected = config.default === branchId ? 'selected' : '';
+        return '<option value="' + escapeHtml(branchId) + '" ' + selected + '>' + escapeHtml(description) + '</option>';
+      }).join('');
+
+      const allCompletedLabel = commissionType === 'basic' ? '选择分支' : '全部完成时默认分支';
+
+      let branchesHtml = '';
+      if (commissionType === 'achievement') {
+        if (branches.length === 0) {
+          branchesHtml =
+            '<div class="section-title">分支配置</div>' +
+            '<div style="color: var(--text-tertiary); text-align: center; padding: 20px;">暂无分支配置</div>';
+        } else {
+          const items = branches.map(([branchId, description]) => {
+            const isCompleted = (config.completed || []).includes(branchId);
+            const stateClass = isCompleted ? 'completed' : 'pending';
+            const stateLabel = isCompleted ? '已完成' : '未完成';
+            return '<div class="branch-item ' + (isCompleted ? 'completed' : '') + '">' +
+                     '<div class="branch-content">' +
+                       '<div class="branch-description">' + escapeHtml(description) + '</div>' +
+                     '</div>' +
+                     '<div class="branch-toggle-wrapper">' +
+                       '<span class="toggle-status-label ' + stateClass + '">' + stateLabel + '</span>' +
+                       '<div class="toggle-switch ' + stateClass + '" data-branch-id="' + escapeHtml(branchId) + '" title="点击切换状态"></div>' +
+                     '</div>' +
+                   '</div>';
+          }).join('');
+          branchesHtml = '<div class="section-title">分支配置</div><div class="branch-list">' + items + '</div>';
+        }
+      }
+
+      elements.contentArea.innerHTML =
+        '<div class="detail-panel">' +
+          '<div class="detail-header">' +
+            '<div class="detail-title">' + escapeHtml(name) + '</div>' +
+          '</div>' +
+          (config.note ?
+            '<div class="note-section">' +
+              '<div class="note-label">说明</div>' +
+              '<div class="note-content">' + config.note + '</div>' +
+            '</div>' : '') +
+          '<div class="branches-section">' +
+            branchesHtml +
+            '<div class="all-completed-section">' +
+              '<div class="all-completed-label">' + allCompletedLabel + '</div>' +
+              '<select class="all-completed-select" id="allCompletedSelect">' +
+                '<option value="">-- 请选择 --</option>' +
+                allCompletedOptions +
+              '</select>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      // 绑定事件
+      elements.contentArea.querySelectorAll('.toggle-switch[data-branch-id]').forEach(sw => {
+        sw.addEventListener('click', () => toggleBranchState(sw.dataset.branchId));
+      });
+      const select = document.getElementById('allCompletedSelect');
+      if (select) {
+        select.addEventListener('change', e => updateAllCompleted(e.target.value));
+      }
+    }
+
+    function updateAllCompleted(branchId) {
+      const config = AppState.data[AppState.selectedCommission];
+      config.default = branchId || null;
+      scheduleSave();
+    }
+
+    function toggleBranchState(branchId) {
+      const config = AppState.data[AppState.selectedCommission];
+      if (!config.completed) config.completed = [];
+
+      const isCompleted = config.completed.includes(branchId);
+      if (isCompleted) {
+        config.completed = config.completed.filter(id => id !== branchId);
+      } else {
+        config.completed.push(branchId);
+      }
+
+      renderCommissionList();
+      renderDetailPanel();
+      scheduleSave();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text == null ? '' : String(text);
+      return div.innerHTML;
+    }
+
+    // 应用可见性切换
+    function applyVisibility(visible) {
+      elements.appContainer.style.display = visible ? 'flex' : 'none';
+      document.body.style.backgroundColor = visible
+        ? 'rgba(0, 0, 0, 0.3)'
+        : 'rgba(0, 0, 0, 0)';
+    }
+
+    // 接收主机消息
+    window.addEventListener('DOMContentLoaded', function () {
+      init();
+
+      if (window.htmlMask) {
+        window.htmlMask.onMessage = function (message) {
+          if (message.url === '/loadConfig') {
+            const payload = message.data && message.data.data ? message.data.data : message.data;
+            AppState.data = normalizeData(payload || {});
+            AppState.loaded = true;
+            AppState.selectedCommission = null;
+            setSaveStatus('saved', '已加载');
+            renderCommissionList();
+            renderEmptyState();
+          } else if (message.url === '/toggleVisibility') {
+            const visible = message.data && message.data.visible !== false;
+            applyVisibility(visible);
+          }
+        };
+
+        // 启动时请求加载配置
+        window.htmlMask.request('/loadConfig', {}).catch(function (err) {
+          setSaveStatus('error', '加载失败');
+          console.error('加载配置失败:', err);
+        });
+      } else {
+        setSaveStatus('error', '未在 htmlMask 环境中');
+      }
+    });
+  </script>
+</body>
+</html>

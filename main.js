@@ -5,6 +5,7 @@ import { executeMainProcess } from "./src/core/main-process.js";
 import { checkVersion } from "./src/version/check-version.js";
 import { runTestCommission } from "./src/core/test-runner.js";
 import { getSetting } from "./src/utils/settings-utils.js";
+import { openCommissionConfigEditor } from "./src/core/commission-config-editor.js";
 
 registerAllProcessors(stepRegistry);
 
@@ -14,9 +15,15 @@ registerAllProcessors(stepRegistry);
         await checkVersion();
         //静态校验所有流程文件
         await validateAllProcesses(stepRegistry);
-        
+
         //获取设置判断运行模式
         const setting = await getSetting();
+
+        //根据设置决定是否打开分支配置面板,阻塞至用户关闭
+        if (setting.showConfigEditor) {
+            await openCommissionConfigEditor();
+        }
+
         if (setting.runMode === "测试") {
             //执行测试
             await runTestCommission();
@@ -24,7 +31,7 @@ registerAllProcessors(stepRegistry);
             //执行主流程
             await executeMainProcess(stepRegistry);
         }
-        
+
         log.info("自动委托执行完毕");
     } catch (error) {
         log.error("自动委托执行过程中发生错误: {error}", error.message);

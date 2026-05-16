@@ -14,7 +14,9 @@ export async function getSetting() {
         const team = settings.team || "";
         const elementTeam = settings.elementTeam || "";
         const runMode = settings.runMode || "默认";
-        const result = { skipRecognition, prepare, team, elementTeam, runMode };
+        // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
+        const showConfigEditor = settings.showConfigEditor !== false;
+        const result = { skipRecognition, prepare, team, elementTeam, runMode, showConfigEditor };
         log.debug("setting:{index}", result);
         return result;
     } catch (error) {
@@ -25,6 +27,7 @@ export async function getSetting() {
             team: "",
             elementTeam: "",
             runMode: "默认",
+            showConfigEditor: true,
         };
     }
 }
