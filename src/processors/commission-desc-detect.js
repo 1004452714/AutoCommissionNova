@@ -1,10 +1,31 @@
 /**
  * 委托描述检测步骤处理器
  */
-import { OCR_REGIONS } from "../config/index.js";
+import { OCR_REGIONS, THRESHOLDS } from "../config/index.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 import { defineStep } from "./define-step.js";
+import { standardizeCommissionName } from "../recognition/commission-standardizer.js";
+import { calculateSimilarity } from "../recognition/text-similarity.js";
+import { cleanText } from "../utils/text-utils.js";
+
+/**
+ * 比较 OCR 识别的描述文本与期望描述
+ * 先用 cleanText 去掉空白与标点，再用编辑距离判断相似度
+ * @param {string} ocrText - OCR 原始识别文本
+ * @param {string} expected - 期望描述（用户配置）
+ * @param {boolean} useKeyword - true 表示关键字子串匹配（清理后的子串包含），false 表示整段相似度匹配
+ * @returns {boolean}
+ */
+function matchesDescription(ocrText, expected, useKeyword) {
+    const cleanedOcr = cleanText(ocrText);
+    const cleanedExpected = cleanText(expected);
+    if (!cleanedExpected) return false;
+    if (useKeyword) {
+        return cleanedOcr.includes(cleanedExpected);
+    }
+    return calculateSimilarity(cleanedOcr, cleanedExpected) >= THRESHOLDS.COMMISSION_DESC;
+}
 
 export default defineStep({
     type: "委托描述检测",
@@ -38,10 +59,12 @@ export default defineStep({
             for (let c = 0; c < 13; c++) {
                 try {
                     const ocrResult = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
-                    if (ocrResult === context.commissionName || ocrResult === "") {
+                    // OCR 可能识别出与委托名一致（说明详情还没刷新出来）或空文本 → 继续等
+                    // 使用标准化后比较，容忍 OCR 抖动
+                    if (ocrResult === "" || standardizeCommissionName(ocrResult) === context.commissionName) {
                         await sleep(1000);
                         log.debug("检测到委托名称或空文本，继续等待...");
-                    } else if ((!useKeyword && ocrResult === targetDescription) || (useKeyword && ocrResult.includes(targetDescription))) {
+                    } else if (matchesDescription(ocrResult, targetDescription, useKeyword)) {
                         log.info("委托描述检测成功，执行后续步骤");
                         if (executeFile && runType === "process") {
                             const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);

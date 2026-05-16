@@ -67,6 +67,8 @@ export const THRESHOLDS = {
     COMMISSION_NAME: 0.6,
     /** 地区名称标准化阈值，用于将 OCR 识别错的地区名称标准化为正确的地区名称 */
     LOCATION: 0.6,
+    /** 委托描述匹配阈值，用于将 OCR 识别的委托描述与期望描述比较（cleanText 去标点后做编辑距离） */
+    COMMISSION_DESC: 0.8,
 };
 
 /** 文件路径常量 */

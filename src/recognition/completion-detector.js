@@ -6,6 +6,7 @@ import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
 import { bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
+import { standardizeCommissionName } from "./commission-standardizer.js";
 
 /**
  * 检查指定委托是否已完成
@@ -26,9 +27,10 @@ export async function isCompleted(commissionName) {
         for (let i = 0; i < 4; i++) {
             if (i === 3) { await pageScroll(1); }  // 第4个委托需要翻页
             const ocrRegion = OCR_REGIONS.COMMISSION_NAME[i];
-            const ocrResult = bvPageOcrRegionText(ocrRegion);
+            const rawName = bvPageOcrRegionText(ocrRegion);
+            const standardizedName = standardizeCommissionName(rawName);
 
-            if (ocrResult && ocrResult.trim() === commissionName) {
+            if (standardizedName === commissionName) {
                 // 找到匹配的委托，检测其完成状态
                 log.info("找到委托 {name}，检测完成状态", commissionName);
                 const status = await detectCommissionStatusByImage(i);
