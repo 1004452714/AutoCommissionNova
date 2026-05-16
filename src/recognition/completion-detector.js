@@ -4,7 +4,7 @@
  */
 import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/ui-detector.js";
-import { bvPageOcrRegionText } from "../vision/index.js";
+import { bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 
 /**
@@ -24,9 +24,10 @@ export async function isCompleted(commissionName) {
 
         // 遍历 4 个委托位置，找到对应的委托名
         for (let i = 0; i < 4; i++) {
+            if (i === 3) { await pageScroll(1); }  // 第4个委托需要翻页
             const ocrRegion = OCR_REGIONS.COMMISSION_NAME[i];
             const ocrResult = bvPageOcrRegionText(ocrRegion);
-      
+
             if (ocrResult && ocrResult.trim() === commissionName) {
                 // 找到匹配的委托，检测其完成状态
                 log.info("找到委托 {name}，检测完成状态", commissionName);

@@ -90,7 +90,6 @@ export async function recognizeCommissions(supportedCommissions) {
     try {
         const allCommissions = [];
         const page = new BvPage();
-        const Rect = OpenCvSharp.OpenCvSharp.Rect;
         let commission;
         // 遍历4个委托位置
         for (let i = 0; i < 4; i++) {
