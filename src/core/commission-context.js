@@ -46,6 +46,11 @@ export function createCommissionContext({ type, commissionName, location, proces
         stepRegistry,
         currentIndex: 0,
         resolveResource: createResolveResource({ type, commissionName, location, processDir }),
+        // 运行时由 step 写入的字段，工厂统一初始化以保持 context shape 稳定
+        branchConfigCache: null,
+        executedBranches: [],
+        locationDetected: false,
+        detectedPosition: null,
     };
 }
 

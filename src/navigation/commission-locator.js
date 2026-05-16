@@ -2,9 +2,9 @@
  * 委托目标查找模块
  * 在委托界面中查找指定委托并获取其地图位置
  */
-import { OCR_REGIONS, UI_REGIONS, PATHS, COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
+import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/index.js";
-import { findCommissionIndex, getCommissionPosition } from "../recognition/commission-scanner.js";
+import { findCommissionIndex, getCommissionPosition, clickCommissionAndOpenMap } from "../recognition/commission-scanner.js";
 
 /**
  * 寻找委托目标位置并追踪
@@ -27,13 +27,7 @@ export async function findCommissionTarget(commissionName) {
 
         let currentCommissionPosition = null;
 
-        const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...UI_REGIONS.TRACK_BUTTON);
-        const trackLo = page.locator(trackRo);
-        await trackLo.withRetryAction(async () => {
-            const button = COMMISSION_POSITIONING_BUTTONS[foundIndex];
-            click(button.x, button.y);
-            await sleep(500); //打开大地图跳转有些微延迟
-        }).waitFor();
+        await clickCommissionAndOpenMap(page, foundIndex);
 
         await page.locator("取消追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryAction(() => click(1693, 1000)).waitFor();
         await page.locator("取消追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryAction(() => keyPress("VK_ESCAPE")).waitForDisappear();

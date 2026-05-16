@@ -18,7 +18,7 @@ export async function getSetting() {
         log.debug("setting:{index}", result);
         return result;
     } catch (error) {
-        log.error("getSetting函数出现错误,将使用默认配置");
+        log.error("执行 getSetting 时出错，将使用默认配置");
         return {
             skipRecognition: false,
             prepare: true,

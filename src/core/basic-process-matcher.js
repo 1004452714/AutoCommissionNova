@@ -3,6 +3,7 @@
  * 负责扫描Basic委托子目录，读取 _path.json 获取目标坐标，计算距离并匹配最近的流程
  */
 import { calculateDistance, getCommissionTargetPosition } from "../navigation/index.js";
+import { parseLocationDir } from "../utils/location-dir.js";
 
 /**
  * 扫描指定目录下的所有子目录
@@ -44,7 +45,7 @@ export async function findNearestBasicProcess(commissionName, location, commissi
 
     const matchedDirs = subDirs.filter(dir => {
         const dirName = dir.split('/').pop().split('\\').pop();
-        return dirName.startsWith(location);
+        return parseLocationDir(dirName).location === location;
     });
 
     if (matchedDirs.length === 0) {

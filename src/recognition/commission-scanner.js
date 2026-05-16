@@ -3,8 +3,8 @@
  * 提取 commission-recognizer.js 和 commission-finder.js 中的公共逻辑
  * 避免代码重复，提高可维护性
  */
-import { OCR_REGIONS, MIN_TEXT_LENGTH } from "../config/index.js";
-import { bvPageOcrRegion, pageScroll } from "../vision/index.js";
+import { OCR_REGIONS, MIN_TEXT_LENGTH, PATHS, UI_REGIONS, COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
+import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { getPositionWithVoting } from "../navigation/position-utils.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
@@ -90,10 +90,10 @@ export async function exitCommissionDetail(waitMs = 1200) {
 
 /**
  * 获取当前委托的地图坐标
- * 
+ *
  * 进入委托详情后，通过投票定位算法获取委托在游戏地图中的坐标
  * 用于战斗委托流程的距离匹配
- * 
+ *
  * @returns {Promise<Object|null>} 坐标对象 {x, y}，失败返回null
  */
 export async function getCommissionPosition() {
@@ -103,4 +103,25 @@ export async function getCommissionPosition() {
         log.error("获取委托坐标时出错: {error}", error.message);
         return null;
     }
+}
+
+/**
+ * 点击委托定位按钮并打开大地图，等待 TrackButton 出现
+ *
+ * 抽出 commission-recognizer 与 commission-locator 共用的"点击委托追踪→等大地图"步骤，
+ * 避免两处分别维护 TemplateMatch / withRetryAction 逻辑
+ *
+ * @param {Object} page - BvPage 实例（调用方持有以复用）
+ * @param {number} index - 委托位置索引（0-3）
+ */
+export async function clickCommissionAndOpenMap(page, index) {
+    const trackRo = RecognitionObject.TemplateMatch(
+        file.ReadImageMatSync(PATHS.TRACK_IMAGE),
+        ...UI_REGIONS.TRACK_BUTTON
+    );
+    const button = COMMISSION_POSITIONING_BUTTONS[index];
+    await page.locator(trackRo).withRetryAction(async () => {
+        click(button.x, button.y);
+        await sleep(500); // 打开大地图跳转有些微延迟
+    }).waitFor();
 }

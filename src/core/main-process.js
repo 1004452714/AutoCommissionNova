@@ -68,7 +68,7 @@ export async function prepareForCommission() {
             await genshin.switchParty(setting.team);
         }
     } catch (error) {
-        log.error("prepareForCommission 函数出现错误：{error}", error.message);
+        log.error("执行委托前准备时出错: {error}", error.message);
     }
 }
 
@@ -95,7 +95,7 @@ export async function executeMainProcess(stepRegistry) {
         log.info("每日委托执行完成");
 
     } catch (error) {
-        log.error("执行出错: {error}", error.message);
+        log.error("执行主流程时出错: {error}", error.message);
     }
 }
 

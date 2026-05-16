@@ -2,11 +2,11 @@
  * 委托识别主模块
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
-import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS, COMMISSION_POSITIONING_BUTTONS, PATHS } from "../config/index.js";
+import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
 import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
-import { getCommissionPosition } from "./commission-scanner.js";
+import { getCommissionPosition, clickCommissionAndOpenMap } from "./commission-scanner.js";
 /**
  * 识别委托地点
  * @returns {Promise<string>} 地点名称
@@ -126,13 +126,7 @@ export async function recognizeCommissions(supportedCommissions) {
                 log.info("查看第{id}个委托详情: {name}", id, standardizedName);
 
                 //尝试点击委托的追踪按钮跳转到大地图，直到追踪按钮出现
-                const trackRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.TRACK_IMAGE), ...UI_REGIONS.TRACK_BUTTON);
-                const trackLo = page.locator(trackRo);
-                await trackLo.withRetryAction(async () => {
-                    const button = COMMISSION_POSITIONING_BUTTONS[i];
-                    click(button.x, button.y);
-                    await sleep(500); //打开大地图跳转有些微延迟
-                }).waitFor();
+                await clickCommissionAndOpenMap(page, i);
 
 
                 // 识别国家

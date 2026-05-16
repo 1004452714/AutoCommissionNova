@@ -5,6 +5,7 @@
 import { THRESHOLDS, PATHS } from "../config/index.js";
 import { getClosestMatch } from "./text-similarity.js";
 import { loadSupportedCommissions } from "../data/index.js";
+import { parseLocationDir } from "../utils/location-dir.js";
 
 const referenceData = { basic: {}, npc: {} };
 
@@ -47,8 +48,7 @@ function buildBasicReferenceMap(basicCommissions) {
                 const subDirs = items.filter((item) => file.isFolder(item));
                 const cleanSubDirs = subDirs.map((subDirPath) => {
                     const dirName = subDirPath.split("/").pop().split("\\").pop();
-                    // 从 "{地点}-{编号}" 中提取地点部分
-                    return dirName.replace(/-(\d+)$/, "");
+                    return parseLocationDir(dirName).location;
                 });
                 basicList[commissionName] = cleanSubDirs;
             } catch (folderError) {
