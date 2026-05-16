@@ -48,3 +48,35 @@ export function createCommissionContext({ type, commissionName, location, proces
         resolveResource: createResolveResource({ type, commissionName, location, processDir }),
     };
 }
+
+/**
+ * 执行 context.processSteps 中的所有步骤
+ *
+ * 由 npc-executor / basic-executor / test-runner 共用，避免每个 executor 各自维护一份循环主体
+ *
+ * @param {Object} context - 共享执行上下文（必须包含 processSteps 和 stepRegistry）
+ * @param {Object} [options]
+ * @param {number} [options.sleepMs=250] - 每步之间的等待毫秒
+ * @param {boolean} [options.stopOnError=true] - 单步抛错时是否中断后续步骤
+ * @returns {Promise<boolean>} 全部步骤未抛错时返回 true
+ */
+export async function runStepsWithContext(context, options = {}) {
+    const { sleepMs = 250, stopOnError = true } = options;
+    const { processSteps, stepRegistry } = context;
+
+    for (let i = 0; i < processSteps.length; i++) {
+        const step = processSteps[i];
+        log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
+        context.currentIndex = i;
+
+        try {
+            await stepRegistry.process(step, context);
+        } catch (stepError) {
+            log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
+            if (stopOnError) return false;
+        }
+
+        await sleep(sleepMs);
+    }
+    return true;
+}

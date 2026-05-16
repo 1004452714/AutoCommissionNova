@@ -1,9 +1,9 @@
 /**
  * 模板匹配识别
- * 
+ *
  * 对指定游戏区域进行模板匹配，返回所有匹配结果
  * 自动进行截图、匹配、资源释放的完整流程
- * 
+ *
  * @param {string} imgPath - 模板图片路径
  * @param {number} X - 搜索区域 X 坐标
  * @param {number} Y - 搜索区域 Y 坐标
@@ -29,4 +29,3 @@ export async function templateMatchFindMulti(imgPath, X, Y, W, H, useMask = fals
         return { count: 0 };
     }
 }
-

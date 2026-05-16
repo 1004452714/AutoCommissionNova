@@ -6,7 +6,7 @@
 /**
  * 加载并解析 Basic 流程文件
  * @param {string} processPath - 流程文件路径
- * @returns {Promise<Array|false>} 步骤数组，失败返回 false
+ * @returns {Promise<Array|null>} 步骤数组，失败返回 null
  */
 export async function loadBasicProcess(processPath) {
     try {
@@ -18,13 +18,13 @@ export async function loadBasicProcess(processPath) {
                 return jsonData;
             }
             log.error("流程文件格式错误，应为数组: {path}", processPath);
-            return false;
+            return null;
         } catch (parseError) {
             log.error("流程文件 JSON 解析失败: {path}, 错误: {error}", processPath, parseError.message);
-            return false;
+            return null;
         }
     } catch (error) {
         log.warn("未找到流程文件: {path}, 错误: {error}", processPath, error.message);
-        return false;
+        return null;
     }
 }

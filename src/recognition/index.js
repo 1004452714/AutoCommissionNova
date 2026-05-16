@@ -1,6 +1,5 @@
 export { levenshteinDistance, calculateSimilarity, getClosestMatch } from "./text-similarity.js";
 export { initReferenceData as initCommissionReferenceData, standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
-export { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 export { isCompleted } from "./completion-detector.js";
 export { recognizeCommissions, recognizeCommissionLocation, checkDetailPageEntered } from "./commission-recognizer.js";
 export { scanCommissionAtPosition, findCommissionIndex, exitCommissionDetail, getCommissionPosition } from "./commission-scanner.js";

@@ -1,13 +1,17 @@
 /**
  * 测试执行模块
  * 跳过识别流程，直接运行流程文件
- * 
+ *
  * 启用方式：在BGI设置中将"选择运行模式"设为"测试"
+ *
+ * 测试用例（mode="case"）使用 BASIC 类型构造 context，让 resolveResource
+ * 指向 test/process/{caseName}/，从而支持依赖 context.resolveResource 的 step
  */
-import { PATHS } from "../config/index.js";
+import { PATHS, COMMISSION_TYPE } from "../config/index.js";
 import { prepareForCommission } from "./main-process.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
-import { buildTestContext, executeProcessSteps } from "./process-executor.js";
+import { createCommissionContext, runStepsWithContext } from "./commission-context.js";
+import { stepRegistry } from "../processors/registry.js";
 
 /**
  * 测试配置区
@@ -41,7 +45,8 @@ export async function runTestCommission() {
  * @returns {Promise<boolean>}
  */
 async function runTestCase(caseName) {
-    const testCasePath = `test/process/${caseName}/process.json`;
+    const testCaseDir = `test/process/${caseName}`;
+    const testCasePath = `${testCaseDir}/process.json`;
     log.info("=== 开始运行测试用例: {name} ===", caseName);
 
     try {
@@ -49,13 +54,17 @@ async function runTestCase(caseName) {
         const processSteps = JSON.parse(processContent);
         log.info("加载流程步骤数量: {count}", processSteps.length);
 
-        const context = buildTestContext({
+        // 用 BASIC 类型构造 context，让 resolveResource 指向测试用例目录
+        const context = createCommissionContext({
+            type: COMMISSION_TYPE.BASIC,
             commissionName: caseName,
             location: "测试位置",
             processSteps,
+            stepRegistry,
+            processDir: testCaseDir,
         });
 
-        const success = await executeProcessSteps(processSteps, context, 1000);
+        const success = await runStepsWithContext(context, { sleepMs: 1000, stopOnError: false });
         log.info("=== 测试用例执行完成: {success} ===", success ? "成功" : "失败");
         return success;
     } catch (error) {
@@ -87,13 +96,15 @@ async function runCommission(commissionName, location, processFile) {
 
         log.info("加载流程步骤数量: {count}", processSteps.length);
 
-        const context = buildTestContext({
+        const context = createCommissionContext({
+            type: COMMISSION_TYPE.NPC,
             commissionName,
             location,
             processSteps,
+            stepRegistry,
         });
 
-        const success = await executeProcessSteps(processSteps, context);
+        const success = await runStepsWithContext(context, { sleepMs: 2000, stopOnError: false });
         log.info("=== 测试委托执行完成: {success} ===", success ? "成功" : "失败");
         return success;
     } catch (error) {
