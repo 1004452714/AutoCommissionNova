@@ -13,7 +13,8 @@ export async function getSetting() {
         const prepare = settings.prepare || false;
         const team = settings.team || "";
         const elementTeam = settings.elementTeam || "";
-        const result = { skipRecognition, prepare, team, elementTeam };
+        const runMode = settings.runMode || "默认";
+        const result = { skipRecognition, prepare, team, elementTeam, runMode };
         log.debug("setting:{index}", result);
         return result;
     } catch (error) {
@@ -23,6 +24,7 @@ export async function getSetting() {
             prepare: true,
             team: "",
             elementTeam: "",
+            runMode: "默认",
         };
     }
 }

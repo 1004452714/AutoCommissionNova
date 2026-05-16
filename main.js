@@ -4,6 +4,7 @@ import { validateAllProcesses } from "./src/loaders/index.js";
 import { executeMainProcess } from "./src/core/main-process.js";
 import { checkVersion } from "./src/version/check-version.js";
 import { runTestCommission } from "./src/core/test-runner.js";
+import { getSetting } from "./src/utils/settings-utils.js";
 
 registerAllProcessors(stepRegistry);
 
@@ -13,10 +14,17 @@ registerAllProcessors(stepRegistry);
         await checkVersion();
         //静态校验所有流程文件
         await validateAllProcesses(stepRegistry);
-        //执行测试
-        await runTestCommission();
-        //执行主流程
-        await executeMainProcess(stepRegistry);
+        
+        //获取设置判断运行模式
+        const setting = await getSetting();
+        if (setting.runMode === "测试") {
+            //执行测试
+            await runTestCommission();
+        } else {
+            //执行主流程
+            await executeMainProcess(stepRegistry);
+        }
+        
         log.info("自动委托执行完毕");
     } catch (error) {
         log.error("自动委托执行过程中发生错误: {error}", error.message);

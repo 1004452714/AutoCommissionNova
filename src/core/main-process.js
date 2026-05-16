@@ -55,7 +55,7 @@ export async function identification() {
 /**
  * 委托前准备工作：前往七天神像、切换队伍
  */
-async function prepareForCommission() {
+export async function prepareForCommission() {
     log.info("开始执行委托前准备");
     try {
         await genshin.returnMainUi();

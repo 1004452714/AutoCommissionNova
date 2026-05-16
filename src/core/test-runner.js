@@ -1,10 +1,10 @@
 /**
  * 测试执行模块
  * 跳过识别流程，直接运行流程文件
- *
- * 使用方式：在设置中将"元素采集的队伍名称"填入 114514 即可启用测试模式
+ * 
+ * 启用方式：在BGI设置中将"选择运行模式"设为"测试"
  */
-import {  PATHS } from "../config/index.js";
+import { PATHS } from "../config/index.js";
 import { prepareForCommission } from "./main-process.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 import { buildTestContext, executeProcessSteps } from "./process-executor.js";
@@ -12,7 +12,6 @@ import { buildTestContext, executeProcessSteps } from "./process-executor.js";
 /**
  * 测试配置区
  * 修改这里的配置来切换测试模式
- * 启用方式：在BGI设置中将"元素采集的队伍名称"填入 114514
  */
 const TEST_CONFIG = {
     mode: "commission",             // 测试模式: "case"=测试用例, "commission"=真实委托
@@ -27,10 +26,6 @@ const TEST_CONFIG = {
  * @returns {Promise<boolean>} 执行是否成功
  */
 export async function runTestCommission() {
-    if (settings.elementTeam !== "114514") {
-        return false;
-    }
-
     log.info("=== 测试模式已启用 ===");
 
     if (TEST_CONFIG.mode === "case") {

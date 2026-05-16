@@ -1,2 +1,10 @@
-此路不通-1.json
-F
+[
+    {
+        "type": "地图追踪",
+        "data": "此路不通-1.json"
+    },
+    {
+        "type": "对话",
+        "data": { "npcWhiteList": ["昆恩"] }
+    }
+]

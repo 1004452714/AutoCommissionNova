@@ -102,10 +102,8 @@ export async function executeCommissionTracking(stepRegistry) {
         for (const comm of commissions) {
             log.info("开始执行委托：{name} ({location}) [{type}]", comm.name, comm.location, comm.type);
 
-
-            for (let tryCount = 0, success = false;
-                tryCount <= MAX_COMMISSION_RETRY_COUNT && !success;
-                tryCount++) {
+            let success = false;
+            for (let tryCount = 0; tryCount <= MAX_COMMISSION_RETRY_COUNT && !success; tryCount++) {
                 log.info("第 {try} 次尝试执行委托 {name} ", tryCount, comm.name);
 
 

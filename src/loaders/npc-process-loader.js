@@ -16,21 +16,12 @@ export async function loadNpcProcessFile(commissionName, location, processFileNa
     const processFilePath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + processFileName;
     try {
         const processContent = file.readTextSync(processFilePath);
-        log.info("找到NPC委托流程文件: {path}", processFilePath);
-        try {
-            const jsonData = JSON.parse(processContent);
-            if (Array.isArray(jsonData)) {
-                log.debug("JSON流程解析成功");
-                return jsonData;
-            }
-            log.error("JSON流程格式错误，应为数组");
-            return false;
-        } catch (jsonError) {
-            const lines = processContent.split("\n").map((line) => line.trim()).filter((line) => line.length > 0);
-            return lines;
+        const jsonData = JSON.parse(processContent);
+        if (Array.isArray(jsonData)) {
+            return jsonData;
         }
     } catch (error) {
-        log.warn("未找到NPC委托 {name} 在 {location} 的流程文件: {path}", commissionName, location, processFilePath);
+        log.error("NPC委托 {name} 在 {location} 的流程文件解析错误: {path}", commissionName, location, processFilePath);
         return false;
     }
 }
