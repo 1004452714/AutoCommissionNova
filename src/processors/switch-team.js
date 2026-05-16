@@ -1,6 +1,7 @@
 /**
  * 切换队伍步骤处理器
  */
+import { getSetting } from "../utils/settings-utils.js";
 import { defineStep } from "./define-step.js";
 
 export default defineStep({
@@ -16,9 +17,12 @@ export default defineStep({
         if (!teamName) { log.warn("切换队伍步骤缺少队伍名称"); return false; }
 
         let actualTeamName;
-        if (teamName === "战斗") { actualTeamName = settings.team; }
-        else if (teamName === "元素采集") { actualTeamName = settings.elementTeam; }
-        else { actualTeamName = teamName; }
+        if (teamName === "战斗" || teamName === "元素采集") {
+            const setting = await getSetting();
+            actualTeamName = teamName === "战斗" ? setting.team : setting.elementTeam;
+        } else {
+            actualTeamName = teamName;
+        }
 
         if (!actualTeamName || actualTeamName.trim() === "") {
             log.warn("未配置队伍名称，跳过切换操作");

@@ -83,8 +83,8 @@ export async function executeCommissionTracking(stepRegistry) {
 
         const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
         if (Array.isArray(commissionsData?.commissions)) {
-            // 过滤条件：支持的委托 + 非未知地点 + 未完成
-            commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成');
+            // 过滤条件：支持的委托 + 非未知地点 + 未完成 + 非处理失败
+            commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成' && c.location !== '处理失败');
             // 统计已完成的委托数量
             const completedCommissions = commissionsData.commissions.filter((c) => c.location === '已完成');
             completedCount = completedCommissions.length;

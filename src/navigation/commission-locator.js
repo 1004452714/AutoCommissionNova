@@ -2,9 +2,9 @@
  * 委托目标查找模块
  * 在委托界面中查找指定委托并获取其地图位置
  */
-import { OCR_REGIONS, UI_REGIONS } from "../config/index.js";
-import { bvPageOcrRegionText, enterCommissionScreen } from "../vision/index.js";
-import { findCommissionIndex, exitCommissionDetail, getCommissionPosition } from "../recognition/commission-scanner.js";
+import { OCR_REGIONS, UI_REGIONS, PATHS, COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
+import { enterCommissionScreen } from "../vision/index.js";
+import { findCommissionIndex, getCommissionPosition } from "../recognition/commission-scanner.js";
 
 /**
  * 寻找委托目标位置并追踪
@@ -19,7 +19,7 @@ export async function findCommissionTarget(commissionName) {
 
         await enterCommissionScreen();
 
-        const foundIndex = findCommissionIndex(commissionName);
+        const foundIndex = await findCommissionIndex(commissionName);
         if (foundIndex === -1) {
             log.warn("未找到委托: {name}", commissionName);
             return null;

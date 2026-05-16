@@ -56,8 +56,10 @@ export async function enterCommissionScreen() {
 
         await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(() => click(300, 350)).waitFor();
         log.info("已进入委托界面");
+        return true;
     } catch (error) {
         log.error("进入委托界面失败: {error}", error.message);
+        return false;
     }
 }
 
