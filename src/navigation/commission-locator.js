@@ -29,8 +29,8 @@ export async function findCommissionTarget(commissionName) {
 
         await clickCommissionAndOpenMap(page, foundIndex);
 
-        await page.locator("取消追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryInterval(1000).withRetryAction(() => click(1693, 1000)).waitFor();
-        await page.locator("取消追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryInterval(1000).withRetryAction(() => keyPress("VK_ESCAPE")).waitForDisappear();
+        await page.locator("停止追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryInterval(1000).withRetryAction(() => click(1693, 1000)).waitFor();
+        await page.locator("停止追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryInterval(1000).withRetryAction(() => keyPress("VK_ESCAPE")).waitForDisappear();
 
         currentCommissionPosition = await getCommissionPosition();
         await genshin.returnMainUi();

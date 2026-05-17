@@ -12,13 +12,13 @@ import { PATHS, COMMISSION_STATUS_REGIONS, UI_REGIONS, COMMISSION_STATUS } from 
  * @returns {boolean} 是否在主界面
  */
 export function isInMainUI() {
+    const mat = file.ReadImageMatSync(PATHS.PAIMON_MENU_IMAGE);
     try {
-        const mat = file.ReadImageMatSync(PATHS.PAIMON_MENU_IMAGE);
         const ro = RecognitionObject.TemplateMatch(mat, 0, 0, 500, 500);
         const page = new BvPage();
         return page.locator(ro).isExist();
     } finally {
-        mat.Dispose();
+        mat?.Dispose();
     }
 }
 
