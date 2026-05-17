@@ -1,12 +1,12 @@
 /**
  * 委托数据源模块
- * 从 name.json 白名单和 process/ 目录扫描取交集，获取支持的委托列表
+ * 从 process/config/support-list.json 白名单和 process/ 目录扫描取交集，获取支持的委托列表
  */
 import { PATHS } from "../config/index.js";
 
 /**
- * 从 name.json 加载白名单
- * 
+ * 从 process/config/support-list.json 加载白名单
+ *
  * @returns {Object} 白名单 { basic: [], npc: [] }
  */
 function loadWhitelist() {
@@ -67,7 +67,7 @@ function scanNpcCommissions() {
  * 加载支持的委托列表
  * 
  * 确保只有同时满足以下两个条件的委托才会被执行：
- * 1. 在 name.json 白名单中声明
+ * 1. 在 process/config/support-list.json 白名单中声明
  * 2. 在 process/ 目录下有对应的流程文件
  * 
  * @returns {Promise<Object>} 支持的委托列表
