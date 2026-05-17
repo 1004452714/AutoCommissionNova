@@ -6,24 +6,11 @@
  */
 
 import { PATHS } from "../config/game-constants.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 const HTML_PATH = "commission-config-mask.html";
 const WINDOW_TAG = "commission-config";
 const CONFIG_FILE = PATHS.CONFIG_BASE + "/commission-branches.json";
-
-/**
- * 判断异常是否为取消相关的异常
- * @param {Error} error
- * @returns {boolean}
- */
-function isCancellationError(error) {
-    if (!error) return false;
-    const msg = (error.message || error.toString() || "").toLowerCase();
-    return msg.includes("取消自动任务")
-        || msg.includes("task was canceled")
-        || msg.includes("operationcanceledexception")
-        || msg.includes("normalendexception");
-}
 
 /**
  * 打开委托分支配置编辑器并阻塞至关闭
@@ -46,6 +33,7 @@ export async function openCommissionConfigEditor() {
     try {
         windowId = htmlMask.show(HTML_PATH, WINDOW_TAG);
     } catch (err) {
+        if (isCancellationError(err)) return;
         log.warn("打开分支配置面板失败: {0}", err.message);
         return;
     }
@@ -69,6 +57,7 @@ export async function openCommissionConfigEditor() {
             }
             isVisible = !isVisible;
         } catch (err) {
+            if (isCancellationError(err)) return;
             log.debug("切换分支面板显示失败: {0}", err.message);
         }
     });
@@ -78,6 +67,7 @@ export async function openCommissionConfigEditor() {
     try {
         while (htmlMask.exists(windowId)) {
             if (cancelToken.isCancellationRequested) {
+                htmlMask.close(windowId);
                 break;
             }
 
@@ -85,7 +75,10 @@ export async function openCommissionConfigEditor() {
             try {
                 raw = await htmlMask.receive(windowId, 1000);
             } catch (err) {
-                if (isCancellationError(err)) break;
+                if (isCancellationError(err)) {
+                    htmlMask.close(windowId);
+                    break;
+                }
                 log.debug("接收分支面板消息失败: {0}", err.message);
                 await sleep(200);
                 continue;
@@ -104,16 +97,90 @@ export async function openCommissionConfigEditor() {
                 continue;
             }
 
-            const shouldClose = await handleMessage(windowId, msg);
-            if (shouldClose) {
+            if (!msg || !msg.url) continue;
+
+            if (msg.url === "/loadConfig") {
+                try {
+                    const content = file.readTextSync(CONFIG_FILE);
+                    JSON.parse(content);
+                    const payload = msg.requestId
+                        ? JSON.stringify({ requestId: msg.requestId, data: JSON.parse(content) })
+                        : content;
+                    htmlMask.send(windowId, "/loadConfig", payload);
+                    log.debug("已发送分支配置到面板");
+                } catch (err) {
+                    if (isCancellationError(err)) {
+                        htmlMask.close(windowId);
+                        break;
+                    }
+                    log.warn("读取分支配置失败: {0}", err.message);
+                    const payload = msg.requestId
+                        ? JSON.stringify({ requestId: msg.requestId, data: {} })
+                        : "{}";
+                    htmlMask.send(windowId, "/loadConfig", payload);
+                }
+            } else if (msg.url === "/saveConfig") {
+                let status = "ok";
+                let errMsg = "";
+                try {
+                    const content = msg.data && msg.data.content;
+                    if (typeof content !== "string") {
+                        throw new Error("缺少 content 字段");
+                    }
+                    JSON.parse(content);
+                    file.writeTextSync(CONFIG_FILE, content);
+                    log.debug("分支配置已保存");
+                } catch (err) {
+                    if (isCancellationError(err)) {
+                        htmlMask.close(windowId);
+                        break;
+                    }
+                    status = "error";
+                    errMsg = err.message;
+                    log.warn("保存分支配置失败: {0}", err.message);
+                }
+                if (msg.requestId) {
+                    try {
+                        htmlMask.send(windowId, "/saveConfig", JSON.stringify({
+                            requestId: msg.requestId,
+                            data: { status, message: errMsg },
+                        }));
+                    } catch (err) {
+                        if (isCancellationError(err)) {
+                            htmlMask.close(windowId);
+                            break;
+                        }
+                        log.debug("回复保存结果失败: {0}", err.message);
+                    }
+                }
+            } else if (msg.url === "/close") {
+                try {
+                    if (msg.requestId) {
+                        htmlMask.send(windowId, "/close", JSON.stringify({
+                            requestId: msg.requestId,
+                            data: { status: "ok" },
+                        }));
+                    }
+                } catch (err) {
+                    if (isCancellationError(err)) {
+                        htmlMask.close(windowId);
+                        break;
+                    }
+                    log.debug("回复关闭确认失败: {0}", err.message);
+                }
+                htmlMask.close(windowId);
                 break;
             }
+
+            await sleep(1);
         }
-    } catch (err) {
-        if (!isCancellationError(err)) {
-            log.warn("分支配置面板循环异常: {0}", err.message);
+    } catch (error) {
+        // 最外层兜底:取消异常静默退出,其他异常记录后继续走 finally 清理
+        if (!isCancellationError(error)) {
+            log.error("分支配置面板执行异常: {0}", error.message);
         }
     } finally {
+        log.debug("释放分支面板键鼠钩子...");
         try { hook.dispose(); } catch (e) {}
         try {
             if (htmlMask.exists(windowId)) {
@@ -122,72 +189,4 @@ export async function openCommissionConfigEditor() {
         } catch (e) {}
         log.info("分支配置面板已关闭");
     }
-}
-
-/**
- * 处理来自 HTML 的单条消息
- * @param {string} windowId
- * @param {{url: string, data?: any, requestId?: string}} msg
- * @returns {Promise<boolean>} 返回 true 时由调用方退出循环
- */
-async function handleMessage(windowId, msg) {
-    if (!msg || !msg.url) return false;
-
-    if (msg.url === "/loadConfig") {
-        try {
-            const content = file.readTextSync(CONFIG_FILE);
-            JSON.parse(content);
-            const payload = msg.requestId
-                ? JSON.stringify({ requestId: msg.requestId, data: JSON.parse(content) })
-                : content;
-            htmlMask.send(windowId, "/loadConfig", payload);
-            log.debug("已发送分支配置到面板");
-        } catch (err) {
-            if (isCancellationError(err)) throw err;
-            log.warn("读取分支配置失败: {0}", err.message);
-            const payload = msg.requestId
-                ? JSON.stringify({ requestId: msg.requestId, data: {} })
-                : "{}";
-            htmlMask.send(windowId, "/loadConfig", payload);
-        }
-        return false;
-    }
-
-    if (msg.url === "/saveConfig") {
-        let status = "ok";
-        let errMsg = "";
-        try {
-            const content = msg.data && msg.data.content;
-            if (typeof content !== "string") {
-                throw new Error("缺少 content 字段");
-            }
-            JSON.parse(content);
-            file.writeTextSync(CONFIG_FILE, content);
-            log.debug("分支配置已保存");
-        } catch (err) {
-            if (isCancellationError(err)) throw err;
-            status = "error";
-            errMsg = err.message;
-            log.warn("保存分支配置失败: {0}", err.message);
-        }
-        if (msg.requestId) {
-            htmlMask.send(windowId, "/saveConfig", JSON.stringify({
-                requestId: msg.requestId,
-                data: { status, message: errMsg },
-            }));
-        }
-        return false;
-    }
-
-    if (msg.url === "/close") {
-        if (msg.requestId) {
-            htmlMask.send(windowId, "/close", JSON.stringify({
-                requestId: msg.requestId,
-                data: { status: "ok" },
-            }));
-        }
-        return true;
-    }
-
-    return false;
 }
