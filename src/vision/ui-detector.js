@@ -29,15 +29,22 @@ export function isInMainUI() {
  * @returns {Promise<string>} "completed" | "uncompleted" | "unknown"
  */
 export async function detectCommissionStatusByImage(buttonIndex) {
+    let completedMat = null;
+    let uncompletedMat = null;
     try {
         const page = new BvPage();
-        const completedRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.COMPLETED_IMAGE), ...COMMISSION_STATUS_REGIONS[buttonIndex]);
-        const uncompletedRo = RecognitionObject.TemplateMatch(file.ReadImageMatSync(PATHS.UNCOMPLETED_IMAGE), ...COMMISSION_STATUS_REGIONS[buttonIndex]);
+        completedMat = file.ReadImageMatSync(PATHS.COMPLETED_IMAGE);
+        uncompletedMat = file.ReadImageMatSync(PATHS.UNCOMPLETED_IMAGE);
+        const completedRo = RecognitionObject.TemplateMatch(completedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
+        const uncompletedRo = RecognitionObject.TemplateMatch(uncompletedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
         if (page.locator(completedRo).isExist()) return "completed";
         if (page.locator(uncompletedRo).isExist()) return "uncompleted";
     } catch (error) {
         log.error("检测第{x}个委托完成状态时出错：{error}", buttonIndex + 1, error.message);
         return "unknown";
+    } finally {
+        if (completedMat) completedMat.Dispose();
+        if (uncompletedMat) uncompletedMat.Dispose();
     }
 }
 

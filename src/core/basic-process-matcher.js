@@ -16,12 +16,8 @@ function scanSubDirectories(dirPath) {
         const subDirs = [];
 
         for (const item of items) {
-            try {
-                // 尝试读取目录内容，成功说明是目录
-                file.readPathSync(item);
+            if (file.isFolder(item)) {
                 subDirs.push(item);
-            } catch {
-                // 不是目录，跳过
             }
         }
 

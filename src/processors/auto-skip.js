@@ -237,6 +237,7 @@ async function executeAutoSkipLogic(stepData, stepName) {
                     if (iconMat) {
                         const ro = RecognitionObject.TemplateMatch(iconMat);
                         priorityIconROs.push(ro);
+                        iconMat.Dispose();
                     }
                 } catch (error) {
                     if (isCancellationError(error)) { throw error; }

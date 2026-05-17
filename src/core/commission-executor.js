@@ -92,15 +92,20 @@ export async function executeCommissionTracking(stepRegistry) {
         let commissions = [];
         let completedCount = 0;
 
-        const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
-        if (Array.isArray(commissionsData?.commissions)) {
-            // 过滤条件：支持的委托 + 非未知地点 + 未完成 + 非处理失败
-            commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成' && c.location !== '处理失败');
-            // 统计已完成的委托数量
-            const completedCommissions = commissionsData.commissions.filter((c) => c.location === '已完成');
-            completedCount = completedCommissions.length;
-        } else {
-            log.error("委托数据文件格式错误");
+        try {
+            const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
+            if (Array.isArray(commissionsData?.commissions)) {
+                // 过滤条件：支持的委托 + 非未知地点 + 未完成 + 非处理失败
+                commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成' && c.location !== '处理失败');
+                // 统计已完成的委托数量
+                const completedCommissions = commissionsData.commissions.filter((c) => c.location === '已完成');
+                completedCount = completedCommissions.length;
+            } else {
+                log.error("委托数据文件格式错误");
+                return false;
+            }
+        } catch (error) {
+            log.error("解析委托数据文件失败: {path}, 错误: {error}", PATHS.COMMISSIONS_DATA, error.message);
             return false;
         }
 
@@ -121,7 +126,7 @@ export async function executeCommissionTracking(stepRegistry) {
 
             let success = false;
             for (let tryCount = 0; tryCount <= MAX_COMMISSION_RETRY_COUNT && !success; tryCount++) {
-                log.info("第 {try} 次尝试执行委托 {name} ", tryCount, comm.name);
+                log.info("第 {try} 次尝试执行委托 {name} ", tryCount + 1, comm.name);
 
                 const result = await executor(comm, stepRegistry);
                 dispatcher.ClearAllTriggers();

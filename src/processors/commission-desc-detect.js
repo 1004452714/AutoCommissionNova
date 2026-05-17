@@ -88,7 +88,7 @@ export default defineStep({
                     log.error("委托描述OCR识别出错: {error}", ocrError.message);
                     break;
                 }
-                await sleep(1);
+                await sleep(1);///不是为了等待，而是为了能及时响应停止脚本的信号
             }
         } catch (error) {
             if (isCancellationError(error)) { throw error; }

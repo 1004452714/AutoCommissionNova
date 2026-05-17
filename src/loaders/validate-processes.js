@@ -32,15 +32,6 @@ export async function validateAllProcesses(registry) {
     return errors;
 }
 
-function isDirectory(path) {
-    try {
-        file.readPathSync(path);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 function baseName(path) {
     return path.split("/").pop().split("\\").pop();
 }
@@ -56,7 +47,7 @@ async function validateNpcProcesses(registry) {
     }
 
     for (const commissionDir of commissionDirs) {
-        if (!isDirectory(commissionDir)) continue;
+        if (!file.isFolder(commissionDir)) continue;
         const commissionName = baseName(commissionDir);
 
         let locationDirs;
@@ -67,7 +58,7 @@ async function validateNpcProcesses(registry) {
         }
 
         for (const locationDir of locationDirs) {
-            if (!isDirectory(locationDir)) continue;
+            if (!file.isFolder(locationDir)) continue;
             const location = baseName(locationDir);
             const steps = await loadNpcProcessFile(commissionName, location, "process.json");
             if (!steps || steps.length === 0) continue;
@@ -90,7 +81,7 @@ async function validateBasicProcesses(registry) {
     }
 
     for (const commissionDir of commissionDirs) {
-        if (!isDirectory(commissionDir)) continue;
+        if (!file.isFolder(commissionDir)) continue;
 
         let subDirs;
         try {
@@ -100,7 +91,7 @@ async function validateBasicProcesses(registry) {
         }
 
         for (const subDir of subDirs) {
-            if (!isDirectory(subDir)) continue;
+            if (!file.isFolder(subDir)) continue;
             const processPath = subDir + "/process.json";
             const steps = await loadBasicProcess(processPath);
             if (!steps || steps.length === 0) continue;
