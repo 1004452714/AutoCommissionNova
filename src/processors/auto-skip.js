@@ -6,6 +6,7 @@ import { PATHS, UI_REGIONS, DIALOG_REGIONS } from "../config/index.js";
 import { isInMainUI } from "../vision/ui-detector.js";
 import { bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 import { defineStep } from "./define-step.js";
 
@@ -199,6 +200,7 @@ async function executeDialogStep(step, context) {
             npcWhiteList: npcWhiteList,
         });
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("执行对话步骤时出错: {error}", error.message);
         throw error;
     }
@@ -237,6 +239,7 @@ async function executeAutoSkipLogic(stepData, stepName) {
                         priorityIconROs.push(ro);
                     }
                 } catch (error) {
+                    if (isCancellationError(error)) { throw error; }
                     log.warn("无法加载优先图标 {iconName}: {error}", iconName, error.message);
                 }
             }
@@ -326,12 +329,14 @@ async function executeAutoSkipLogic(stepData, stepName) {
                 } finally {
                     fIconMat.Dispose();
                 }
+                await sleep(1);
             }
         } finally {
             storyMat.Dispose();
         }
         log.info("{stepName}步骤执行完成", stepName);
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("执行{stepName}步骤时出错: {error}", stepName, error.message);
         throw error;
     }
@@ -357,6 +362,7 @@ async function recognizeImage(recognitionObject) {
             captureRegion.Dispose();
         }
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("识别图像时发生异常: {error}", error.message);
     }
     return { success: false };

@@ -2,6 +2,7 @@
  * 位置工具模块
  * 距离计算、投票定位等位置相关工具
  */
+import { isCancellationError } from "../utils/error-utils.js";
 
 /**
  * 计算两点之间的欧几里得距离
@@ -50,9 +51,11 @@ export async function getPositionWithVoting() {
             positions.push(position);
             recognitionCount++;
         } catch (error) {
+            if (isCancellationError(error)) { throw error; }
             log.debug('缩放:{0}, error:{1}', scale, error.message);
         }
         scale += 0.3;
+        await sleep(1);
     }
 
     if (positions.length > 0) {
@@ -103,6 +106,7 @@ export async function getCommissionTargetPosition(scriptPath) {
         log.debug("从脚本路径 {path} 获取到目标坐标: ({x}, {y})", scriptPath, lastPosition.x, lastPosition.y);
         return { x: lastPosition.x, y: lastPosition.y };
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("获取委托目标坐标时出错: {error}", error.message);
         return null;
     }

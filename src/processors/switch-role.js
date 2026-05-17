@@ -3,6 +3,7 @@
  */
 import { PATHS, POSITION_COORDINATES } from "../config/index.js";
 import { defineStep } from "./define-step.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 /**
  * 读取角色别名映射表
@@ -23,6 +24,7 @@ function readAliases() {
         }
         return aliases;
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("读取角色别名文件失败：{error}", error.message);
         return {};
     }
@@ -112,7 +114,11 @@ export default defineStep({
                                     }
                                 } finally { ro2.Dispose(); }
                             } finally { characterMat.Dispose(); }
-                        } catch (error) { break; }
+                        } catch (error) {
+                            if (isCancellationError(error)) { throw error; }
+                            break;
+                        }
+                        await sleep(1);
                     }
                     if (characterFound) break;
                     if (pageTries < 15) {
@@ -149,6 +155,7 @@ export default defineStep({
                 joinMat.Dispose();
             }
         } catch (error) {
+            if (isCancellationError(error)) { throw error; }
             log.error("执行切换角色步骤时出错: {error}", error.message);
             throw error;
         }
@@ -174,6 +181,7 @@ async function scrollPage(totalDistance, stepDistance, delayMs) {
         await sleep(100);
         return true;
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("角色选择界面滚动操作时发生错误：{error}", error.message);
         return false;
     }

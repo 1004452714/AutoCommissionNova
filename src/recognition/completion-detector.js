@@ -7,6 +7,7 @@ import { enterCommissionScreen } from "../vision/ui-detector.js";
 import { bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 /**
  * 检查指定委托是否已完成
@@ -36,15 +37,18 @@ export async function isCompleted(commissionName) {
                 const status = await detectCommissionStatusByImage(i);
                 return status === "completed";
             }
+            await sleep(1);
         }
 
         log.warn("未在委托界面找到委托: {name}", commissionName);
         return false;
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("检查委托完成状态失败: {error}", error.message);
         try {
             await genshin.returnMainUi();
         } catch (exitError) {
+            if (isCancellationError(exitError)) { throw exitError; }
             log.warn("退出委托界面失败: {error}", exitError);
         }
         return false;

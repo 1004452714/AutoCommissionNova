@@ -7,6 +7,7 @@ import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/inde
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 import { getCommissionPosition, clickCommissionAndOpenMap } from "./commission-scanner.js";
+import { isCancellationError } from "../utils/error-utils.js";
 /**
  * 识别委托地点
  * @returns {Promise<string>} 地点名称
@@ -23,6 +24,7 @@ export async function recognizeCommissionLocation(country) {
         return "未知地点";
 
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("识别委托地点时出错: {error}", error.message);
         return "未知地点";
     }
@@ -64,6 +66,7 @@ export async function checkDetailPageEntered() {
         log.info("三次OCR检测后仍未确认委托国家");
         return "未知";
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("检测委托详情界面时出错: {error}", error.message);
         return "错误";
     }
@@ -118,6 +121,7 @@ export async function recognizeCommissions(supportedCommissions) {
                 log.info("第{id}个委托状态: {status}", id, status);
                 if (status === "completed") {
                     commission.location = "已完成";
+                    await sleep(1);
                     continue;
                 }
 
@@ -150,16 +154,19 @@ export async function recognizeCommissions(supportedCommissions) {
                 }).waitFor();
 
             } catch (error) {
+                if (isCancellationError(error)) { throw error; }
                 log.error("处理第 {id} 个委托 {name} 时出错: {error}", commission.id, commission.name, error.message);
                 log.debug("错误详情:{error}", error);
                 commission.location = "处理失败";
                 commission.country = "未知";
 
             }
+            await sleep(1);
         }
 
         return allCommissions;
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("委托识别出错: {error}", error.message);
         log.debug("错误详情:{error}", error);
         return [];

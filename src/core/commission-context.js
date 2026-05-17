@@ -9,6 +9,7 @@
  *   detectedPosition   — 位置检测命中的坐标（location-detection）
  */
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 /**
  * 构造 resolveResource 解析器
@@ -77,6 +78,7 @@ export async function runStepsWithContext(context, options = {}) {
         try {
             await stepRegistry.process(step, context);
         } catch (stepError) {
+            if (isCancellationError(stepError)) { throw stepError; }
             log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
             if (stopOnError) return false;
         }

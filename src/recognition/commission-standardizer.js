@@ -6,6 +6,7 @@ import { THRESHOLDS, PATHS } from "../config/index.js";
 import { getClosestMatch } from "./text-similarity.js";
 import { loadSupportedCommissions } from "../data/index.js";
 import { parseLocationDir } from "../utils/location-dir.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 const referenceData = { basic: {}, npc: {} };
 
@@ -23,11 +24,12 @@ export async function initReferenceData(supportedCommissions) {
         if (!supportedCommissions) {
             supportedCommissions = await loadSupportedCommissions();
         }
-        referenceData.basic = buildBasicReferenceMap(supportedCommissions.basic);
-        referenceData.npc = buildNpcReferenceMap(supportedCommissions.npc);
+        referenceData.basic = await buildBasicReferenceMap(supportedCommissions.basic);
+        referenceData.npc = await buildNpcReferenceMap(supportedCommissions.npc);
         log.debug("Basic委托参考数据: {count} 个委托", Object.keys(referenceData.basic).length);
         log.debug("NPC委托参考数据: {count} 个委托", Object.keys(referenceData.npc).length);
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("初始化委托参考数据时出错: {error}", error.message);
     }
 }
@@ -37,7 +39,7 @@ export async function initReferenceData(supportedCommissions) {
  * @param {string[]} basicCommissions - Basic 委托名称列表
  * @returns {Object} Basic 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
  */
-function buildBasicReferenceMap(basicCommissions) {
+async function buildBasicReferenceMap(basicCommissions) {
     const basicList = {};
     try {
         const assetsPath = PATHS.BASIC_SCRIPT_BASE;
@@ -52,10 +54,13 @@ function buildBasicReferenceMap(basicCommissions) {
                 });
                 basicList[commissionName] = cleanSubDirs;
             } catch (folderError) {
+                if (isCancellationError(folderError)) { throw folderError; }
                 log.warn("无法读取Basic委托 {name} 的目录: {error}", commissionName, folderError.message);
             }
+            await sleep(1);
         }
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("构建Basic委托参考数据时出错: {error}", error.message);
     }
     return basicList;
@@ -67,7 +72,7 @@ function buildBasicReferenceMap(basicCommissions) {
  * @param {string[]} npcCommissions - NPC 委托名称列表
  * @returns {Object} NPC 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
  */
-function buildNpcReferenceMap(npcCommissions) {
+async function buildNpcReferenceMap(npcCommissions) {
     const npcList = {};
     try {
         const processPath = PATHS.NPC_PROCESS_BASE;
@@ -79,10 +84,13 @@ function buildNpcReferenceMap(npcCommissions) {
                 const cleanSubFolders = subFolders.map((subFolderPath) => subFolderPath.split("/").pop().split("\\").pop());
                 npcList[commissionName] = cleanSubFolders;
             } catch (folderError) {
+                if (isCancellationError(folderError)) { throw folderError; }
                 log.warn("无法读取NPC委托 {name} 的目录: {error}", commissionName, folderError.message);
             }
+            await sleep(1);
         }
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("构建NPC委托参考数据时出错: {error}", error.message);
     }
     return npcList;

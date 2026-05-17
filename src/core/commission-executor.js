@@ -13,6 +13,7 @@ import { COMMISSION_TYPE, MAX_COMMISSION_RETRY_COUNT, PATHS } from "../config/in
 import { isCompleted } from "../recognition/index.js";
 import { executeNpcCommission } from "./npc-executor.js";
 import { executeBasicCommission } from "./basic-executor.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 /**
  * 委托类型 → 执行器映射
@@ -68,6 +69,7 @@ async function updateBranchCompletion(commissionName, context) {
             log.info("分支配置文件已更新");
         }
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("更新分支完成进度时出错: {error}", error.message);
     }
 }
@@ -148,11 +150,13 @@ export async function executeCommissionTracking(stepRegistry) {
             } else {
                 log.info("委托 {name} 执行成功", comm.name);
             }
+            await sleep(1);
         }
 
         log.info("委托追踪全部执行完成，共执行 {count}/{total} 个委托", completedCount, commissions.length);
         return completedCount > 0;
     } catch (error) {
+        if (isCancellationError(error)) { throw error; }
         log.error("执行委托追踪时出错: {error}", error.message);
         return false;
     }

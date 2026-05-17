@@ -8,6 +8,7 @@ import { defineStep } from "./define-step.js";
 import { standardizeCommissionName } from "../recognition/commission-standardizer.js";
 import { calculateSimilarity } from "../recognition/text-similarity.js";
 import { cleanText } from "../utils/text-utils.js";
+import { isCancellationError } from "../utils/error-utils.js";
 
 /**
  * 比较 OCR 识别的描述文本与期望描述
@@ -83,11 +84,14 @@ export default defineStep({
                         break;
                     }
                 } catch (ocrError) {
+                    if (isCancellationError(ocrError)) { throw ocrError; }
                     log.error("委托描述OCR识别出错: {error}", ocrError.message);
                     break;
                 }
+                await sleep(1);
             }
         } catch (error) {
+            if (isCancellationError(error)) { throw error; }
             log.error("执行委托描述检测步骤时出错: {error}", error.message);
             throw error;
         }
