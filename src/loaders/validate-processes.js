@@ -105,14 +105,20 @@ async function validateBasicProcesses(registry) {
  * 对一份流程的步骤数组做校验
  * @param {Object} registry
  * @param {string} processPath - 用于日志定位
- * @param {Array} steps - loader 返回的 step 数组（可能含字符串旧格式）
+ * @param {Array} steps - loader 返回的 step 数组
  */
 function validateProcessSteps(registry, processPath, steps) {
     let errors = 0;
     for (let i = 0; i < steps.length; i++) {
-        const normalized = registry.normalizeStep(steps[i]);
-        const stepType = normalized.type;
+        const step = steps[i];
 
+        if (!step || typeof step !== "object" || Array.isArray(step)) {
+            log.error("[{path}] 步骤 #{n} 必须是对象格式，收到: {value}", processPath, i + 1, step);
+            errors++;
+            continue;
+        }
+
+        const stepType = step.type;
         if (!registry.has(stepType)) {
             log.error("[{path}] 步骤 #{n} 未知 type: {type}", processPath, i + 1, stepType);
             errors++;
@@ -121,7 +127,7 @@ function validateProcessSteps(registry, processPath, steps) {
 
         const schema = registry.getSchema(stepType);
         if (schema) {
-            const result = validateSchema(normalized.data, schema, stepType);
+            const result = validateSchema(step.data, schema, stepType);
             if (!result.ok) {
                 log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, result.error);
                 errors++;

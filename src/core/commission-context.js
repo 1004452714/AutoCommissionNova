@@ -72,7 +72,7 @@ export async function runStepsWithContext(context, options = {}) {
 
     for (let i = 0; i < processSteps.length; i++) {
         const step = processSteps[i];
-        log.info("执行流程步骤 {step}: {type}", i + 1, step.type || step);
+        log.info("执行流程步骤 {step}: {type}", i + 1, step.type);
         context.currentIndex = i;
 
         try {

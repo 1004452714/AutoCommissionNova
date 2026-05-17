@@ -82,7 +82,7 @@ defineStep({
 });
 ```
 
-**建议**：把 [src/processors/registry.js:48-59](src/processors/registry.js#L48-L59) 的 `normalizeStep` 字符串映射也搬进 wrapper。
+**建议**：~~把 `normalizeStep` 字符串映射搬进 wrapper~~（已废弃 — 旧字符串格式已无在用流程，兼容层已删除）。
 
 ---
 

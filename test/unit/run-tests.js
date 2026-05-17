@@ -149,24 +149,18 @@ test("validateSchema 非对象 data=报错", () => {
     assertEq(r.ok, false);
 });
 
-// ============ registry.normalizeStep ============
+// ============ registry ============
 const registry = new StepProcessorRegistry();
 
-test("normalizeStep .json 字符串→地图追踪", () => {
-    assertEq(registry.normalizeStep("foo.json"), { type: "地图追踪", data: "foo.json" });
+test("registry.has 未注册→false", () => {
+    assertEq(registry.has("未注册类型"), false);
 });
 
-test("normalizeStep F→对话", () => {
-    assertEq(registry.normalizeStep("F"), { type: "对话", data: {} });
-});
-
-test("normalizeStep 其他字符串→type 即字符串", () => {
-    assertEq(registry.normalizeStep("等待"), { type: "等待", data: {} });
-});
-
-test("normalizeStep 对象保持原状", () => {
-    const step = { type: "传送", data: { x: 1, y: 2 } };
-    assertEq(registry.normalizeStep(step), step);
+test("registry.register/has/getSchema", () => {
+    const schema = { x: "number" };
+    registry.register("__测试类型", async () => {}, schema);
+    assertEq(registry.has("__测试类型"), true);
+    assertEq(registry.getSchema("__测试类型"), schema);
 });
 
 /**
