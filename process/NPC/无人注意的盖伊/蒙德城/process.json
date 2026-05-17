@@ -6,7 +6,7 @@
     },
     {
         "type": "对话",
-        "note": "执行对话步骤，默认跳过10次对话",
+        "note": "执行对话步骤",
         "data": {
             "priorityOptions": [
                 "没有"
