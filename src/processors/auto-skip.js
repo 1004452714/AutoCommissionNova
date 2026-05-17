@@ -1,8 +1,8 @@
 /**
- * AutoSkip + 对话步骤处理器
- * AutoSkip 处理剧情跳过，对话使用 DialogProcessor 处理 NPC 对话
+ * 对话步骤处理器
+ * 使用 DialogProcessor 处理 NPC 对话
  */
-import { PATHS, UI_REGIONS, DIALOG_REGIONS } from "../config/index.js";
+import { PATHS, DIALOG_REGIONS } from "../config/index.js";
 import { isInMainUI } from "../vision/ui-detector.js";
 import { bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
@@ -11,12 +11,6 @@ import { isCancellationError } from "../utils/error-utils.js";
 import { defineStep } from "./define-step.js";
 
 export default [
-    defineStep({
-        type: "AutoSkip",
-        run: async (step, context) => {
-            await executeAutoSkipLogic(step.data || {}, "AutoSkip");
-        },
-    }),
     defineStep({
         type: "对话",
         run: async (step, context) => {
@@ -204,167 +198,4 @@ async function executeDialogStep(step, context) {
         log.error("执行对话步骤时出错: {error}", error.message);
         throw error;
     }
-}
-
-/**
- * 执行 AutoSkip 剧情跳过逻辑
- * 
- * 持续按空格跳过剧情，同时检测F图标和优先选项进行智能选择
- * 
- * @param {Object} stepData - 步骤数据
- * @param {string} stepName - 步骤名称
- */
-async function executeAutoSkipLogic(stepData, stepName) {
-    try {
-        log.info("执行{stepName}步骤", stepName);
-        const customPriorityOptions = stepData.priorityOptions || [];
-        const customBlacklist = stepData.blacklist || [];
-        const customPriorityIcons = stepData.priorityIcons || [];
-        const customNpcWhiteList = stepData.npcWhiteList || [];
-
-        const storyMat = file.ReadImageMatSync(PATHS.DISABLED_UI_IMAGE);
-        try {
-            const StoryRo = RecognitionObject.TemplateMatch(storyMat, ...UI_REGIONS.STORY_ICON);
-
-            const mergedPriorityOptions = customNpcWhiteList.concat(customPriorityOptions);
-            const effectivePriorityOptions = mergedPriorityOptions;
-            const effectiveBlacklist = customBlacklist;
-
-            const priorityIconROs = [];
-            for (const iconName of customPriorityIcons) {
-                try {
-                    const iconMat = file.ReadImageMatSync("Data/RecognitionObject/" + iconName);
-                    if (iconMat) {
-                        const ro = RecognitionObject.TemplateMatch(iconMat);
-                        priorityIconROs.push(ro);
-                        iconMat.Dispose();
-                    }
-                } catch (error) {
-                    if (isCancellationError(error)) { throw error; }
-                    log.warn("无法加载优先图标 {iconName}: {error}", iconName, error.message);
-                }
-            }
-
-            await sleep(1000);
-            let maxAttempts = 1200;
-            let attempts = 0;
-            let SkipTime = 100;
-            let storyIconDetectedOnce = false;
-
-            while (attempts < maxAttempts) {
-                const StoryResult = await recognizeImage(StoryRo);
-                if (storyIconDetectedOnce) {
-                    if (!StoryResult.success) { log.info("剧情图标消失，结束AutoSkip"); return; }
-                } else {
-                    if (StoryResult.success) { storyIconDetectedOnce = true; log.info("检测到剧情图标首次出现，启用图标检测机制"); }
-                }
-                attempts++;
-                const startTime = Date.now();
-                while (Date.now() - startTime < 1000) { keyPress("VK_SPACE"); await sleep(SkipTime); }
-
-                const fIconMat = file.ReadImageMatSync(PATHS.F_ICON_IMAGE);
-                try {
-                    const fIconRO = RecognitionObject.TemplateMatch(fIconMat, ...UI_REGIONS.F_ICON);
-                    let fIconFound = false;
-                    let fIconY = 0;
-                    const fIconResult = await recognizeImage(fIconRO);
-                    if (fIconResult.success) { fIconFound = true; fIconY = fIconResult.y; }
-
-                    let priorityIconClicked = false;
-                    if (fIconFound) {
-                        for (const iconRO of priorityIconROs) {
-                            const iconResult = await recognizeImage(iconRO);
-                            if (iconResult.success) {
-                                log.info("找到优先图标点击");
-                                click(iconResult.x, iconResult.y);
-                                priorityIconClicked = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fIconFound && !priorityIconClicked) {
-                        const ocrStartY = fIconY + 10;
-                        const ocrHeight = 850 - ocrStartY;
-                        if (ocrHeight > 0) {
-                            const captureRegion = captureGameRegion();
-                            try {
-                                const dialogArea = captureRegion.DeriveCrop(1250, ocrStartY, 550, ocrHeight);
-                                try {
-                                    const ocrRo = RecognitionObject.Ocr(0, 0, dialogArea.width, dialogArea.height);
-                                    const ocrResults = dialogArea.FindMulti(ocrRo);
-                                    if (ocrResults && ocrResults.count > 0) {
-                                        let foundValidOption = false;
-                                        let firstNonBlacklistOption = null;
-                                        for (let i = 0; i < ocrResults.count; i++) {
-                                            const ocrText = ocrResults[i].text;
-                                            log.debug("选项 {index}: {text}", i + 1, ocrText);
-                                            for (const priorityOption of effectivePriorityOptions) {
-                                                if (ocrText.includes(priorityOption)) {
-                                                    log.info("找到优先选项: {option}，点击该选项", priorityOption);
-                                                    ocrResults[i].click();
-                                                    foundValidOption = true;
-                                                    break;
-                                                }
-                                            }
-                                            if (foundValidOption) break;
-                                            if (!firstNonBlacklistOption) {
-                                                let isBlacklisted = false;
-                                                for (const blackOption of effectiveBlacklist) {
-                                                    if (ocrText.includes(blackOption)) { isBlacklisted = true; break; }
-                                                }
-                                                if (!isBlacklisted) firstNonBlacklistOption = ocrResults[i];
-                                            }
-                                        }
-                                        if (!foundValidOption && firstNonBlacklistOption) { firstNonBlacklistOption.click(); foundValidOption = true; }
-                                        if (!foundValidOption) keyPress("F");
-                                    } else { keyPress("F"); }
-                                } finally {
-                                    dialogArea.Dispose();
-                                }
-                            } finally {
-                                captureRegion.Dispose();
-                            }
-                        }
-                    }
-                } finally {
-                    fIconMat.Dispose();
-                }
-                await sleep(1);
-            }
-        } finally {
-            storyMat.Dispose();
-        }
-        log.info("{stepName}步骤执行完成", stepName);
-    } catch (error) {
-        if (isCancellationError(error)) { throw error; }
-        log.error("执行{stepName}步骤时出错: {error}", stepName, error.message);
-        throw error;
-    }
-}
-
-/**
- * 识别图像（带截图和错误处理）
- * 
- * 在当前游戏画面中识别指定的识别对象
- * 
- * @param {Object} recognitionObject - 识别对象
- * @returns {Promise<{success: boolean, x: number, y: number}>} 识别结果
- */
-async function recognizeImage(recognitionObject) {
-    try {
-        const captureRegion = captureGameRegion();
-        try {
-            const imageResult = captureRegion.find(recognitionObject);
-            if (imageResult && imageResult.x !== 0 && imageResult.y !== 0 && imageResult.width !== 0 && imageResult.height !== 0) {
-                return { success: true, x: imageResult.x, y: imageResult.y };
-            }
-        } finally {
-            captureRegion.Dispose();
-        }
-    } catch (error) {
-        if (isCancellationError(error)) { throw error; }
-        log.error("识别图像时发生异常: {error}", error.message);
-    }
-    return { success: false };
 }
