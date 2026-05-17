@@ -33,7 +33,7 @@ function scanSubDirectories(dirPath) {
  * @param {string} commissionName - 委托名
  * @param {string} location - 地点
  * @param {Object} commissionPosition - 委托坐标 {x, y}
- * @returns {Promise<{processPath: string, distance: number}|null>}
+ * @returns {Promise<{processPath: string, processDir: string, distance: number}|null>}
  */
 export async function findNearestBasicProcess(commissionName, location, commissionPosition) {
     const baseDir = `process/Basic/${commissionName}`;

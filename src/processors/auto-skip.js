@@ -3,8 +3,7 @@
  * 使用 DialogProcessor 处理 NPC 对话
  */
 import { PATHS, DIALOG_REGIONS } from "../config/index.js";
-import { isInMainUI } from "../vision/ui-detector.js";
-import { bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
+import { isInMainUI, bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
 

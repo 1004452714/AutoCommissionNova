@@ -1,7 +1,7 @@
 /**
  * 等待返回主界面步骤处理器
  */
-import { isInMainUI } from "../vision/ui-detector.js";
+import { isInMainUI } from "../vision/index.js";
 import { defineStep } from "./define-step.js";
 
 const run = async (step, context) => {

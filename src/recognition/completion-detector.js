@@ -3,9 +3,7 @@
  * 检查委托是否已完成
  */
 import { OCR_REGIONS } from "../config/index.js";
-import { enterCommissionScreen } from "../vision/ui-detector.js";
-import { bvPageOcrRegionText, pageScroll } from "../vision/index.js";
-import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
+import { enterCommissionScreen, detectCommissionStatusByImage, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
 import { isCancellationError } from "../utils/error-utils.js";
 
@@ -24,7 +22,6 @@ export async function isCompleted(commissionName) {
         }
         await sleep(900);
 
-        // 遍历 4 个委托位置，找到对应的委托名
         for (let i = 0; i < 4; i++) {
             if (i === 3) { await pageScroll(1); }  // 第4个委托需要翻页
             const ocrRegion = OCR_REGIONS.COMMISSION_NAME[i];
@@ -32,7 +29,6 @@ export async function isCompleted(commissionName) {
             const standardizedName = standardizeCommissionName(rawName);
 
             if (standardizedName === commissionName) {
-                // 找到匹配的委托，检测其完成状态
                 log.info("找到委托 {name}，检测完成状态", commissionName);
                 const status = await detectCommissionStatusByImage(i);
                 return status === "completed";

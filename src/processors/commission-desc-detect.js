@@ -5,8 +5,7 @@ import { OCR_REGIONS, THRESHOLDS } from "../config/index.js";
 import { bvPageOcrRegionText } from "../vision/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 import { defineStep } from "./define-step.js";
-import { standardizeCommissionName } from "../recognition/commission-standardizer.js";
-import { calculateSimilarity } from "../recognition/text-similarity.js";
+import { standardizeCommissionName, calculateSimilarity } from "../recognition/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
 

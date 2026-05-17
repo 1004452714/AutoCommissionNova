@@ -33,26 +33,22 @@ const executorMap = {
  */
 async function updateBranchCompletion(commissionName, context) {
     try {
-        // 从缓存中获取配置（如果有的话）
         const config = context.branchConfigCache;
         if (!config) {
-            return; // 没有缓存配置，说明没有使用分支选择
+            return;
         }
 
         const commissionConfig = config[commissionName];
         if (!commissionConfig) {
-            return; // 没有配置该委托的分支信息
+            return;
         }
 
-        // 初始化 completed 数组
         if (!commissionConfig.completed) {
             commissionConfig.completed = [];
         }
 
-        // 获取本次执行的分支列表
         const executedBranches = context.executedBranches || [];
 
-        // 更新完成进度
         let hasUpdate = false;
         for (const branch of executedBranches) {
             if (!commissionConfig.completed.includes(branch)) {
@@ -62,7 +58,6 @@ async function updateBranchCompletion(commissionName, context) {
             }
         }
 
-        // 如果有更新，保存配置文件
         if (hasUpdate) {
             const configPath = PATHS.CONFIG_BASE + "/commission-branches.json";
             file.writeTextSync(configPath, JSON.stringify(config, null, 2));
@@ -88,16 +83,13 @@ export async function executeCommissionTracking(stepRegistry) {
         log.info("开始执行委托追踪");
         await genshin.returnMainUi();
 
-        // 加载委托数据
         let commissions = [];
         let completedCount = 0;
 
         try {
             const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
             if (Array.isArray(commissionsData?.commissions)) {
-                // 过滤条件：支持的委托 + 非未知地点 + 未完成 + 非处理失败
                 commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成' && c.location !== '处理失败');
-                // 统计已完成的委托数量
                 const completedCommissions = commissionsData.commissions.filter((c) => c.location === '已完成');
                 completedCount = completedCommissions.length;
             } else {
@@ -114,7 +106,6 @@ export async function executeCommissionTracking(stepRegistry) {
             return false;
         }
 
-        // 遍历执行每个委托
         for (const comm of commissions) {
             log.info("开始执行委托：{name} ({location}) [{type}]", comm.name, comm.location, comm.type);
 
@@ -124,9 +115,11 @@ export async function executeCommissionTracking(stepRegistry) {
                 continue;
             }
 
+            // tryCount 0 是首次尝试，1..MAX 是重试；总尝试数 = MAX+1
+            const totalAttempts = MAX_COMMISSION_RETRY_COUNT + 1;
             let success = false;
             for (let tryCount = 0; tryCount <= MAX_COMMISSION_RETRY_COUNT && !success; tryCount++) {
-                log.info("第 {try} 次尝试执行委托 {name} ", tryCount + 1, comm.name);
+                log.info("第 {attempt}/{total} 次尝试执行委托 {name}", tryCount + 1, totalAttempts, comm.name);
 
                 const result = await executor(comm, stepRegistry);
                 dispatcher.ClearAllTriggers();
@@ -139,10 +132,10 @@ export async function executeCommissionTracking(stepRegistry) {
                         log.info("委托 {name} 执行完成", comm.name);
                         await updateBranchCompletion(comm.name, result.context);
                     } else {
-                        log.warn("委托 {name} 执行后检查未完成，重试次数: {try}/{max}", comm.name, tryCount, MAX_COMMISSION_RETRY_COUNT);
+                        log.warn("委托 {name} 执行后检查未完成（第 {attempt}/{total} 次）", comm.name, tryCount + 1, totalAttempts);
                     }
                 } else {
-                    log.warn("委托 {name} 执行失败，重试次数: {try}/{max}", comm.name, tryCount, MAX_COMMISSION_RETRY_COUNT);
+                    log.warn("委托 {name} 执行失败（第 {attempt}/{total} 次）", comm.name, tryCount + 1, totalAttempts);
                 }
 
                 if (!success && tryCount < MAX_COMMISSION_RETRY_COUNT) {
@@ -151,7 +144,7 @@ export async function executeCommissionTracking(stepRegistry) {
             }
 
             if (!success) {
-                log.warn("委托 {name} 重试 {try} 次后仍未完成，跳过该委托", comm.name, MAX_COMMISSION_RETRY_COUNT);
+                log.warn("委托 {name} 共 {total} 次尝试后仍未完成，跳过该委托", comm.name, totalAttempts);
             } else {
                 log.info("委托 {name} 执行成功", comm.name);
             }

@@ -3,7 +3,7 @@
  * 负责委托数据的加载、保存、验证和持久化
  * 采用内存 + 文件双写模式，文件仅作为持久化备份
  */
-import { PATHS, COMMISSION_TYPE } from "../config/index.js";
+import { PATHS } from "../config/index.js";
 
 /**
  * 检查时间戳是否为今天（以凌晨四点为分界）
@@ -64,7 +64,7 @@ export async function saveCommissionsData(commissions) {
                     existing.type = updated.type;
                     existing.supported = updated.supported;
                     existing.country = updated.country;
-                    existing.CommissionPosition = updated.CommissionPosition;
+                    existing.commissionPosition = updated.commissionPosition;
                 }
             }
             existingData.timestamp = new Date().toISOString();

@@ -4,7 +4,7 @@
  */
 import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/index.js";
-import { findCommissionIndex, getCommissionPosition, clickCommissionAndOpenMap } from "../recognition/commission-scanner.js";
+import { findCommissionIndex, getCommissionPosition, clickCommissionAndOpenMap } from "../recognition/index.js";
 
 /**
  * 寻找委托目标位置并追踪

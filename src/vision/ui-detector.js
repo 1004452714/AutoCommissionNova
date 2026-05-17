@@ -25,8 +25,7 @@ export function isInMainUI() {
 /**
  * 检测委托完成状态（使用图像识别）
  * @param {number} buttonIndex - 委托按钮索引（0-3）
- * @param {string} [commissionName] - 委托名称（用于日志输出）
- * @returns {Promise<string>} "completed" | "uncompleted" | "unknown"
+ * @returns {Promise<"completed"|"uncompleted"|"unknown">}
  */
 export async function detectCommissionStatusByImage(buttonIndex) {
     let completedMat = null;
@@ -39,6 +38,7 @@ export async function detectCommissionStatusByImage(buttonIndex) {
         const uncompletedRo = RecognitionObject.TemplateMatch(uncompletedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
         if (page.locator(completedRo).isExist()) return "completed";
         if (page.locator(uncompletedRo).isExist()) return "uncompleted";
+        return "unknown";
     } catch (error) {
         log.error("检测第{x}个委托完成状态时出错：{error}", buttonIndex + 1, error.message);
         return "unknown";

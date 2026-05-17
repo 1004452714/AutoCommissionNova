@@ -5,7 +5,7 @@
  *              不影响游戏交互。修改即时写回文件。
  */
 
-import { PATHS } from "../config/game-constants.js";
+import { PATHS } from "../config/index.js";
 import { isCancellationError } from "../utils/error-utils.js";
 
 const HTML_PATH = "commission-config-mask.html";

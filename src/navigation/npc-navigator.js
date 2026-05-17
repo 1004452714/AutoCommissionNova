@@ -11,7 +11,7 @@
  * 6. 重复2-5直到到达或超时
  */
 import { PATHS } from "../config/index.js";
-import { isInMainUI } from "../vision/ui-detector.js";
+import { isInMainUI } from "../vision/index.js";
 
 /**
  * 自动导航到 NPC 对话位置

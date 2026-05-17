@@ -15,11 +15,10 @@ import { createCommissionContext, runStepsWithContext } from "./commission-conte
  */
 export async function executeBasicCommission(commission, stepRegistry) {
     try {
-        // 1. 匹配最近的流程
         const matched = await findNearestBasicProcess(
             commission.name,
             commission.location,
-            commission.CommissionPosition
+            commission.commissionPosition
         );
 
         if (!matched) {
@@ -29,14 +28,12 @@ export async function executeBasicCommission(commission, stepRegistry) {
 
         log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, matched.distance.toFixed(2));
 
-        // 2. 加载流程步骤
         const processSteps = await loadBasicProcess(matched.processPath);
         if (!processSteps || processSteps.length === 0) {
             log.warn("流程文件为空或解析失败: {path}", matched.processPath);
             return { success: false, context: null };
         }
 
-        // 3. 构造 context + 执行步骤
         const context = createCommissionContext({
             type: COMMISSION_TYPE.BASIC,
             commissionName: commission.name,

@@ -3,9 +3,8 @@
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
 import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
-import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
+import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll, detectCommissionStatusByImage } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
-import { detectCommissionStatusByImage } from "../vision/ui-detector.js";
 import { getCommissionPosition, clickCommissionAndOpenMap } from "./commission-scanner.js";
 import { isCancellationError } from "../utils/error-utils.js";
 /**
@@ -94,7 +93,6 @@ export async function recognizeCommissions(supportedCommissions) {
         const allCommissions = [];
         const page = new BvPage();
         let commission;
-        // 遍历4个委托位置
         for (let i = 0; i < 4; i++) {
             try {
                 commission = {};
@@ -103,9 +101,7 @@ export async function recognizeCommissions(supportedCommissions) {
                 const rawName = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_NAME[i]);
                 log.info("识别到第{id}个委托名称: {name}", id, rawName);
 
-                // 标准化委托名称
                 const standardizedName = standardizeCommissionName(rawName);
-                // 判断委托类型
                 const isBasic = supportedCommissions.basic.includes(standardizedName);
                 const isNpc = supportedCommissions.npc.includes(standardizedName);
                 commission = {
@@ -116,7 +112,6 @@ export async function recognizeCommissions(supportedCommissions) {
                     location: "",
                 };
                 allCommissions.push(commission);
-                // 检测委托状态
                 const status = await detectCommissionStatusByImage(i);
                 log.info("第{id}个委托状态: {status}", id, status);
                 if (status === "completed") {
@@ -125,32 +120,27 @@ export async function recognizeCommissions(supportedCommissions) {
                     continue;
                 }
 
-                // 进入委托详情
                 log.info("查看第{id}个委托详情: {name}", id, standardizedName);
 
-                //尝试点击委托的追踪按钮跳转到大地图，直到追踪按钮出现
                 await clickCommissionAndOpenMap(page, i);
 
 
-                // 识别国家
                 const country = await checkDetailPageEntered();
                 commission.country = country;
 
-                // 识别地点并标准化地点
                 let location = await recognizeCommissionLocation(country);
                 commission.location = standardizeCommissionLocation(commission.name, location);
 
-                // 获取委托任务所在位置坐标
                 const bigMapPosition = await getCommissionPosition();
-                commission.CommissionPosition = bigMapPosition;
+                commission.commissionPosition = bigMapPosition;
 
-                // 返回冒险之证-委托页面
+                // 关闭详情页 + 大地图返回委托页；大地图跳转有微小延迟，单次 ESC 可能不够
                 await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(async () => {
                     log.info("尝试从地图返回委托页面");
-                    keyPress("VK_ESCAPE"); //关闭详情页
+                    keyPress("VK_ESCAPE");
                     await sleep(500);
-                    keyPress("VK_ESCAPE");//关闭大地图
-                    await sleep(1000); //关闭大地图跳转有些微延迟
+                    keyPress("VK_ESCAPE");
+                    await sleep(1000);
                 }).waitFor();
 
             } catch (error) {

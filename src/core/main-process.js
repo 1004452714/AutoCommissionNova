@@ -6,11 +6,11 @@ import { getSetting } from "../utils/settings-utils.js";
 import { loadSupportedCommissions, saveCommissionsData } from "../data/index.js";
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
 import { executeCommissionTracking } from "./commission-executor.js";
-import { enterCommissionScreen } from "../vision/ui-detector.js";
+import { enterCommissionScreen } from "../vision/index.js";
 
 /**
  * 委托识别主函数
- * @returns {Promise<Array>} 识别到的委托列表
+ * @returns {Promise<Array|undefined>} 识别到的委托列表；skipRecognition 时返回 undefined，失败时返回 []
  */
 export async function identification() {
     try {
@@ -21,23 +21,17 @@ export async function identification() {
         }
         log.info("开始执行委托识别");
 
-        // 返回游戏主界面
         await genshin.returnMainUi();
 
-        // 加载支持的委托列表
         const supportedCommissions = await loadSupportedCommissions();
 
-        // 加载标准的委托名称和对应地点名称
         await initCommissionReferenceData(supportedCommissions);
 
-        // 进入冒险之证-委托界面
         await enterCommissionScreen();
 
-        // 执行委托列表识别（名称、状态、地点）
         const commissions = await recognizeCommissions(supportedCommissions);
 
         if (commissions && commissions.length > 0) {
-            // 保存识别到的委托数据
             await saveCommissionsData(commissions);
             log.info("委托识别完成，共识别到 {total} 个委托，其中 {supported} 个受支持",
                 commissions.length, commissions.filter(function (c) { return c.supported; }).length);
@@ -78,13 +72,10 @@ export async function prepareForCommission() {
  */
 export async function executeMainProcess(stepRegistry) {
     try {
-        //识别委托
         await identification();
 
-        //前置准备
         await prepareForCommission();
 
-        //执行委托
         await executeCommissionTracking(stepRegistry);
 
         const setting = await getSetting();
