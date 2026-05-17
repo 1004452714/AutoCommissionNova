@@ -3,7 +3,7 @@
  * 负责委托数据的加载、保存、验证和持久化
  * 采用内存 + 文件双写模式，文件仅作为持久化备份
  */
-import { PATHS } from "../config/index.js";
+import { PATHS, COMMISSION_STATUS } from "../config/index.js";
 
 /**
  * 检查时间戳是否为今天（以凌晨四点为分界）
@@ -42,7 +42,8 @@ export async function saveCommissionsData(commissions) {
             existingData = JSON.parse(existingContent);
             if (existingData && existingData.timestamp && existingData.commissions &&
                     existingData.commissions.length === 4 && commissions.length === 4 &&
-                    isToday(existingData.timestamp)) {
+                    isToday(existingData.timestamp) &&
+                    existingData.commissions.every((c) => c.status)) {
                 const existingNames = existingData.commissions.map((c) => c.name).sort();
                 const newNames = commissions.map((c) => c.name).sort();
                 if (existingNames.every((name, idx) => name === newNames[idx])) {
@@ -59,8 +60,9 @@ export async function saveCommissionsData(commissions) {
             for (let i = 0; i < existingData.commissions.length; i++) {
                 const existing = existingData.commissions[i];
                 const updated = commissions.find((c) => c.name === existing.name);
-                if (updated && existing.location === "未知地点") {
+                if (updated && existing.status === COMMISSION_STATUS.UNKNOWN) {
                     existing.location = updated.location;
+                    existing.status = updated.status;
                     existing.type = updated.type;
                     existing.supported = updated.supported;
                     existing.country = updated.country;

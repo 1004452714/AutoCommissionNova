@@ -2,7 +2,7 @@
  * UI 检测与操作工具
  * 使用 BvPage 检测游戏界面状态，提供通用 UI 操作
  */
-import { PATHS, COMMISSION_STATUS_REGIONS, UI_REGIONS } from "../config/index.js";
+import { PATHS, COMMISSION_STATUS_REGIONS, UI_REGIONS, COMMISSION_STATUS } from "../config/index.js";
 
 /**
  * 检测是否在主界面
@@ -25,7 +25,7 @@ export function isInMainUI() {
 /**
  * 检测委托完成状态（使用图像识别）
  * @param {number} buttonIndex - 委托按钮索引（0-3）
- * @returns {Promise<"completed"|"uncompleted"|"unknown">}
+ * @returns {Promise<string>} COMMISSION_STATUS.COMPLETED / UNCOMPLETED / UNKNOWN
  */
 export async function detectCommissionStatusByImage(buttonIndex) {
     let completedMat = null;
@@ -36,12 +36,12 @@ export async function detectCommissionStatusByImage(buttonIndex) {
         uncompletedMat = file.ReadImageMatSync(PATHS.UNCOMPLETED_IMAGE);
         const completedRo = RecognitionObject.TemplateMatch(completedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
         const uncompletedRo = RecognitionObject.TemplateMatch(uncompletedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
-        if (page.locator(completedRo).isExist()) return "completed";
-        if (page.locator(uncompletedRo).isExist()) return "uncompleted";
-        return "unknown";
+        if (page.locator(completedRo).isExist()) return COMMISSION_STATUS.COMPLETED;
+        if (page.locator(uncompletedRo).isExist()) return COMMISSION_STATUS.UNCOMPLETED;
+        return COMMISSION_STATUS.UNKNOWN;
     } catch (error) {
         log.error("检测第{x}个委托完成状态时出错：{error}", buttonIndex + 1, error.message);
-        return "unknown";
+        return COMMISSION_STATUS.UNKNOWN;
     } finally {
         if (completedMat) completedMat.Dispose();
         if (uncompletedMat) uncompletedMat.Dispose();

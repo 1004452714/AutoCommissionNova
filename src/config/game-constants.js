@@ -6,6 +6,19 @@ export const COMMISSION_TYPE = {
 };
 
 /**
+ * 委托状态（detectCommissionStatusByImage 返回值 + 持久化到委托对象的 status 字段）
+ * UNKNOWN 表示无法判定（图标识别不出 / 地点 OCR 失败 / 处理过程抛错），下游统一不执行
+ */
+export const COMMISSION_STATUS = {
+    /** 当日已完成，跳过执行 */
+    COMPLETED: "已完成",
+    /** 未完成且具备执行条件（有地点） */
+    UNCOMPLETED: "未完成",
+    /** 状态无法判定，跳过执行 */
+    UNKNOWN: "未知",
+};
+
+/**
  * 委托统一配置（OCR 区域 + 状态检查区域）
  * 每个配置项包含委托名 OCR 识别区域和完成状态检测区域
  */

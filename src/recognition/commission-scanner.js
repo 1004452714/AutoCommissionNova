@@ -122,6 +122,6 @@ export async function clickCommissionAndOpenMap(page, index) {
     const button = COMMISSION_POSITIONING_BUTTONS[index];
     await page.locator(trackRo).withRetryAction(async () => {
         click(button.x, button.y);
-        await sleep(500); // 打开大地图跳转有些微延迟
+        await sleep(1500); // 打开大地图跳转有些微延迟
     }).waitFor();
 }

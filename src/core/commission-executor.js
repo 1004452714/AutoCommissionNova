@@ -9,7 +9,7 @@
  * 4. 按委托类型（NPC/Basic）通过 executorMap 调度执行
  * 5. 执行后检查完成状态，支持重试机制
  */
-import { COMMISSION_TYPE, MAX_COMMISSION_RETRY_COUNT, PATHS } from "../config/index.js";
+import { COMMISSION_TYPE, COMMISSION_STATUS, MAX_COMMISSION_RETRY_COUNT, PATHS } from "../config/index.js";
 import { isCompleted } from "../recognition/index.js";
 import { executeNpcCommission } from "./npc-executor.js";
 import { executeBasicCommission } from "./basic-executor.js";
@@ -89,8 +89,8 @@ export async function executeCommissionTracking(stepRegistry) {
         try {
             const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
             if (Array.isArray(commissionsData?.commissions)) {
-                commissions = commissionsData.commissions.filter((c) => c.supported && c.location !== '未知地点' && c.location !== '已完成' && c.location !== '处理失败');
-                const completedCommissions = commissionsData.commissions.filter((c) => c.location === '已完成');
+                commissions = commissionsData.commissions.filter((c) => c.supported && c.status === COMMISSION_STATUS.UNCOMPLETED);
+                const completedCommissions = commissionsData.commissions.filter((c) => c.status === COMMISSION_STATUS.COMPLETED);
                 completedCount = completedCommissions.length;
             } else {
                 log.error("委托数据文件格式错误");

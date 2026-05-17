@@ -2,14 +2,14 @@
  * 委托识别主模块
  * 负责委托列表的 OCR 识别、地点识别、详情检测等
  */
-import { COMMISSION_TYPE, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
+import { COMMISSION_TYPE, COMMISSION_STATUS, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
 import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll, detectCommissionStatusByImage } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { getCommissionPosition, clickCommissionAndOpenMap } from "./commission-scanner.js";
 import { isCancellationError } from "../utils/error-utils.js";
 /**
  * 识别委托地点
- * @returns {Promise<string>} 地点名称
+ * @returns {Promise<string>} 地点名称；OCR 失败时返回空字符串（调用方据此设置 status）
  */
 export async function recognizeCommissionLocation(country) {
     try {
@@ -20,12 +20,12 @@ export async function recognizeCommissionLocation(country) {
             return location.trim();
         }
 
-        return "未知地点";
+        return "";
 
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
         log.error("识别委托地点时出错: {error}", error.message);
-        return "未知地点";
+        return "";
     }
 }
 
@@ -110,12 +110,13 @@ export async function recognizeCommissions(supportedCommissions) {
                     supported: isBasic || isNpc,
                     type: isBasic ? COMMISSION_TYPE.BASIC : isNpc ? COMMISSION_TYPE.NPC : "",
                     location: "",
+                    status: COMMISSION_STATUS.UNKNOWN,
                 };
                 allCommissions.push(commission);
-                const status = await detectCommissionStatusByImage(i);
-                log.info("第{id}个委托状态: {status}", id, status);
-                if (status === "completed") {
-                    commission.location = "已完成";
+                const iconStatus = await detectCommissionStatusByImage(i);
+                log.info("第{id}个委托完成图标状态: {status}", id, iconStatus);
+                if (iconStatus === COMMISSION_STATUS.COMPLETED) {
+                    commission.status = COMMISSION_STATUS.COMPLETED;
                     await sleep(1);
                     continue;
                 }
@@ -128,8 +129,11 @@ export async function recognizeCommissions(supportedCommissions) {
                 const country = await checkDetailPageEntered();
                 commission.country = country;
 
-                let location = await recognizeCommissionLocation(country);
-                commission.location = standardizeCommissionLocation(commission.name, location);
+                const rawLocation = await recognizeCommissionLocation(country);
+                if (rawLocation) {
+                    commission.location = standardizeCommissionLocation(commission.name, rawLocation);
+                    commission.status = COMMISSION_STATUS.UNCOMPLETED;
+                }
 
                 const bigMapPosition = await getCommissionPosition();
                 commission.commissionPosition = bigMapPosition;
@@ -147,7 +151,6 @@ export async function recognizeCommissions(supportedCommissions) {
                 if (isCancellationError(error)) { throw error; }
                 log.error("处理第 {id} 个委托 {name} 时出错: {error}", commission.id, commission.name, error.message);
                 log.debug("错误详情:{error}", error);
-                commission.location = "处理失败";
                 commission.country = "未知";
 
             }

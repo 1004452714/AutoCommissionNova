@@ -2,7 +2,7 @@
  * 委托完成检测模块
  * 检查委托是否已完成
  */
-import { OCR_REGIONS } from "../config/index.js";
+import { OCR_REGIONS, COMMISSION_STATUS } from "../config/index.js";
 import { enterCommissionScreen, detectCommissionStatusByImage, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
 import { isCancellationError } from "../utils/error-utils.js";
@@ -30,8 +30,8 @@ export async function isCompleted(commissionName) {
 
             if (standardizedName === commissionName) {
                 log.info("找到委托 {name}，检测完成状态", commissionName);
-                const status = await detectCommissionStatusByImage(i);
-                return status === "completed";
+                const iconStatus = await detectCommissionStatusByImage(i);
+                return iconStatus === COMMISSION_STATUS.COMPLETED;
             }
             await sleep(1);
         }
