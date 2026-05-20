@@ -18,6 +18,7 @@ import commissionTracking from "./commission-tracking.js";
 import locationDetection from "./location-detection.js";
 import commissionDescDetect from "./commission-desc-detect.js";
 import userBranchSelect from "./user-branch-select.js";
+import flowBranch from "./flow-branch.js";
 
 const processors = [
     wait,
@@ -35,6 +36,7 @@ const processors = [
     locationDetection,
     commissionDescDetect,
     userBranchSelect,
+    flowBranch,
 ];
 
 /**
