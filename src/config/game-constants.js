@@ -107,6 +107,9 @@ export const PATHS = {
     TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",
     CHARACTER_IMAGE_DIR: "Data/characterimage/",
     AVATAR_DATA: "Data/avatar/combat_avatar.json",
+    AVATAR_INFO: "Data/avatar/avatar_info.json",
+    AVATAR_TEMPLATE_DIR: "Data/RecognitionObject/avatar",
+    SWITCH_ROLE_SLOT_DIR: "Data/RecognitionObject/switch_role",
     CONFIG_BASE: "process/config",
 };
 
@@ -136,6 +139,26 @@ export const UI_REGIONS = {
     F_ICON: [1207, 0, 43, 850],
     /** 主界面派蒙菜单搜索区域 [x, y, width, height] */
     PAIMON_MENU_SEARCH: [0, 0, 500, 500],
+
+    // ========== 切换角色 ==========
+    /** 队伍配置界面标题区域 */
+    TEAM_CONFIG_TITLE: new rect(119, 30, 108, 37),
+    /** "当前状态不可进行队伍配置" 提示区域 */
+    TEAM_DISABLED_HINT: new rect(806, 198, 314, 37),
+    /** 队伍配置 - 快速编队按钮区域 */
+    TEAM_QUICK_FORMATION: new rect(1293, 1004, 125, 34),
+    /** 队伍配置 - 元素共鸣标签区域（用于确认队伍配置面板已切到角色列表） */
+    TEAM_ELEMENT_RESONANCE: new rect(1655, 32, 106, 30),
+    /** 筛选面板 - 筛选按钮区域 */
+    FILTER_BUTTON: new rect(28, 26, 76, 40),
+    /** 筛选面板 - 元素类型生效后底部 tag 区域 */
+    FILTER_ELEMENT_TAG: new rect(50, 924, 75, 30),
+    /** 筛选面板 - 武器类型生效后底部 tag 区域 */
+    FILTER_WEAPON_TAG: new rect(148, 924, 95, 29),
+    /** 筛选面板 - 清除按钮区域 */
+    FILTER_CLEAR_BUTTON: new rect(699, 922, 55, 31),
+    /** 角色头像网格 SIFT 搜索区域 */
+    AVATAR_GRID: new rect(26, 97, 763, 546),
 };
 
 /** OCR 识别区域坐标常量 */

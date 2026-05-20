@@ -20,8 +20,8 @@ import { runUnitTests } from "../../test/unit/run-tests.js";
  * 修改这里的配置来切换测试模式
  */
 const TEST_CONFIG = {
-    mode: "commission",             // 测试模式: "case"=测试用例, "commission"=真实委托, "unit"=纯函数单元测试
-    caseName: "用户分支选择测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
+    mode: "case",             // 测试模式: "case"=测试用例, "commission"=真实委托, "unit"=纯函数单元测试
+    caseName: "选择角色测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
     commissionName: "餐品订单",         // mode="commission" 时生效，对应 process/NPC/ 下的目录名
     location: "蒙德城",           // mode="commission" 时生效，委托地点
     processFile: "process.json",      // mode="commission" 时生效，流程文件名
