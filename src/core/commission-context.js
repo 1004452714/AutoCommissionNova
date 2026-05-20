@@ -38,7 +38,7 @@ function createResolveResource({ type, commissionName, location, processDir }) {
  * @returns {Object} 共享上下文对象
  */
 export function createCommissionContext({ type, commissionName, location, processSteps, stepRegistry, processDir }) {
-    return {
+    const context = {
         type,
         commissionName,
         location,
@@ -46,6 +46,7 @@ export function createCommissionContext({ type, commissionName, location, proces
         processDir,
         stepRegistry,
         currentIndex: 0,
+        currentStepLabel: null,
         resolveResource: createResolveResource({ type, commissionName, location, processDir }),
         // 运行时由 step 写入的字段，工厂统一初始化以保持 context shape 稳定
         branchConfigCache: null,
@@ -53,6 +54,20 @@ export function createCommissionContext({ type, commissionName, location, proces
         locationDetected: false,
         detectedPosition: null,
     };
+
+    // 把子流程 step 数组 splice 到当前 step 之后，并为每个 sub-step 打上 _indexPath，
+    // 让 runStepsWithContext 输出层级序号（父序号.子序号），例如 "1.1" / "1.2"
+    // 嵌套子流程时，父 step 自身的 currentStepLabel 即已是 "1.1" 等层级值，递归生成 "1.1.1" / "1.1.2"
+    context.insertSubSteps = (subSteps) => {
+        const parentLabel = context.currentStepLabel || String(context.currentIndex + 1);
+        for (let j = 0; j < subSteps.length; j++) {
+            subSteps[j]._indexPath = parentLabel + "." + (j + 1);
+        }
+        context.processSteps.splice(context.currentIndex + 1, 0, ...subSteps);
+        return subSteps.length;
+    };
+
+    return context;
 }
 
 /**
@@ -70,16 +85,26 @@ export async function runStepsWithContext(context, options = {}) {
     const { sleepMs = 250, stopOnError = true } = options;
     const { processSteps, stepRegistry } = context;
 
+    let topLevelCounter = 0;
     for (let i = 0; i < processSteps.length; i++) {
         const step = processSteps[i];
-        log.info("执行流程步骤 {step}: {type}", i + 1, step.type);
+        // 子流程 splice 时已写入 _indexPath（如 "1.1"），顶层 step 沿用 1, 2, 3... 顺序
+        let stepLabel;
+        if (step._indexPath) {
+            stepLabel = step._indexPath;
+        } else {
+            topLevelCounter++;
+            stepLabel = String(topLevelCounter);
+        }
+        log.info("执行流程步骤 {step}: {type}", stepLabel, step.type);
         context.currentIndex = i;
+        context.currentStepLabel = stepLabel;
 
         try {
             await stepRegistry.process(step, context);
         } catch (stepError) {
             if (isCancellationError(stepError)) { throw stepError; }
-            log.error("执行步骤 {step} 时出错: {error}", i + 1, stepError.message);
+            log.error("执行步骤 {step} 时出错: {error}", stepLabel, stepError.message);
             if (stopOnError) return false;
         }
 

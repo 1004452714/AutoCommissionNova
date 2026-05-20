@@ -43,7 +43,7 @@ export default defineStep({
             try {
                 const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);
                 if (nextSteps && nextSteps.length > 0) {
-                    context.processSteps.splice(context.currentIndex + 1, 0, ...nextSteps);
+                    context.insertSubSteps(nextSteps);
                     log.info("已插入 {count} 个后续步骤", nextSteps.length);
                 }
             } catch (fileError) {

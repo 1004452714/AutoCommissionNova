@@ -35,7 +35,7 @@ export default defineStep({
             return false;
         }
 
-        context.processSteps.splice(context.currentIndex + 1, 0, ...subSteps);
+        context.insertSubSteps(subSteps);
         log.info("已插入 {count} 个子流程步骤", subSteps.length);
     },
 });

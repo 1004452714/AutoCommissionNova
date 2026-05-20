@@ -69,7 +69,7 @@ export default defineStep({
                         if (executeFile && runType === "process") {
                             const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);
                             if (nextSteps && Array.isArray(nextSteps)) {
-                                context.processSteps.splice(context.currentIndex + 1, 0, ...nextSteps);
+                                context.insertSubSteps(nextSteps);
                                 log.info("已插入 {count} 个后续步骤", nextSteps.length);
                             }
                         } else if (executeFile && runType === "path") {
