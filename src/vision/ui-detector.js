@@ -7,14 +7,27 @@ import { PATHS, COMMISSION_STATUS_REGIONS, UI_REGIONS, COMMISSION_STATUS } from 
 /**
  * 检测是否在主界面
  * 
- * 通过模板匹配派蒙菜单图标判断当前是否在游戏主界面
- * 
  * @returns {boolean} 是否在主界面
  */
 export function isInMainUI() {
     const mat = file.ReadImageMatSync(PATHS.PAIMON_MENU_IMAGE);
     try {
         const ro = RecognitionObject.TemplateMatch(mat, 0, 0, 500, 500);
+        const page = new BvPage();
+        return page.locator(ro).isExist();
+    } finally {
+        mat?.Dispose();
+    }
+}
+/**
+ * 检测是否在对话界面
+ * 
+ * @returns {boolean} 是否在对话界面
+ */
+export function isInTalkUI() {
+    const mat = file.ReadImageMatSync(PATHS.INTALK_IMAGE);
+    try {
+        const ro = RecognitionObject.TemplateMatch(mat, 254, 19, 80, 52);
         const page = new BvPage();
         return page.locator(ro).isExist();
     } finally {

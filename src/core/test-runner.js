@@ -6,14 +6,12 @@
  *
  * 测试用例（mode="case"）使用 BASIC 类型构造 context，让 resolveResource
  * 指向 test/process/{caseName}/，从而支持依赖 context.resolveResource 的 step
- * 单元测试（mode="unit"）跳过游戏环境，仅跑 test/unit/ 下的纯函数 assert
  */
 import { PATHS, COMMISSION_TYPE } from "../config/index.js";
 import { prepareForCommission } from "./main-process.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 import { createCommissionContext, runStepsWithContext } from "./commission-context.js";
 import { stepRegistry } from "../processors/registry.js";
-import { runUnitTests } from "../../test/unit/run-tests.js";
 
 /**
  * 测试配置区
@@ -21,7 +19,7 @@ import { runUnitTests } from "../../test/unit/run-tests.js";
  */
 const TEST_CONFIG = {
     mode: "case",             // 测试模式: "case"=测试用例, "commission"=真实委托, "unit"=纯函数单元测试
-    caseName: "选择角色测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
+    caseName: "自动对话测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
     commissionName: "餐品订单",         // mode="commission" 时生效，对应 process/NPC/ 下的目录名
     location: "蒙德城",           // mode="commission" 时生效，委托地点
     processFile: "process.json",      // mode="commission" 时生效，流程文件名
@@ -36,8 +34,6 @@ export async function runTestCommission() {
 
     if (TEST_CONFIG.mode === "case") {
         return await runTestCase(TEST_CONFIG.caseName);
-    } else if (TEST_CONFIG.mode === "unit") {
-        return await runUnitTests();
     } else {
         return await runCommission(TEST_CONFIG.commissionName, TEST_CONFIG.location, TEST_CONFIG.processFile);
     }
