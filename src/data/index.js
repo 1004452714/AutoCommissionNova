@@ -1,2 +1,2 @@
 export { loadSupportedCommissions } from "./commission-source.js";
-export { saveCommissionsData } from "./commission-data.js";
+export { saveCommissionsData, updateCommissionStatus } from "./commission-data.js";

@@ -16,6 +16,7 @@ import { executeBasicCommission } from "./basic-executor.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { dispatchOnCommissionComplete } from "../probes/index.js";
 import { writeBranchConfig } from "../loaders/branch-config.js";
+import { updateCommissionStatus } from "../data/index.js";
 
 /**
  * 委托类型 → 执行器映射
@@ -136,6 +137,8 @@ export async function executeCommissionTracking(stepRegistry) {
                         success = true;
                         completedCount++;
                         log.info("委托 {name} 执行完成", comm.name);
+                        // 持久化已完成状态到 commissions_data.json，避免 skipRecognition 复用数据时重跑
+                        updateCommissionStatus(comm.name, COMMISSION_STATUS.COMPLETED);
                         // 给完成型探针（type: "completion" 等）一个写 branchConditionMet 的机会
                         // 必须在 updateBranchCompletion 之前，否则进度永远不会被写入 completed
                         dispatchOnCommissionComplete(result.context);
