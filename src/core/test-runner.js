@@ -19,10 +19,19 @@ import { stepRegistry } from "../processors/registry.js";
  */
 const TEST_CONFIG = {
     mode: "case",             // 测试模式: "case"=测试用例, "commission"=真实委托, "unit"=纯函数单元测试
-    caseName: "自动对话测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
+    caseName: "成就检测测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
     commissionName: "餐品订单",         // mode="commission" 时生效，对应 process/NPC/ 下的目录名
     location: "蒙德城",           // mode="commission" 时生效，委托地点
     processFile: "process.json",      // mode="commission" 时生效，流程文件名
+    /**
+     * 仅 case 模式有效：测试探针 step（成就检测 / 对话探针 等）时，绕过 用户分支选择
+     * step 锁定流程，直接给 context.branchCondition 注入指定 condition。
+     * 不需要时置 null
+     * 示例：{ type: "achievement", name: "迷踪猎人" }
+     *       { type: "dialog", keywords: ["偷偷吃了"] }
+     *       { type: "completion" }
+     */
+    branchCondition: { type: "achievement", name: "这不是应急食品" },
 };
 
 /**
@@ -63,6 +72,15 @@ async function runTestCase(caseName) {
             stepRegistry,
             processDir: testCaseDir,
         });
+
+        // 测试探针 step 时直接注入 branchCondition，跳过 用户分支选择 决策
+        // dispatchExplicit / dispatchOnDialogOcr / dispatchOnCommissionComplete 都依赖
+        // context.branchCondition 非空才会派发到对应探针
+        if (TEST_CONFIG.branchCondition) {
+            context.branchCondition = TEST_CONFIG.branchCondition;
+            context.activeBranch = "test-branch";
+            log.info("测试模式注入 branchCondition: {cond}", JSON.stringify(TEST_CONFIG.branchCondition));
+        }
 
         const success = await runStepsWithContext(context, { sleepMs: 1000, stopOnError: false });
         log.info("=== 测试用例执行完成: {success} ===", success ? "成功" : "失败");

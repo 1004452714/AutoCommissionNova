@@ -431,7 +431,7 @@
       "  \"note\": \"${8:根据用户配置选择分支}\"",
       "},"
     ],
-    "description": "用户分支选择 — 按 config/commission-branches.json 决定执行哪个分支（selected 优先，全完成回落 default）"
+    "description": "用户分支选择 — 按 process/config/branches/{委托名}.json 决定执行哪个分支（conditions 中未完成的追剧分支优先，无则回落 default）"
   },
 
   "AutoCommission: 流程分支 (include 子流程)": {

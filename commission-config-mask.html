@@ -515,7 +515,7 @@
 
       <div class="status-bar">
         <span id="commissionCount">共 0 个委托</span>
-        <span id="filePath">commission-branches.json</span>
+        <span id="filePath">process/config/branches/</span>
       </div>
     </main>
   </div>
@@ -581,7 +581,9 @@
       Object.values(data || {}).forEach(commission => {
         if (!commission.type) commission.type = 'achievement';
         if (commission.default === undefined) commission.default = null;
-        if (!Array.isArray(commission.selected)) commission.selected = [];
+        if (!commission.conditions || typeof commission.conditions !== 'object') {
+          commission.conditions = {};
+        }
         if (!Array.isArray(commission.completed)) commission.completed = [];
         if (!commission.descriptions || typeof commission.descriptions !== 'object') {
           commission.descriptions = {};
@@ -656,12 +658,17 @@
           '<div class="empty-state">' + (searchTerm ? '未找到匹配的委托' : '暂无委托') + '</div>';
       } else {
         elements.commissionList.innerHTML = commissions.map(([name, config]) => {
-          const totalBranches = Object.keys(config.descriptions || {}).length;
-          const completedBranches = (config.completed || []).length;
+          const conditions = config.conditions || {};
+          const achievementKeys = Object.keys(conditions);
+          const achievementTotal = achievementKeys.length;
+          const completed = (config.completed || []).filter(b => achievementKeys.includes(b));
           const isActive = name === AppState.selectedCommission;
+          const progressHtml = achievementTotal > 0
+            ? '<span class="commission-progress">' + completed.length + '/' + achievementTotal + '</span>'
+            : '';
           return '<div class="commission-item ' + (isActive ? 'active' : '') + '" data-name="' + escapeHtml(name) + '">' +
                    '<span class="commission-name">' + escapeHtml(name) + '</span>' +
-                   '<span class="commission-progress">' + completedBranches + '/' + totalBranches + '</span>' +
+                   progressHtml +
                  '</div>';
         }).join('');
 
@@ -688,23 +695,39 @@
       const name = AppState.selectedCommission;
       const config = AppState.data[name];
       const branches = Object.entries(config.descriptions || {});
+      const conditions = config.conditions || {};
       const commissionType = config.type || 'achievement';
 
+      // 兜底：default 缺失或不在 descriptions 中时回填第一个分支，避免 UI 默认选中与 config 失同步
+      if (branches.length > 0 && (!config.default || !config.descriptions[config.default])) {
+        config.default = branches[0][0];
+        scheduleSave();
+      }
+
+      // 分支拆分：在 conditions 中声明的是成就分支（带滑块），其余只在下拉框
+      const achievementBranches = branches.filter(([branchId]) => conditions[branchId]);
+      const preferenceBranches = branches.filter(([branchId]) => !conditions[branchId]);
+
+      // 默认分支下拉框：按 descriptions 声明顺序平铺，不分组
       const allCompletedOptions = branches.map(([branchId, description]) => {
         const selected = config.default === branchId ? 'selected' : '';
         return '<option value="' + escapeHtml(branchId) + '" ' + selected + '>' + escapeHtml(description) + '</option>';
       }).join('');
 
-      const allCompletedLabel = commissionType === 'basic' ? '选择分支' : '全部完成时默认分支';
+      const allCompletedLabel = commissionType === 'basic'
+        ? '选择分支'
+        : (achievementBranches.length > 0 ? '全部成就达成后的默认分支' : '默认分支');
 
       let branchesHtml = '';
       if (commissionType === 'achievement') {
-        if (branches.length === 0) {
+        if (achievementBranches.length === 0) {
           branchesHtml =
-            '<div class="section-title">分支配置</div>' +
-            '<div style="color: var(--text-tertiary); text-align: center; padding: 20px;">暂无分支配置</div>';
+            '<div class="section-title">成就分支</div>' +
+            '<div style="color: var(--text-tertiary); padding: 12px 0; font-size: 13px;">' +
+              '该委托暂无成就分支（conditions 为空）。<br>若需成就解锁，请在 JSON 中为对应分支添加 conditions。' +
+            '</div>';
         } else {
-          const items = branches.map(([branchId, description]) => {
+          const items = achievementBranches.map(([branchId, description]) => {
             const isCompleted = (config.completed || []).includes(branchId);
             const stateClass = isCompleted ? 'completed' : 'pending';
             const stateLabel = isCompleted ? '已完成' : '未完成';
@@ -718,7 +741,7 @@
                      '</div>' +
                    '</div>';
           }).join('');
-          branchesHtml = '<div class="section-title">分支配置</div><div class="branch-list">' + items + '</div>';
+          branchesHtml = '<div class="section-title">成就分支（命中条件后永久跳过）</div><div class="branch-list">' + items + '</div>';
         }
       }
 
@@ -737,7 +760,6 @@
             '<div class="all-completed-section">' +
               '<div class="all-completed-label">' + allCompletedLabel + '</div>' +
               '<select class="all-completed-select" id="allCompletedSelect">' +
-                '<option value="">-- 请选择 --</option>' +
                 allCompletedOptions +
               '</select>' +
             '</div>' +

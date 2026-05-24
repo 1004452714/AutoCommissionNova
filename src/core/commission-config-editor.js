@@ -1,16 +1,20 @@
 /**
  * 委托分支配置编辑器(HTML 遮罩)
- * @description 打开 commission-branches.json 的可视化配置面板,阻塞至用户点击关闭。
+ * @description 打开委托分支配置的可视化配置面板,阻塞至用户点击关闭。
  *              通过 ~ 键(Oem3)切换显示/隐藏,隐藏时遮罩自动开启点击穿透,
  *              不影响游戏交互。修改即时写回文件。
+ *
+ *              磁盘存储为 process/config/branches/{委托名}.json 多文件结构，
+ *              本编辑器透过 loadAllBranchConfigs / writeAllBranchConfigs 在
+ *              composite 对象（与历史单文件结构一致）与多文件之间转换，
+ *              HTML 侧无需感知拆分
  */
 
-import { PATHS } from "../config/index.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { loadAllBranchConfigs, writeAllBranchConfigs } from "../loaders/branch-config.js";
 
 const HTML_PATH = "commission-config-mask.html";
 const WINDOW_TAG = "commission-config";
-const CONFIG_FILE = PATHS.CONFIG_BASE + "/commission-branches.json";
 
 /**
  * 打开委托分支配置编辑器并阻塞至关闭
@@ -101,13 +105,12 @@ export async function openCommissionConfigEditor() {
 
             if (msg.url === "/loadConfig") {
                 try {
-                    const content = file.readTextSync(CONFIG_FILE);
-                    JSON.parse(content);
+                    const composite = loadAllBranchConfigs();
                     const payload = msg.requestId
-                        ? JSON.stringify({ requestId: msg.requestId, data: JSON.parse(content) })
-                        : content;
+                        ? JSON.stringify({ requestId: msg.requestId, data: composite })
+                        : JSON.stringify(composite);
                     htmlMask.send(windowId, "/loadConfig", payload);
-                    log.debug("已发送分支配置到面板");
+                    log.debug("已发送分支配置到面板（{n} 个委托）", Object.keys(composite).length);
                 } catch (err) {
                     if (isCancellationError(err)) {
                         htmlMask.close(windowId);
@@ -127,9 +130,12 @@ export async function openCommissionConfigEditor() {
                     if (typeof content !== "string") {
                         throw new Error("缺少 content 字段");
                     }
-                    JSON.parse(content);
-                    file.writeTextSync(CONFIG_FILE, content);
-                    log.debug("分支配置已保存");
+                    const composite = JSON.parse(content);
+                    if (!composite || typeof composite !== "object") {
+                        throw new Error("content 必须解析为对象");
+                    }
+                    writeAllBranchConfigs(composite);
+                    log.debug("分支配置已保存（{n} 个委托）", Object.keys(composite).length);
                 } catch (err) {
                     if (isCancellationError(err)) {
                         htmlMask.close(windowId);

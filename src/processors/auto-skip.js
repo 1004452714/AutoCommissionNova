@@ -6,6 +6,7 @@ import { PATHS, DIALOG_REGIONS } from "../config/index.js";
 import { isInMainUI, isInTalkUI, bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { dispatchOnDialogOcr } from "../probes/index.js";
 
 import { defineStep } from "./define-step.js";
 const page = new BvPage();
@@ -48,10 +49,19 @@ export default [
 
                 log.info("开始执行自动对话");
 
+                // 探针总开关：仅当 step 显式声明 probe:true 才扫描分支条件
+                // 一条流程通常有多个对话，关键词可能在非目标对话里出现，所以默认关闭、按需打开
+                const probeEnabled = step.probe === true;
+
                 for (let attempts = 0; attempts < 100; attempts++) {
                     const startTime = Date.now();
                     while (Date.now() - startTime < 1000) {
                         if (isInTalkUI()) {
+                            // 翻页前先 OCR 当前台词，否则 SPACE 一按下一段就过去了
+                            if (probeEnabled && !context.branchConditionMet) {
+                                const speechOcr = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_CONTENT);
+                                dispatchOnDialogOcr(context, speechOcr);
+                            }
                             keyPress("VK_SPACE");
                             await sleep(200);
                         } else {
@@ -62,6 +72,12 @@ export default [
 
                     let foundPriorityOption = false;
                     const ocrResults = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_OPTIONS_OCR);
+
+                    // 选项区也兼带扫一次：有些场景关键词出现在选项条目而非台词里（如 "偷吃看看"）
+                    if (probeEnabled && !context.branchConditionMet) {
+                        dispatchOnDialogOcr(context, ocrResults);
+                    }
+
                     if (ocrResults.count > 0) {
                         for (let i = 0; i < ocrResults.count; i++) {
                             const ocrText = ocrResults[i].text;

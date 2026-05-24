@@ -1,11 +1,35 @@
 /**
- * 获取分支的描述名称
- * 如果 descriptions 中存在该分支的描述，返回描述值；否则返回分支 key
- * 
- * @param {Object} descriptions - 分支描述对象
- * @param {string} branchKey - 分支标识
- * @returns {string} 分支描述名称
+ * 用户分支选择步骤处理器
+ *
+ * 分支配置存储：process/config/branches/{委托名}.json（每个委托一个文件）
+ * 内存视图：合并后的 composite { 委托名: config }，缓存在 context.branchConfigCache
+ *
+ * 每个委托的 config 结构：
+ *   {
+ *       descriptions: { branchKey: 显示文字 },   // 此委托存在的所有分支（UI 唯一来源）
+ *       conditions:   { branchKey: { type, ... } }, // 成就分支 + 探测达成方式（缺则为偏好分支）
+ *       completed:    [branchKey],               // 已永久解锁的成就分支
+ *       default:      branchKey,                  // 没有可追的分支时的兜底（通常指偏好分支）
+ *       type, note                                // UI 用
+ *   }
+ *
+ * 选择逻辑：
+ *   queue = Object.keys(conditions || {}) 中 filter 掉 completed 里的（按声明顺序）
+ *   有 queue → 跑 queue[0]
+ *   queue 空 → 跑 default（用户配置 default 优先；其次 step.default）
+ *
+ * 一次委托内多次 用户分支选择 step 共享决策：
+ *   首次决策后 context.activeBranch 被写入；后续遇到同 step 时直接复用 activeBranch，
+ *   保证一条流程内所有 用户分支选择 step 选定同一分支。
+ *
+ * 探针机制：
+ *   决策时把 conditions[branchKey] 写入 context.branchCondition；
+ *   对话 step / 成就检测 step 据此写 context.branchConditionMet；
+ *   commission-executor.updateBranchCompletion 据此判定是否把 activeBranch 写入 completed。
  */
+import { defineStep } from "./define-step.js";
+import { loadAllBranchConfigs } from "../loaders/branch-config.js";
+
 function getBranchName(descriptions, branchKey) {
     if (descriptions && descriptions[branchKey]) {
         return descriptions[branchKey];
@@ -13,128 +37,92 @@ function getBranchName(descriptions, branchKey) {
     return branchKey;
 }
 
+function loadBranchConfig(context) {
+    if (context.branchConfigCache) {
+        return context.branchConfigCache;
+    }
+    try {
+        const composite = loadAllBranchConfigs();
+        context.branchConfigCache = composite;
+        log.info("已加载分支配置（{n} 个委托）并缓存", Object.keys(composite).length);
+        return composite;
+    } catch (error) {
+        log.warn("加载分支配置失败，使用空配置: {error}", error.message);
+        context.branchConfigCache = {};
+        return context.branchConfigCache;
+    }
+}
+
 /**
- * 用户分支选择步骤处理器
- * 根据用户配置文件选择并执行对应的分支步骤
- * 
- * 支持同一 process 中多个分支选择 step 共享配置，
- * 只在第一次时读取配置文件，后续从 context 缓存中获取
- * 
- * default 优先级逻辑：
- * 1. 优先使用用户配置文件中的 default（commissionConfig.default）
- * 2. 其次使用 step 定义中的 default（step.default）
- * 
- * 分支选择逻辑：
- * 1. 如果 selected 为空，使用 default
- * 2. 如果 selected 中的分支都已完成，使用 default
- * 3. 否则，选择 selected 中第一个未完成的分支
+ * 根据 conditions 和 completed 决策本次要执行的分支
+ * 返回 { branchKey, condition } —— condition 为 null 表示偏好分支
  */
-import { PATHS } from "../config/index.js";
-import { defineStep } from "./define-step.js";
+function decideBranch(commissionConfig, step, descriptions) {
+    const conditions = (commissionConfig && commissionConfig.conditions) || {};
+    const completed = (commissionConfig && commissionConfig.completed) || [];
+
+    // 按声明顺序遍历 conditions，挑第一个未完成的
+    const queue = Object.keys(conditions).filter(k => !completed.includes(k));
+    if (queue.length > 0) {
+        const branchKey = queue[0];
+        log.info("选择第一个未完成的成就分支: {branch}", getBranchName(descriptions, branchKey));
+        return { branchKey, condition: conditions[branchKey] };
+    }
+
+    // 无未完成成就分支 → 走 default
+    const defaultBranch = (commissionConfig && commissionConfig.default) || step.default || null;
+    if (!defaultBranch) {
+        log.warn("无成就分支可执行，且未设置默认分支");
+        return { branchKey: null, condition: null };
+    }
+    log.info("无成就分支可执行，使用默认分支: {branch}", getBranchName(descriptions, defaultBranch));
+    // default 也可能在 conditions 里（虽然反常），如果命中则把它当成就分支处理
+    return { branchKey: defaultBranch, condition: conditions[defaultBranch] || null };
+}
 
 export default defineStep({
     type: "用户分支选择",
     swallow: true,
     run: async (step, context) => {
-        // 1. 读取或获取缓存的配置文件
-        let config;
-        if (context.branchConfigCache) {
-            // 已有缓存，直接使用
-            config = context.branchConfigCache;
-            log.debug("使用缓存的分支配置");
-        } else {
-            // 首次读取，加载并缓存
-            const configPath = PATHS.CONFIG_BASE + "/commission-branches.json";
-            try {
-                const configContent = file.readTextSync(configPath);
-                config = JSON.parse(configContent);
-                context.branchConfigCache = config; // 缓存到 context
-                log.info("已加载分支配置文件并缓存");
-            } catch (error) {
-                log.warn("读取分支配置文件失败，使用空配置: {error}", error.message);
-                config = {};
-                context.branchConfigCache = config;
-            }
-        }
-
-        // 2. 查找当前委托配置
+        const config = loadBranchConfig(context);
         const commissionConfig = config[context.commissionName];
-        const descriptions = commissionConfig ? commissionConfig.descriptions : {};
+        const descriptions = (commissionConfig && commissionConfig.descriptions) || {};
 
-        // 3. 获取默认分支（用户配置优先，step 定义次之）
-        let defaultBranch = null;
-
-        // 先查找用户配置的 default
-        if (commissionConfig && commissionConfig.default) {
-            defaultBranch = commissionConfig.default;
-            const branchName = getBranchName(descriptions, defaultBranch);
-            log.debug("使用用户配置的默认分支: {branch}", branchName);
-        }
-        // 再查找 step 定义的 default
-        else if (step.default) {
-            defaultBranch = step.default;
-            const branchName = getBranchName(descriptions, defaultBranch);
-            log.debug("使用step定义的默认分支: {branch}", branchName);
-        }
-
-        if (!defaultBranch) {
-            log.warn("未设置默认分支（用户配置和step均未设置）");
-        }
-
-        // 4. 确定要执行的分支
-        let selectedBranches = [];
-        let completed = [];
-
-        if (commissionConfig) {
-            selectedBranches = commissionConfig.selected || [];
-            completed = commissionConfig.completed || [];
-        }
-
-        // 确保 selected 是数组
-        if (!Array.isArray(selectedBranches)) {
-            selectedBranches = [selectedBranches];
-        }
-
-        // 过滤出未完成的分支
-        const unfinishedBranches = selectedBranches.filter(
-            branch => !completed.includes(branch)
-        );
-
-        // 确定最终要执行的分支
-        let branchToExecute;
-        if (unfinishedBranches.length === 0) {
-            // selected 为空或已全部完成，使用默认分支
-            if (defaultBranch) {
-                branchToExecute = defaultBranch;
-                const branchName = getBranchName(descriptions, defaultBranch);
-                log.info("selected为空或已全部完成，使用默认分支: {branch}", branchName);
-            } else {
-                log.warn("未设置默认分支，跳过");
+        // 一次委托内的后续 用户分支选择 step 直接复用首次锁定的分支
+        if (context.activeBranch) {
+            const branchStep = step.data ? step.data[context.activeBranch] : null;
+            if (!branchStep) {
+                log.warn("复用已锁定分支 {branch}，但当前 step.data 未定义该分支，跳过",
+                    getBranchName(descriptions, context.activeBranch));
                 return;
             }
-        } else {
-            // 选择第一个未完成的分支
-            branchToExecute = unfinishedBranches[0];
-            const branchName = getBranchName(descriptions, branchToExecute);
-            log.info("选择第一个未完成的分支: {branch}", branchName);
-        }
-
-        // 5. 执行分支的 step
-        const branchStep = step.data[branchToExecute];
-        if (!branchStep) {
-            const branchName = getBranchName(descriptions, branchToExecute);
-            log.warn("未找到分支 {branch} 的step定义", branchName);
+            log.info("复用已锁定分支: {branch}", getBranchName(descriptions, context.activeBranch));
+            await context.stepRegistry.process(branchStep, context);
             return;
         }
 
-        const branchName = getBranchName(descriptions, branchToExecute);
-        log.info("执行用户选择的分支: {branch}", branchName);
-        await context.stepRegistry.process(branchStep, context);
-
-        // 记录当前执行的分支到context中，用于委托完成时更新进度
-        if (!context.executedBranches) {
-            context.executedBranches = [];
+        // 首次决策
+        const { branchKey, condition } = decideBranch(commissionConfig, step, descriptions);
+        if (!branchKey) {
+            return;
         }
-        context.executedBranches.push(branchToExecute);
+
+        const branchStep = step.data ? step.data[branchKey] : null;
+        if (!branchStep) {
+            log.warn("未在 step.data 中找到分支 {branch} 的定义，跳过", getBranchName(descriptions, branchKey));
+            return;
+        }
+
+        // 锁定分支，注入 condition；branchConditionMet 留给探针 step 写
+        context.activeBranch = branchKey;
+        context.branchCondition = condition;
+        if (condition) {
+            log.info("锁定成就分支 {branch}，探针类型: {type}",
+                getBranchName(descriptions, branchKey), condition.type);
+        } else {
+            log.info("锁定偏好分支 {branch}（不写入完成进度）", getBranchName(descriptions, branchKey));
+        }
+
+        await context.stepRegistry.process(branchStep, context);
     },
 });

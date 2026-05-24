@@ -3,10 +3,12 @@
  * NPC 与 Basic 委托共享同一构造路径，避免字段缺失导致的隐式不对称
  *
  * 运行时由 step 按需写入的字段（不在工厂初始化）：
- *   branchConfigCache  — 分支配置缓存（user-branch-select 首次读后缓存）
- *   executedBranches   — 本次执行过的分支列表（commission-executor 用于回写完成状态）
- *   locationDetected   — 位置检测命中标志（location-detection）
- *   detectedPosition   — 位置检测命中的坐标（location-detection）
+ *   branchConfigCache   — 分支配置缓存（user-branch-select 首次读后缓存）
+ *   activeBranch        — 本次委托锁定的分支 key（首次 用户分支选择 决策后写入，后续 step 复用）
+ *   branchCondition     — 锁定分支的 condition 配置 { type, keywords?, name? }；preference 分支为 null
+ *   branchConditionMet  — 探针 step（对话关键词 / 成就检测）写入；true 时 commission-executor 把 activeBranch 写入 completed
+ *   locationDetected    — 位置检测命中标志（location-detection）
+ *   detectedPosition    — 位置检测命中的坐标（location-detection）
  */
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
 import { isCancellationError } from "../utils/error-utils.js";
@@ -50,7 +52,9 @@ export function createCommissionContext({ type, commissionName, location, proces
         resolveResource: createResolveResource({ type, commissionName, location, processDir }),
         // 运行时由 step 写入的字段，工厂统一初始化以保持 context shape 稳定
         branchConfigCache: null,
-        executedBranches: [],
+        activeBranch: null,
+        branchCondition: null,
+        branchConditionMet: false,
         locationDetected: false,
         detectedPosition: null,
     };

@@ -1,5 +1,6 @@
 import { stepRegistry } from "./src/processors/registry.js";
 import { registerAllProcessors } from "./src/processors/index.js";
+import { registerAllProbes } from "./src/probes/index.js";
 import { validateAllProcesses } from "./src/loaders/index.js";
 import { executeMainProcess } from "./src/core/main-process.js";
 import { checkVersion } from "./src/version/check-version.js";
@@ -8,6 +9,7 @@ import { getSetting } from "./src/utils/settings-utils.js";
 import { openCommissionConfigEditor } from "./src/core/commission-config-editor.js";
 
 registerAllProcessors(stepRegistry);
+registerAllProbes();
 
 (async function () {
     try {

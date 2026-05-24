@@ -90,6 +90,7 @@ export const PATHS = {
     BASIC_SCRIPT_BASE: "process/Basic",
     NPC_PROCESS_BASE: "process/NPC",
     COMMISSIONS_DATA: "Data/commissions_data.json",
+    HAS_NO_RESULT_IMAGE: "Data/RecognitionObject/hasNoResult.png",
     COMPLETED_IMAGE: "Data/RecognitionObject/Completed.png",
     UNCOMPLETED_IMAGE: "Data/RecognitionObject/UnCompleted.png",
     TALK_EXIT_IMAGE: "Data/RecognitionObject/TalkExit.png",
@@ -112,6 +113,10 @@ export const PATHS = {
     AVATAR_TEMPLATE_DIR: "Data/RecognitionObject/avatar",
     SWITCH_ROLE_SLOT_DIR: "Data/RecognitionObject/switch_role",
     CONFIG_BASE: "process/config",
+    /** 委托分支配置目录。每个委托一个文件：{委托名}.json
+     *  内存视图（branchConfigCache / UI 编辑器）是合并后的 { 委托名: config }，
+     *  磁盘按委托名拆分存储，新增委托加文件即可，零冲突 */
+    BRANCHES_DIR: "process/config/branches",
 };
 
 /** 对话相关区域常量 */
@@ -124,6 +129,9 @@ export const DIALOG_REGIONS = {
     TALK_ICON: [1260, 300, 90, 550],
     /** 对话选项OCR识别区域 */
     DIALOG_OPTIONS_OCR: new rect(1250, 250, 550, 600),
+    /** NPC 对话台词区域。用于 step.probe=true 时
+     *  在按 SPACE 翻页之前 OCR 当前段台词，给分支探针扫描关键词 */
+    DIALOG_CONTENT: new rect(308, 924, 1356, 99),
 };
 
 /** UI界面相关区域常量 */

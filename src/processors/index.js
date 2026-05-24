@@ -19,6 +19,8 @@ import locationDetection from "./location-detection.js";
 import commissionDescDetect from "./commission-desc-detect.js";
 import userBranchSelect from "./user-branch-select.js";
 import flowBranch from "./flow-branch.js";
+import achievementDetect from "./achievement-detect.js";
+import useItem from "./use-item.js";
 
 const processors = [
     wait,
@@ -37,6 +39,8 @@ const processors = [
     commissionDescDetect,
     userBranchSelect,
     flowBranch,
+    achievementDetect,
+    useItem,
 ];
 
 /**

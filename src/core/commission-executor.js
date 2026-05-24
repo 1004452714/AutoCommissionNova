@@ -14,6 +14,8 @@ import { isCompleted } from "../recognition/index.js";
 import { executeNpcCommission } from "./npc-executor.js";
 import { executeBasicCommission } from "./basic-executor.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { dispatchOnCommissionComplete } from "../probes/index.js";
+import { writeBranchConfig } from "../loaders/branch-config.js";
 
 /**
  * 委托类型 → 执行器映射
@@ -26,10 +28,16 @@ const executorMap = {
 
 /**
  * 更新分支完成进度
- * 当委托任务成功完成时调用
+ * 委托任务成功完成后调用
+ *
+ * 仅当满足以下全部条件时把 context.activeBranch 写入 completed：
+ *   - context.branchCondition 非空（即 activeBranch 是带条件的成就分支，不是 default 兜底的偏好分支）
+ *   - context.branchConditionMet === true（探针 step 检测到本次条件已达成）
+ *
+ * 偏好分支（branchCondition === null）永远不进 completed，每次都可重新跑
  *
  * @param {string} commissionName - 委托名称
- * @param {Object} context - 执行上下文（包含 branchConfigCache 和 executedBranches）
+ * @param {Object} context - 执行上下文
  */
 async function updateBranchCompletion(commissionName, context) {
     try {
@@ -43,26 +51,24 @@ async function updateBranchCompletion(commissionName, context) {
             return;
         }
 
+        const activeBranch = context.activeBranch;
+        if (!activeBranch || !context.branchCondition || !context.branchConditionMet) {
+            return;
+        }
+
         if (!commissionConfig.completed) {
             commissionConfig.completed = [];
         }
-
-        const executedBranches = context.executedBranches || [];
-
-        let hasUpdate = false;
-        for (const branch of executedBranches) {
-            if (!commissionConfig.completed.includes(branch)) {
-                commissionConfig.completed.push(branch);
-                hasUpdate = true;
-                log.info("已更新分支完成进度: {branch}", branch);
-            }
+        if (commissionConfig.completed.includes(activeBranch)) {
+            return;
         }
 
-        if (hasUpdate) {
-            const configPath = PATHS.CONFIG_BASE + "/commission-branches.json";
-            file.writeTextSync(configPath, JSON.stringify(config, null, 2));
-            log.info("分支配置文件已更新");
-        }
+        commissionConfig.completed.push(activeBranch);
+        log.info("已更新分支完成进度: {branch}", activeBranch);
+
+        // 只写当前委托对应的单个文件，避免一次保存把整个 BRANCHES_DIR 都覆盖
+        writeBranchConfig(commissionName, commissionConfig);
+        log.info("分支配置文件已更新: {name}.json", commissionName);
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
         log.error("更新分支完成进度时出错: {error}", error.message);
@@ -130,6 +136,9 @@ export async function executeCommissionTracking(stepRegistry) {
                         success = true;
                         completedCount++;
                         log.info("委托 {name} 执行完成", comm.name);
+                        // 给完成型探针（type: "completion" 等）一个写 branchConditionMet 的机会
+                        // 必须在 updateBranchCompletion 之前，否则进度永远不会被写入 completed
+                        dispatchOnCommissionComplete(result.context);
                         await updateBranchCompletion(comm.name, result.context);
                     } else {
                         log.warn("委托 {name} 执行后检查未完成（第 {attempt}/{total} 次）", comm.name, tryCount + 1, totalAttempts);

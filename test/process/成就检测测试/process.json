@@ -1,0 +1,6 @@
+[
+    {
+        "type": "成就检测",
+        "note": "调用 achievement-probe.runExplicit：派蒙菜单 → 成就界面 → 搜索成就名 → 判断解锁。成就名由 test-runner.js 中 TEST_CONFIG.branchCondition.name 注入"
+    }
+]
