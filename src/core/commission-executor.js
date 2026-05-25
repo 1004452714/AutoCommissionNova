@@ -92,6 +92,7 @@ export async function executeCommissionTracking(stepRegistry) {
 
         let commissions = [];
         let completedCount = 0;
+        let successCount = 0;
 
         try {
             const commissionsData = JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA));
@@ -135,7 +136,7 @@ export async function executeCommissionTracking(stepRegistry) {
                     const completed = await isCompleted(comm.name);
                     if (completed) {
                         success = true;
-                        completedCount++;
+                        successCount++;
                         log.info("委托 {name} 执行完成", comm.name);
                         // 持久化已完成状态到 commissions_data.json，避免 skipRecognition 复用数据时重跑
                         updateCommissionStatus(comm.name, COMMISSION_STATUS.COMPLETED);
@@ -163,8 +164,8 @@ export async function executeCommissionTracking(stepRegistry) {
             await sleep(1);
         }
 
-        log.info("委托追踪全部执行完成，共执行 {count}/{total} 个委托", completedCount, commissions.length);
-        return completedCount > 0;
+        log.info("委托追踪全部执行完成，共执行 {count}/{total} 个委托", successCount, commissions.length);
+        return successCount > 0;
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
         log.error("执行委托追踪时出错: {error}", error.message);

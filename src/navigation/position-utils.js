@@ -29,27 +29,24 @@ export function calculateDistance(point1, point2) {
  * 通过多次识别不同缩放级别的地图坐标，使用聚类投票算法选出最可信的位置
  * 
  * 算法流程：
- * 1. 从2.0倍缩放开始，每次增加0.3，直到5.0倍或识别6次
+ * 1. 从2.0倍缩放开始，每次增加0.3，目标3次成功识别（每次失败会追加一次识别）
  * 2. 每次识别后将坐标加入位置列表
  * 3. 对所有位置进行聚类：距离小于5像素的点归为同一簇
  * 4. 选择点数最多的簇的第一个位置作为最终结果
- * 
+ *
  * @returns {Promise<Object>} 位置对象 { x, y }
  * @throws {Error} 无法从大地图中识别位置时抛出异常
  */
 export async function getPositionWithVoting() {
     let scale = 2.0;
     const positions = [];
-    let recognitionCount = 0;
 
-    // 多次识别：从2.0倍缩放到5.0倍，最多识别6次
-    while (scale <= 5.0 && recognitionCount < 6) {
+    while (positions.length < 3 && scale <= 5.0) {
         try {
             await genshin.setBigMapZoomLevel(scale);
             await sleep(100);
             const position = genshin.getPositionFromBigMap();
             positions.push(position);
-            recognitionCount++;
         } catch (error) {
             if (isCancellationError(error)) { throw error; }
             log.debug('缩放:{0}, error:{1}', scale, error.message);

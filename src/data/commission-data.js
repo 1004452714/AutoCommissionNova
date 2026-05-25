@@ -79,13 +79,17 @@ export async function saveCommissionsData(commissions) {
             };
         });
 
-        file.writeTextSync(outputPath, JSON.stringify({
-            timestamp: new Date().toISOString(),
-            scriptVersion: "1.0.0",
-            bgiVersion: getVersion(),
-            commissions: merged,
-        }, null, 2));
-        log.info("委托数据保存结束");
+        try {
+            file.writeTextSync(outputPath, JSON.stringify({
+                timestamp: new Date().toISOString(),
+                scriptVersion: "1.0.0",
+                bgiVersion: getVersion(),
+                commissions: merged,
+            }, null, 2));
+            log.info("委托数据保存结束");
+        } catch (writeError) {
+            log.error("保存委托数据失败：{error}", writeError.message);
+        }
 
         return commissions.filter((c) => c.supported);
     } catch (error) {

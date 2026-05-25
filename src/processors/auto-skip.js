@@ -14,11 +14,29 @@ export default [
     defineStep({
         type: "对话",
         run: async (step, context) => {
+            let mat;
             try {
                 log.info("执行对话步骤");
-                const priorityOptions = Array.isArray(step.data.priorityOptions) ? step.data.priorityOptions : [];
-                const npcWhiteList = Array.isArray(step.data.npcWhiteList) ? step.data.npcWhiteList : [];
-                const mat = file.ReadImageMatSync(PATHS.INTALK_IMAGE);
+                const priorityOptions = Array.isArray(step.data?.priorityOptions) ? step.data.priorityOptions : [];
+                const npcWhiteList = Array.isArray(step.data?.npcWhiteList) ? step.data.npcWhiteList : [];
+
+                // 追踪任务描述，从当前任务描述中提取目标人名，作为白名单未命中时的兜底匹配源
+                keyPress("V");
+                await sleep(1000);
+                let extractedName = null;
+                const nameResults = bvPageOcrRegion(DIALOG_REGIONS.NPC_NAME);
+                for (let i = 0; i < nameResults.count; i++) {
+                    const text = nameResults[i].text;
+                    log.info("任务区域识别文本: {text}", text);
+                    const name = extractName(text);
+                    if (name) {
+                        extractedName = name;
+                        log.info("提取到人名: {name}", extractedName);
+                        break;
+                    }
+                }
+
+                mat = file.ReadImageMatSync(PATHS.INTALK_IMAGE);
                 const talkRO = RecognitionObject.templateMatch(mat, 254, 19, 80, 52);
                 const results = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_OPTIONS);
 
@@ -30,19 +48,39 @@ export default [
                     }))
                     .filter(item => item.matchedNPC !== undefined);
 
-                
+                // 复用同一份 OCR，找一个文本包含提取人名的选项作为兜底点击目标
+                const matchedByName = extractedName
+                    ? Array.from(results).find(r => r.text.includes(extractedName))
+                    : null;
+
                 await page.locator(talkRO)
                     .withRetryInterval(500)
                     .withRetryAction(async () => {
-                        for (let i = 0; i < matchedNPCs.length; i++) {
-                            const { element, matchedNPC } = matchedNPCs[i];
-                            log.info("找到白名单NPC: {npc}，点击该NPC", matchedNPC);
+                        if (matchedNPCs.length > 0) {
+                            for (let i = 0; i < matchedNPCs.length; i++) {
+                                const { element, matchedNPC } = matchedNPCs[i];
+                                log.info("找到白名单NPC: {npc}，点击该NPC", matchedNPC);
+                                keyDown("VK_MENU");
+                                await sleep(200);
+                                element.click();
+                                await sleep(100);
+                                leftButtonClick();
+                                keyUp("VK_MENU");
+                            }
+                        } else if (matchedByName) {
+                            log.info("点击包含提取到任务人名的选项: {text}", matchedByName.text);
                             keyDown("VK_MENU");
                             await sleep(200);
-                            element.click();
+                            matchedByName.click();
                             await sleep(100);
                             leftButtonClick();
                             keyUp("VK_MENU");
+                        } else {
+                            log.info("未找到匹配的NPC，使用默认按F触发对话");
+                            keyPress("F");
+                            await sleep(100);
+                            keyPress("F");
+                            await sleep(400);
                         }
                     })
                     .waitFor();
@@ -53,7 +91,8 @@ export default [
                 // 一条流程通常有多个对话，关键词可能在非目标对话里出现，所以默认关闭、按需打开
                 const probeEnabled = step.probe === true;
 
-                for (let attempts = 0; attempts < 100; attempts++) {
+                let attempts = 0;
+                for (; attempts < 100; attempts++) {
                     const startTime = Date.now();
                     while (Date.now() - startTime < 1000) {
                         if (isInTalkUI()) {
@@ -127,6 +166,8 @@ export default [
                 if (isCancellationError(error)) { throw error; }
                 log.error("执行对话步骤时出错: {error}", error.message);
                 throw error;
+            } finally {
+                if (mat) mat.Dispose();
             }
         },
     }),

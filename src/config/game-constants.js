@@ -122,7 +122,7 @@ export const PATHS = {
 /** 对话相关区域常量 */
 export const DIALOG_REGIONS = {
     /** 对话NPC名称识别区域 */
-    NPC_NAME: new rect(75, 240, 225, 60),
+    NPC_NAME: new rect(80, 248, 343, 31),
     /** 对话选项列表识别区域 */
     DIALOG_OPTIONS: new rect(1150, 300, 350, 400),
     /** 对话气泡图标模板匹配区域 [x, y, width, height] */

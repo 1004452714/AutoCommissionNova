@@ -5,6 +5,8 @@
  * 对每个 step 检查：
  *   (1) step.type 是否已在 registry 注册
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
+ *   (3) 用户分支选择 的 step.data[branchKey] 嵌套 step 递归校验
+ *   (4) 流程分支 / 委托描述检测 引用的子流程文件递归校验
  *
  * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
@@ -67,7 +69,8 @@ async function validateNpcProcesses(registry) {
             if (!steps || steps.length === 0) continue;
 
             const processPath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/process.json";
-            errors += validateProcessSteps(registry, processPath, steps);
+            const loadSubProcess = (filename) => loadNpcProcessFile(commissionName, location, filename);
+            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess);
         }
     }
     return errors;
@@ -98,7 +101,8 @@ async function validateBasicProcesses(registry) {
             const processPath = subDir + "/process.json";
             const steps = await loadBasicProcess(processPath);
             if (!steps || steps.length === 0) continue;
-            errors += validateProcessSteps(registry, processPath, steps);
+            const loadSubProcess = (filename) => loadBasicProcess(subDir + "/" + filename);
+            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess);
         }
     }
     return errors;
@@ -106,11 +110,14 @@ async function validateBasicProcesses(registry) {
 
 /**
  * 对一份流程的步骤数组做校验
+ *
  * @param {Object} registry
  * @param {string} processPath - 用于日志定位
  * @param {Array} steps - loader 返回的 step 数组
+ * @param {Function} loadSubProcess - (filename) => Promise<Array|null> 子流程加载器（按委托类型注入）
+ * @param {Set<string>} visited - 已访问的子流程文件名，避免循环递归
  */
-function validateProcessSteps(registry, processPath, steps) {
+async function validateProcessSteps(registry, processPath, steps, loadSubProcess, visited = new Set()) {
     let errors = 0;
     for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
@@ -133,6 +140,54 @@ function validateProcessSteps(registry, processPath, steps) {
             const result = validateSchema(step.data, schema, stepType);
             if (!result.ok) {
                 log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, result.error);
+                errors++;
+            }
+        }
+
+        // 嵌套校验：用户分支选择 的 step.data[branchKey] 是嵌套 step 对象
+        if (stepType === "用户分支选择" && step.data && typeof step.data === "object" && !Array.isArray(step.data)) {
+            const nestedSteps = [];
+            for (const branchKey of Object.keys(step.data)) {
+                const branchStep = step.data[branchKey];
+                if (branchStep && typeof branchStep === "object" && !Array.isArray(branchStep)) {
+                    nestedSteps.push(branchStep);
+                }
+            }
+            if (nestedSteps.length > 0) {
+                errors += await validateProcessSteps(
+                    registry,
+                    `${processPath} → 用户分支选择`,
+                    nestedSteps,
+                    loadSubProcess,
+                    visited
+                );
+            }
+        }
+
+        // 子流程文件校验（流程分支 / 委托描述检测）
+        let subFile = null;
+        if (stepType === "流程分支" && step.data && typeof step.data.path === "string") {
+            subFile = step.data.path;
+        } else if (stepType === "委托描述检测" && typeof step.run === "string") {
+            subFile = step.run;
+        }
+        if (subFile && loadSubProcess) {
+            if (visited.has(subFile)) continue;
+            visited.add(subFile);
+            try {
+                const subSteps = await loadSubProcess(subFile);
+                if (subSteps && subSteps.length > 0) {
+                    errors += await validateProcessSteps(
+                        registry,
+                        `${processPath} → ${subFile}`,
+                        subSteps,
+                        loadSubProcess,
+                        visited
+                    );
+                }
+            } catch (err) {
+                log.error("[{path}] 步骤 #{n} ({type}) 子流程加载失败: {file} - {error}",
+                    processPath, i + 1, stepType, subFile, err.message);
                 errors++;
             }
         }
