@@ -14,7 +14,7 @@ import { enterCommissionScreen } from "../vision/index.js";
  */
 export async function identification() {
     try {
-        const setting = await getSetting();
+        const setting = getSetting();
         if (setting.skipRecognition) {
             log.info("跳过识别，直接加载数据");
             return;
@@ -53,7 +53,7 @@ export async function prepareForCommission() {
     log.info("开始执行委托前准备");
     try {
         await genshin.returnMainUi();
-        const setting = await getSetting();
+        const setting = getSetting();
         if (!setting.prepare) {
             await genshin.tpToStatueOfTheSeven();
         }
@@ -78,7 +78,7 @@ export async function executeMainProcess(stepRegistry) {
 
         await executeCommissionTracking(stepRegistry);
 
-        const setting = await getSetting();
+        const setting = getSetting();
         if (!setting.prepare) {
             log.info("前往安全地点");
             await genshin.tpToStatueOfTheSeven();

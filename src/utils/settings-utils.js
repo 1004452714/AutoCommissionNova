@@ -1,33 +1,43 @@
 /**
  * 设置读取工具
  * 从 BGI settings 全局对象读取用户配置
+ *
+ * settings 全局对象在脚本启动后不会变化，首次读取后缓存在模块级变量中，
+ * 后续调用直接返回缓存，避免重复构造对象。
  */
 
+const DEFAULT_SETTING = {
+    skipRecognition: false,
+    prepare: true,
+    team: "",
+    elementTeam: "",
+    runMode: "默认",
+    showConfigEditor: true,
+};
+
+let cachedSetting = null;
+
 /**
- * 获取用户设置配置
- * @returns {Promise<Object>} 设置对象
+ * 获取用户设置配置（首次调用读取 settings 全局对象，后续调用返回缓存）
+ * @returns {Object} 设置对象
  */
-export async function getSetting() {
+export function getSetting() {
+    if (cachedSetting) return cachedSetting;
     try {
-        const skipRecognition = settings.skipRecognition || false;
-        const prepare = settings.prepare || false;
-        const team = settings.team || "";
-        const elementTeam = settings.elementTeam || "";
-        const runMode = settings.runMode || "默认";
-        // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
-        const showConfigEditor = settings.showConfigEditor !== false;
-        const result = { skipRecognition, prepare, team, elementTeam, runMode, showConfigEditor };
-        log.debug("setting:{index}", result);
-        return result;
+        cachedSetting = {
+            skipRecognition: settings.skipRecognition || false,
+            prepare: settings.prepare || false,
+            team: settings.team || "",
+            elementTeam: settings.elementTeam || "",
+            runMode: settings.runMode || "默认",
+            // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
+            showConfigEditor: settings.showConfigEditor !== false,
+        };
+        log.debug("setting:{index}", cachedSetting);
+        return cachedSetting;
     } catch (error) {
         log.error("执行 getSetting 时出错，将使用默认配置");
-        return {
-            skipRecognition: false,
-            prepare: true,
-            team: "",
-            elementTeam: "",
-            runMode: "默认",
-            showConfigEditor: true,
-        };
+        cachedSetting = { ...DEFAULT_SETTING };
+        return cachedSetting;
     }
 }

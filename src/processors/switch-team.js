@@ -18,7 +18,7 @@ export default defineStep({
 
         let actualTeamName;
         if (teamName === "战斗" || teamName === "元素采集") {
-            const setting = await getSetting();
+            const setting = getSetting();
             actualTeamName = teamName === "战斗" ? setting.team : setting.elementTeam;
         } else {
             actualTeamName = teamName;

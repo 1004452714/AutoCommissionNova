@@ -19,7 +19,7 @@ registerAllProbes();
         await validateAllProcesses(stepRegistry);
 
         //获取设置判断运行模式
-        const setting = await getSetting();
+        const setting = getSetting();
 
         //根据设置决定是否打开分支配置面板,阻塞至用户关闭
         if (setting.showConfigEditor) {

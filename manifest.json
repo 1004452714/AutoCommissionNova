@@ -1,6 +1,6 @@
 {
     "manifest_version": 1,
-    "name": "(对话+成就)全自动蒙德地区每日委托",
+    "name": "自动每日委托",
     "version": "1.0.0",
     "tags": [
         "委托",
@@ -9,8 +9,12 @@
         "成就",
         "历练点"
     ],
-    "description": "自动识别接取完成蒙德每日委托。使用前请阅读README.md获取详细说明和常见问题解答。",
+    "description": "自动识别接取完成每日委托,目前蒙德地区基本全部支持，其他地区等待完善，使用前请阅读README.md获取详细说明和常见问题解答。",
     "authors": [
+        {
+            "name": "DarkFlameMaster",
+            "links": "https://github.com/1004452714"
+        },
         {
             "name": "星野",
             "links": "https://github.com/LX666-666"
