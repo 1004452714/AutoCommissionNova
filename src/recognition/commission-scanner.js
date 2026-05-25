@@ -3,8 +3,8 @@
  * 提取 commission-recognizer.js 和 commission-finder.js 中的公共逻辑
  * 避免代码重复，提高可维护性
  */
-import { OCR_REGIONS, MIN_TEXT_LENGTH, PATHS, UI_REGIONS, COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
-import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
+import { OCR_REGIONS, MIN_TEXT_LENGTH, COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
+import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll, RO } from "../vision/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { getPositionWithVoting } from "../navigation/position-utils.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
@@ -115,12 +115,8 @@ export async function getCommissionPosition() {
  * @param {number} index - 委托位置索引（0-3）
  */
 export async function clickCommissionAndOpenMap(page, index) {
-    const trackRo = RecognitionObject.TemplateMatch(
-        file.ReadImageMatSync(PATHS.TRACK_IMAGE),
-        ...UI_REGIONS.TRACK_BUTTON
-    );
     const button = COMMISSION_POSITIONING_BUTTONS[index];
-    await page.locator(trackRo).withRetryAction(async () => {
+    await page.locator(RO.track).withRetryAction(async () => {
         click(button.x, button.y);
         await sleep(1500); // 打开大地图跳转有些微延迟
     }).waitFor();

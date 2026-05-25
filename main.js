@@ -7,6 +7,7 @@ import { checkVersion } from "./src/version/check-version.js";
 import { runTestCommission } from "./src/core/test-runner.js";
 import { getSetting } from "./src/utils/settings-utils.js";
 import { openCommissionConfigEditor } from "./src/core/commission-config-editor.js";
+import { releaseAllTemplates } from "./src/vision/index.js";
 
 registerAllProcessors(stepRegistry);
 registerAllProbes();
@@ -38,5 +39,8 @@ registerAllProbes();
     } catch (error) {
         log.error("自动委托执行过程中发生错误: {error}", error.message);
         throw error;
+    } finally {
+        // 释放所有懒加载的 RO 模板 mat（脚本退出统一回收）
+        releaseAllTemplates();
     }
 })();

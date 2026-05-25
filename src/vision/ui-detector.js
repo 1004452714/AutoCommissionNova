@@ -2,37 +2,25 @@
  * UI 检测与操作工具
  * 使用 BvPage 检测游戏界面状态，提供通用 UI 操作
  */
-import { PATHS, COMMISSION_STATUS_REGIONS, UI_REGIONS, COMMISSION_STATUS } from "../config/index.js";
+import { COMMISSION_STATUS, UI_REGIONS } from "../config/index.js";
+import { RO } from "./templates/index.js";
 
 /**
  * 检测是否在主界面
- * 
+ *
  * @returns {boolean} 是否在主界面
  */
 export function isInMainUI() {
-    const mat = file.ReadImageMatSync(PATHS.PAIMON_MENU_IMAGE);
-    try {
-        const ro = RecognitionObject.TemplateMatch(mat, 0, 0, 500, 500);
-        const page = new BvPage();
-        return page.locator(ro).isExist();
-    } finally {
-        mat?.Dispose();
-    }
+    return new BvPage().locator(RO.inMainUI).isExist();
 }
+
 /**
  * 检测是否在对话界面
- * 
+ *
  * @returns {boolean} 是否在对话界面
  */
 export function isInTalkUI() {
-    const mat = file.ReadImageMatSync(PATHS.INTALK_IMAGE);
-    try {
-        const ro = RecognitionObject.TemplateMatch(mat, 254, 19, 80, 52);
-        const page = new BvPage();
-        return page.locator(ro).isExist();
-    } finally {
-        mat?.Dispose();
-    }
+    return new BvPage().locator(RO.inTalk).isExist();
 }
 
 /**
@@ -41,31 +29,22 @@ export function isInTalkUI() {
  * @returns {Promise<string>} COMMISSION_STATUS.COMPLETED / UNCOMPLETED / UNKNOWN
  */
 export async function detectCommissionStatusByImage(buttonIndex) {
-    let completedMat = null;
-    let uncompletedMat = null;
     try {
         const page = new BvPage();
-        completedMat = file.ReadImageMatSync(PATHS.COMPLETED_IMAGE);
-        uncompletedMat = file.ReadImageMatSync(PATHS.UNCOMPLETED_IMAGE);
-        const completedRo = RecognitionObject.TemplateMatch(completedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
-        const uncompletedRo = RecognitionObject.TemplateMatch(uncompletedMat, ...COMMISSION_STATUS_REGIONS[buttonIndex]);
-        if (page.locator(completedRo).isExist()) return COMMISSION_STATUS.COMPLETED;
-        if (page.locator(uncompletedRo).isExist()) return COMMISSION_STATUS.UNCOMPLETED;
+        if (page.locator(RO.commissionCompleted(buttonIndex)).isExist()) return COMMISSION_STATUS.COMPLETED;
+        if (page.locator(RO.commissionUncompleted(buttonIndex)).isExist()) return COMMISSION_STATUS.UNCOMPLETED;
         return COMMISSION_STATUS.UNKNOWN;
     } catch (error) {
         log.error("检测第{x}个委托完成状态时出错：{error}", buttonIndex + 1, error.message);
         return COMMISSION_STATUS.UNKNOWN;
-    } finally {
-        if (completedMat) completedMat.Dispose();
-        if (uncompletedMat) uncompletedMat.Dispose();
     }
 }
 
 /**
  * 进入委托界面（F1快捷键 + 点击委托标签）
- * 
+ *
  * 通过 F1 键打开冒险之证，并点击委托标签进入委托界面
- * 
+ *
  * @returns {Promise<boolean>} 是否成功进入委托界面
  */
 export async function enterCommissionScreen() {
@@ -85,9 +64,9 @@ export async function enterCommissionScreen() {
 
 /**
  * 委托列表翻页（模拟鼠标拖拽）
- * 
+ *
  * 通过鼠标拖拽操作实现委托列表页面的滚动
- * 
+ *
  * @param {number} scrollCount - 滚动次数
  * @returns {Promise<boolean>} 是否成功
  */

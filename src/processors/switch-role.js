@@ -13,6 +13,7 @@ import { PATHS, UI_REGIONS } from "../config/index.js";
 import { defineStep } from "./define-step.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { matchSift } from "../vision/sift.js";
+import { RO } from "../vision/index.js";
 const page = new BvPage();
 
 /** SIFT 在头像网格里找角色的最大尝试轮数，超过则放弃此角色避免死循环 */
@@ -121,36 +122,24 @@ function prepareRoleResources(roles) {
  *   等"队伍配置"标题 → 点击"快速编队" → 等"元素共鸣"出现表示已切到角色列表
  */
 async function openTeamConfigPage() {
-    const mainUIMat = file.readImageMatSync(PATHS.PAIMON_MENU_IMAGE);
-    try {
-        const mainUIRo = RecognitionObject.TemplateMatch(mainUIMat);
-        await page.locator(mainUIRo).withRetryAction(async () => {
-            keyPress("l");
-            await sleep(500);
-            if (page.locator("当前状态不可进行队伍配置", UI_REGIONS.TEAM_DISABLED_HINT).isExist()) {
-                log.warn("当前状态不可进行队伍配置，传送到神像后重试");
-                await genshin.tpToStatueOfTheSeven();
-            }
-        }).waitForDisappear();
-        await page.locator("队伍配置", UI_REGIONS.TEAM_CONFIG_TITLE).waitFor();
-        await page.locator("元素共鸣", UI_REGIONS.TEAM_ELEMENT_RESONANCE).withRetryAction(async () => {
-            await page.locator("快速编队", UI_REGIONS.TEAM_QUICK_FORMATION).click();
-        }).waitFor();
-    } finally {
-        mainUIMat.Dispose();
-    }
+    await page.locator(RO.inMainUI).withRetryAction(async () => {
+        keyPress("l");
+        await sleep(500);
+        if (page.locator("当前状态不可进行队伍配置", UI_REGIONS.TEAM_DISABLED_HINT).isExist()) {
+            log.warn("当前状态不可进行队伍配置，传送到神像后重试");
+            await genshin.tpToStatueOfTheSeven();
+        }
+    }).waitForDisappear();
+    await page.locator("队伍配置", UI_REGIONS.TEAM_CONFIG_TITLE).waitFor();
+    await page.locator("元素共鸣", UI_REGIONS.TEAM_ELEMENT_RESONANCE).withRetryAction(async () => {
+        await page.locator("快速编队", UI_REGIONS.TEAM_QUICK_FORMATION).click();
+    }).waitFor();
 }
 
 /** 依次点击对应队员槽位将其移出队伍 */
 async function clearTeamSlots(roles) {
     for (const role of roles) {
-        const slotMat = file.readImageMatSync(`${PATHS.SWITCH_ROLE_SLOT_DIR}/${role.num}.png`);
-        try {
-            const slotRo = RecognitionObject.TemplateMatch(slotMat);
-            await page.locator(slotRo).click();
-        } finally {
-            slotMat.Dispose();
-        }
+        await page.locator(RO.switchRoleSlot(role.num)).click();
     }
 }
 

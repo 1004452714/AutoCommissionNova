@@ -2,8 +2,8 @@
  * 对话步骤处理器
  * 使用 DialogProcessor 处理 NPC 对话
  */
-import { PATHS, DIALOG_REGIONS } from "../config/index.js";
-import { isInMainUI, isInTalkUI, bvPageOcrRegion, templateMatchFindMulti } from "../vision/index.js";
+import { DIALOG_REGIONS } from "../config/index.js";
+import { isInMainUI, isInTalkUI, bvPageOcrRegion, captureAndFindMulti, RO } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { dispatchOnDialogOcr } from "../probes/index.js";
@@ -14,7 +14,6 @@ export default [
     defineStep({
         type: "对话",
         run: async (step, context) => {
-            let mat;
             try {
                 log.info("执行对话步骤");
                 const priorityOptions = Array.isArray(step.data?.priorityOptions) ? step.data.priorityOptions : [];
@@ -36,8 +35,6 @@ export default [
                     }
                 }
 
-                mat = file.ReadImageMatSync(PATHS.INTALK_IMAGE);
-                const talkRO = RecognitionObject.templateMatch(mat, 254, 19, 80, 52);
                 const results = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_OPTIONS);
 
                 // 使用筛选方法先过滤出符合点击条件的元素，并保存匹配的NPC名称
@@ -53,7 +50,7 @@ export default [
                     ? Array.from(results).find(r => r.text.includes(extractedName))
                     : null;
 
-                await page.locator(talkRO)
+                await page.locator(RO.inTalk)
                     .withRetryInterval(500)
                     .withRetryAction(async () => {
                         if (matchedNPCs.length > 0) {
@@ -133,8 +130,8 @@ export default [
                         }
 
                         if (!foundPriorityOption && isInTalkUI()) {
-                            const exitList = await templateMatchFindMulti(PATHS.TALK_EXIT_IMAGE, ...DIALOG_REGIONS.TALK_ICON, true);
-                            const iconList = await templateMatchFindMulti(PATHS.TALK_ICON_IMAGE, ...DIALOG_REGIONS.TALK_ICON);
+                            const exitList = await captureAndFindMulti(RO.talkExit);
+                            const iconList = await captureAndFindMulti(RO.talkIcon);
                             let clickXY = null;
 
                             if (exitList.count === 1) {
@@ -166,11 +163,7 @@ export default [
                 if (isCancellationError(error)) { throw error; }
                 log.error("执行对话步骤时出错: {error}", error.message);
                 throw error;
-            } finally {
-                if (mat) mat.Dispose();
             }
         },
     }),
 ];
-
-

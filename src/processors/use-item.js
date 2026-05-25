@@ -12,7 +12,7 @@
  * 调用方（流程作者）若需要严格失败语义，可以在 step 上配 retry / 配 retryOn 显式覆盖
  */
 import { defineStep } from "./define-step.js";
-import { pageScroll } from "../vision/index.js";
+import { pageScroll, RO } from "../vision/index.js";
 
 export default defineStep({
     type: "使用道具",
@@ -31,11 +31,7 @@ export default defineStep({
         const page = new BvPage();
         const Rect = OpenCvSharp.OpenCvSharp.Rect;
 
-        let inBagMat;
         try {
-            inBagMat = file.readImageMatSync("Data/RecognitionObject/bag/inBag.png");
-            const inBagRo = RecognitionObject.TemplateMatch(inBagMat, 39, 975, 76, 84);
-
             const uiMap = {
                 "武器": { x: 570, y: 50 },
                 "圣遗物": { x: 665, y: 50 },
@@ -53,7 +49,7 @@ export default defineStep({
             }
 
             //  1: 打开背包（B 键背包）
-            await page.locator(inBagRo).withRetryInterval(1000).withRetryAction(() => keyPress("B")).waitFor();
+            await page.locator(RO.inBag).withRetryInterval(1000).withRetryAction(() => keyPress("B")).waitFor();
 
             // 2: 切到 tab 指定的分页
             //   locator 用 tab 文本本身（切换后内容区域左上角会显示当前分页名）
@@ -76,28 +72,23 @@ export default defineStep({
                 await sleep(500);
 
                 for (const item of items) {
-                    let itemMat;
+                    let itemRo;
                     try {
-                        itemMat = file.readImageMatSync(`Data/RecognitionObject/bag/items/${tab}/${item}.png`);
+                        itemRo = RO.bagItem({ tab, item });
                     } catch (readErr) {
                         log.debug("候选道具 {item} 读取失败（可能不存在），尝试下一个：{err}", item, readErr.message);
                         continue;
                     }
-                    try {
-                        const itemRo = RecognitionObject.TemplateMatch(itemMat, 112, 118, 1158, 839);
-                        const result = page.locator(itemRo).findAll();
-                        if (result.count > 0) {
-                            result[0].click();
-                            await page.locator("使用", new Rect(1662, 994, 77, 42))
-                                .withRetryAction(() => result[0].click())
-                                .click();
+                    const result = page.locator(itemRo).findAll();
+                    if (result.count > 0) {
+                        result[0].click();
+                        await page.locator("使用", new Rect(1662, 994, 77, 42))
+                            .withRetryAction(() => result[0].click())
+                            .click();
 
-                            log.info("在 {tab} 页使用道具 {name} ", tab, item);
-                            found = true;
-                            break;
-                        }
-                    } finally {
-                        itemMat.Dispose();
+                        log.info("在 {tab} 页使用道具 {name} ", tab, item);
+                        found = true;
+                        break;
                     }
                 }
             }
@@ -105,7 +96,6 @@ export default defineStep({
                 throw new Error(`道具：${items.join("/")} 在 ${attempt} 页查找后仍未找到`);
             }
         } finally {
-            if (inBagMat) inBagMat.Dispose();
             await genshin.returnMainUi();
         }
     },
