@@ -1,2 +1,2 @@
 export { calculateDistance, getPositionWithVoting, getCommissionTargetPosition } from "./position-utils.js";
-export { findCommissionTarget } from "./commission-locator.js";
+export { findCommissionTarget, trackCommission } from "./commission-locator.js";

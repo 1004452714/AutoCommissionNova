@@ -3,7 +3,7 @@
  * 负责NPC委托的流程加载和执行
  */
 import { COMMISSION_TYPE } from "../config/index.js";
-import { findCommissionTarget } from "../navigation/index.js";
+import { trackCommission } from "../navigation/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 import { createCommissionContext, runStepsWithContext } from "./commission-context.js";
 
@@ -23,7 +23,7 @@ export async function executeNpcCommission(commissionName, location, stepRegistr
         }
 
         log.info("执行统一NPC委托流程: {name}", commissionName);
-        await findCommissionTarget(commissionName);
+        await trackCommission(commissionName);
 
         const context = createCommissionContext({
             type: COMMISSION_TYPE.NPC,

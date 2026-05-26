@@ -1,6 +1,7 @@
 /**
- * 委托目标查找模块
- * 在委托界面中查找指定委托并获取其地图位置
+ * 委托目标查找/追踪模块
+ * - findCommissionTarget: 激活追踪 + 识别并返回大地图坐标
+ * - trackCommission:      仅激活追踪，不识别坐标（executor 启动时使用）
  */
 import { OCR_REGIONS } from "../config/index.js";
 import { enterCommissionScreen } from "../vision/index.js";
@@ -40,5 +41,41 @@ export async function findCommissionTarget(commissionName) {
         log.error("寻找委托目标位置时出错: {error}", error.message);
         log.debug("错误详情:", error);
         return null;
+    }
+}
+
+/**
+ * 仅激活委托追踪，不识别坐标
+ * 委托坐标在 OCR 识别阶段已存入 commission.commissionPosition，executor 启动时
+ * 只需要激活追踪点供后续寻路使用，不需要再读一次大地图
+ * @param {string} commissionName - 委托名称
+ * @returns {Promise<boolean>} 是否成功激活追踪
+ */
+export async function trackCommission(commissionName) {
+    try {
+        const page = new BvPage();
+        log.info("开始追踪委托: {name}", commissionName);
+        await genshin.returnMainUi();
+
+        await enterCommissionScreen();
+
+        const foundIndex = await findCommissionIndex(commissionName);
+        if (foundIndex === -1) {
+            log.warn("未找到委托: {name}", commissionName);
+            return false;
+        }
+
+        await clickCommissionAndOpenMap(page, foundIndex);
+
+        await page.locator("停止追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryInterval(1000).withRetryAction(() => click(1693, 1000)).waitFor();
+        await page.locator("停止追踪", OCR_REGIONS.COMMISSION_TRACKING).withRetryInterval(1000).withRetryAction(() => keyPress("VK_ESCAPE")).waitForDisappear();
+
+        await genshin.returnMainUi();
+
+        return true;
+    } catch (error) {
+        log.error("追踪委托时出错: {error}", error.message);
+        log.debug("错误详情:", error);
+        return false;
     }
 }

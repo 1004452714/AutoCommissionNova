@@ -134,15 +134,18 @@ export async function recognizeCommissions(supportedCommissions) {
                     commission.location = standardizeCommissionLocation(commission.name, rawLocation);
                     commission.status = COMMISSION_STATUS.UNCOMPLETED;
                 }
-
+                
+                //关闭详情页
+                await page.locator(RO.track)
+                    .withRetryAction(async () => { keyPress("VK_ESCAPE"); await sleep(500); })
+                    .waitForDisappear();
+                
                 const bigMapPosition = await getCommissionPosition();
                 commission.commissionPosition = bigMapPosition;
 
-                // 关闭详情页 + 大地图返回委托页；大地图跳转有微小延迟，单次 ESC 可能不够
+                // 关闭大地图返回委托页
                 await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(async () => {
-                    log.info("尝试从地图返回委托页面");
-                    keyPress("VK_ESCAPE");
-                    await sleep(500);
+                    log.debug("尝试从地图返回委托页面");
                     keyPress("VK_ESCAPE");
                     await sleep(1000);
                 }).waitFor();

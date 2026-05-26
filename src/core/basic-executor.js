@@ -5,6 +5,7 @@
 import { COMMISSION_TYPE } from "../config/index.js";
 import { findNearestBasicProcess } from "./basic-process-matcher.js";
 import { loadBasicProcess } from "../loaders/index.js";
+import { trackCommission } from "../navigation/index.js";
 import { createCommissionContext, runStepsWithContext } from "./commission-context.js";
 
 /**
@@ -33,6 +34,8 @@ export async function executeBasicCommission(commission, stepRegistry) {
             log.warn("流程文件为空或解析失败: {path}", matched.processPath);
             return { success: false, context: null };
         }
+
+        await trackCommission(commission.name);
 
         const context = createCommissionContext({
             type: COMMISSION_TYPE.BASIC,
