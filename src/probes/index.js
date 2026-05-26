@@ -16,6 +16,7 @@
 import dialogProbe from "./dialog-probe.js";
 import achievementProbe from "./achievement-probe.js";
 import completionProbe from "./completion-probe.js";
+import { logCaughtError, rethrowIfCancellation } from "../utils/error-utils.js";
 
 const probes = [
     dialogProbe,
@@ -62,7 +63,8 @@ export function dispatchOnDialogOcr(context, ocrResults) {
     try {
         probe.onDialogOcr(context, ocrResults);
     } catch (error) {
-        log.error("探针 {t}.onDialogOcr 抛错: {err}", cond.type, error.message);
+        rethrowIfCancellation(error);
+        logCaughtError("probe:" + cond.type, "调度 onDialogOcr", error);
     }
 }
 
@@ -78,7 +80,8 @@ export function dispatchOnCommissionComplete(context) {
     try {
         probe.onCommissionComplete(context);
     } catch (error) {
-        log.error("探针 {t}.onCommissionComplete 抛错: {err}", cond.type, error.message);
+        rethrowIfCancellation(error);
+        logCaughtError("probe:" + cond.type, "调度 onCommissionComplete", error);
     }
 }
 
@@ -107,6 +110,7 @@ export async function dispatchExplicit(context, expectedType, stepData) {
     try {
         await probe.runExplicit(context, stepData);
     } catch (error) {
-        log.error("探针 {t}.runExplicit 抛错: {err}", cond.type, error.message);
+        rethrowIfCancellation(error);
+        logCaughtError("probe:" + cond.type, "调度 runExplicit", error);
     }
 }

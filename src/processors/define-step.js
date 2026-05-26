@@ -2,7 +2,9 @@
  * 步骤处理器声明式包装
  *
  * 提供：
- *   - 统一 try/catch + log.error 兜底（措辞统一为"执行 X 步骤时出错: ..."）
+ *   - 统一 try/catch 兜底：swallow=true 时调 logCaughtError（message→error / stack→debug）；
+ *     swallow=false 时静默 throw 让上层最终处理点统一打日志，避免冒泡链双重日志
+ *   - 取消异常透传（rethrowIfCancellation）：取消信号始终一路向上到顶层，不会被任何 step 吞掉
  *   - 可选 schema 校验（声明式校验 step.data 字段，省去重复手写 typeof/range 检查）
  *   - step 级重试（retry/retryOn）：失败先重试 N 次再走 swallow/throw 路径，
  *     避免瞬时 OCR / 网络 / 模板匹配抖动直接拖累整个委托
@@ -28,6 +30,7 @@
  *   - schema 校验失败不重试（属配置错误）；swallow 在重试全部用尽后才生效
  *   - **注意**：重试假设 step 幂等。`按键` / 业务有副作用的 step 启用 retry 需谨慎
  */
+import { logCaughtError, rethrowIfCancellation } from "../utils/error-utils.js";
 
 const TYPE_CHECKS = {
     string: v => typeof v === "string",
@@ -76,6 +79,10 @@ export { validateSchema };
 
 /**
  * 执行 run 函数，按 retry 配置自动重试
+ *
+ * 取消异常（isCancellationError）任何时候都立即透传，不计入重试 —— 用户已经主动停止，
+ * 没必要再 retry。
+ *
  * @returns {{ok: true, value: any} | {ok: false, error: Error}}
  */
 async function callWithRetry({ type, run, step, context, maxRetry, retryMode }) {
@@ -91,6 +98,7 @@ async function callWithRetry({ type, run, step, context, maxRetry, retryMode }) 
             }
             return { ok: true, value: result };
         } catch (error) {
+            rethrowIfCancellation(error);
             // return-false 模式：仅返回 false 重试，抛错立即向上
             if (retryMode === "return-false") return { ok: false, error };
             // throw / all 模式：用尽后向上
@@ -108,7 +116,8 @@ function buildHandler({ type, schema, run, swallow, retry, retryOn }) {
         if (schema) {
             const validated = validateSchema(step.data, schema, type);
             if (!validated.ok) {
-                log.error("{type} 步骤数据校验失败: {error}", type, validated.error);
+                // 配置错误，非运行时异常 —— 无 stack 可言，直接 log.error 即可
+                log.error("[processor:{type}] step.data 校验失败: {error}", type, validated.error);
                 return;
             }
             processedStep = Object.assign({}, step, { data: validated.value });
@@ -122,9 +131,15 @@ function buildHandler({ type, schema, run, swallow, retry, retryOn }) {
         const outcome = await callWithRetry({ type, run, step: processedStep, context, maxRetry, retryMode });
         if (outcome.ok) return outcome.value;
 
-        // 4. 最终失败兜底
-        log.error("执行 {type} 步骤时出错: {error}", type, outcome.error.message);
-        if (!swallow) throw outcome.error;
+        // 4. 最终失败处理
+        //   swallow=true  → 本层就是最终处理点，message+stack 都打全（stack 走 debug 不污染遮罩）
+        //   swallow=false → 中间层静默 throw，由 commission-context.runStepsWithContext 等最终
+        //                   处理点统一记录，避免冒泡链双重日志
+        if (swallow) {
+            logCaughtError("processor:" + type, "执行 " + type + " 步骤", outcome.error);
+            return;
+        }
+        throw outcome.error;
     };
 }
 

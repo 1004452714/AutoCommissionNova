@@ -19,6 +19,7 @@ export function cleanText(text) {
  * @returns {string|null} 提取到的人名，未找到返回 null
  */
 export function extractName(text) {
+    // (.+?)\S+ 故意只捕首字: 下游用 .includes() 子串匹配, 任务文本可能带人名后缀("询问艾琳关于X"), 贪婪捕获反而会让 includes 失配
     const patterns = [
         /与(.+?)对话/,
         /与(.+?)一起/,

@@ -11,7 +11,7 @@
  *   detectedPosition    — 位置检测命中的坐标（location-detection）
  */
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
-import { isCancellationError } from "../utils/error-utils.js";
+import { logCaughtError, rethrowIfCancellation } from "../utils/error-utils.js";
 
 /**
  * 构造 resolveResource 解析器
@@ -107,8 +107,10 @@ export async function runStepsWithContext(context, options = {}) {
         try {
             await stepRegistry.process(step, context);
         } catch (stepError) {
-            if (isCancellationError(stepError)) { throw stepError; }
-            log.error("执行步骤 {step} 时出错: {error}", stepLabel, stepError.message);
+            rethrowIfCancellation(stepError);
+            // 最终处理点：step wrapper（swallow=false 时）静默 throw 到这里
+            // 由本层统一打 message+stack，避免冒泡链双重日志
+            logCaughtError("executor:step", "执行步骤 " + stepLabel + " (" + step.type + ")", stepError);
             if (stopOnError) return false;
         }
 

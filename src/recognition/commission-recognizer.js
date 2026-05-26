@@ -7,6 +7,7 @@ import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll, detectCommissionStatu
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
 import { getCommissionPosition, clickCommissionAndOpenMap } from "./commission-scanner.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { RO } from "../vision/index.js";
 /**
  * 识别委托地点
  * @returns {Promise<string>} 地点名称；OCR 失败时返回空字符串（调用方据此设置 status）
