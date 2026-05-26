@@ -11,7 +11,7 @@ async function waitFight(timeout, intervals) {
         keyPress("l");
         await sleep(1000);
         const page = new BvPage();
-        const results = await page.Locator(RO.team).TryWaitFor(2000);
+        const results = await page.locator(RO.team).TryWaitFor(2000);
         if (results.length > 0) {
             log.info("识别到战斗结束");
             keyPress("l");

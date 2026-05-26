@@ -51,9 +51,9 @@ export async function enterCommissionScreen() {
     try {
         const page = new BvPage();
 
-        await page.Locator("委托", UI_REGIONS.COMMISSION_TAB).withRetryAction(() => keyPress("VK_F1")).waitFor();
+        await page.locator("委托", UI_REGIONS.COMMISSION_TAB).withRetryAction(() => keyPress("VK_F1")).waitFor();
 
-        await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(() => click(300, 350)).waitFor();
+        await page.locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(() => click(300, 350)).waitFor();
         log.info("已进入委托界面");
         return true;
     } catch (error) {

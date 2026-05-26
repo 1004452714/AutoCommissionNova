@@ -144,7 +144,7 @@ export async function recognizeCommissions(supportedCommissions) {
                 commission.commissionPosition = bigMapPosition;
 
                 // 关闭大地图返回委托页
-                await page.Locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(async () => {
+                await page.locator("每日委托奖励", UI_REGIONS.DAILY_COMMISSION_REWARD).withRetryAction(async () => {
                     log.debug("尝试从地图返回委托页面");
                     keyPress("VK_ESCAPE");
                     await sleep(1000);
