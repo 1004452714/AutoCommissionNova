@@ -51,23 +51,84 @@ async function autoNavigateToTalk(options = {}) {
     middleButtonClick();
     await sleep(800);
 
-    while (true) {
+    // 停止信号（用于终止后台异步任务）
+    const cancel = { flag: false };
+
+    // === 异步：持续微调视角 ===
+    const adjustTask = async () => {
+        while (!cancel.flag) {
+            await sleep(250);
+            try {
+                const cap = captureGameRegion();
+                try {
+                    const iconRes = cap.Find(iconTemplateRO);
+                    if (iconRes.x >= 920 && iconRes.x <= 980 && iconRes.y < 540) continue;
+                    if (iconRes.y >= 520) moveMouseBy(0, 600);
+                    const adjustAmount = iconRes.x < 920 ? -8 : 8;
+                    const distanceToCenter = Math.abs(iconRes.x - 920);
+                    const scaleFactor = Math.max(1, Math.floor(distanceToCenter / 80));
+                    moveMouseBy(adjustAmount * Math.min(scaleFactor, 3), 0);
+                    keyPress("v");
+                } finally { cap.Dispose(); }
+            } catch (e) {
+                log.error("视角调整异常: {e}", e);
+            }
+        }
+    };
+
+    // === 异步：持续前进 ===
+    const moveTask = async () => {
+        while (!cancel.flag) {
+            keyDown("w");
+            await sleep(200);
+            keyPress("VK_SPACE");
+            await sleep(100);
+            keyUp("w");
+            await sleep(200);
+            forwardAttemptCount++;
+        }
+    };
+
+    // === 阶段1：粗调视角（先大致对准方向再并行移动）===
+    for (let i = 0; i < 15; i++) {
+        const cap = captureGameRegion();
+        try {
+            const iconRes = cap.Find(iconTemplateRO);
+            if (iconRes.x >= 750 && iconRes.x <= 1150 && iconRes.y < 600) {
+                log.info("粗调完成");
+                break;
+            }
+            if (iconRes.y >= 520) moveMouseBy(0, 920);
+            const adjustAmount = iconRes.x < 750 ? -20 : 20;
+            const distanceToCenter = Math.abs(iconRes.x - 750);
+            moveMouseBy(adjustAmount * Math.max(1, Math.floor(distanceToCenter / 80)), 0);
+        } finally {
+            cap.Dispose();
+        }
+        await sleep(100);
+    }
+
+    // === 启动并行异步任务（不带 await）===
+    adjustTask();
+    moveTask();
+
+    // === 阶段2：OCR 到达检测主循环 ===
+    while (!cancel.flag) {
         await sleep(500);
         const captureRegion = captureGameRegion();
         try {
-            // 裁剪右侧文字区域进行OCR识别
             const rewardTextArea = captureRegion.DeriveCrop(1210, 515, 200, 50);
             try {
                 const rewardResult = rewardTextArea.find(RecognitionObject.ocrThis);
                 log.debug("检测到文字: " + rewardResult.text);
 
-                // 检测到目标文字，说明已到达
                 if (rewardResult.text === targetText) {
+                    cancel.flag = true;
                     log.info("已到达指定位置，检测到文字: " + rewardResult.text);
                     if (autoTalk) keyPress("VK_F");
                     return;
                 } else if (forwardAttemptCount > 80) {
-                    // 前进超时（80次×200ms=16秒），抛出异常
+                    cancel.flag = true;
                     throw new Error("前进时间超时");
                 }
             } finally {
@@ -76,50 +137,6 @@ async function autoNavigateToTalk(options = {}) {
         } finally {
             captureRegion.Dispose();
         }
-
-        // 视角调整循环：将图标移动到屏幕中心区域
-        for (let i = 0; i < 100; i++) {
-            const cap = captureGameRegion();
-            try {
-                const iconRes = cap.Find(iconTemplateRO);
-                log.info("检测到委托图标位置 ({x}, {y})", iconRes.x, iconRes.y);
-
-                // 图标在中心区域（X: 920-980, Y: <540），视角已调正
-                if (iconRes.x >= 920 && iconRes.x <= 980 && iconRes.y <= 540) {
-                    forwardAttemptCount++;
-                    log.info("视野已调正，前进第{num}次", forwardAttemptCount);
-                    break;
-                } else {
-                    // 图标偏下，先向上调整视角
-                    if (iconRes.y >= 520) moveMouseBy(0, 920);
-
-                    // 计算水平调整量：图标偏离中心的距离越大，调整幅度越大
-                    const adjustAmount = iconRes.x < 920 ? -20 : 20;
-                    const distanceToCenter = Math.abs(iconRes.x - 920);
-                    // 缩放因子：每偏离50像素，调整量增加1倍
-                    const scaleFactor = Math.max(1, Math.floor(distanceToCenter / 50));
-                    // 垂直调整量：图标在上方时按缩放因子调整，在下方时固定调整10
-                    const adjustAmount2 = iconRes.y < 540 ? scaleFactor : 10;
-                    moveMouseBy(adjustAmount * adjustAmount2, 0);
-                    await sleep(100);
-                }
-
-                // 视角调整超时（50次×100ms=5秒）
-                if (i > 50) throw new Error("视野调整超时");
-            } finally {
-                cap.Dispose();
-            }
-        }
-
-        // 前进操作：W键+空格跳跃
-        keyDown("w");
-        await sleep(200);
-        keyPress("VK_SPACE");
-        await sleep(200);
-        keyPress("VK_SPACE");
-        await sleep(200);
-        keyUp("w");
-        await sleep(200);
     }
 }
 
