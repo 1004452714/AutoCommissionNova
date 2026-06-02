@@ -2,12 +2,12 @@
 .vscode/*
 .idea/*
 .trae/*
-.claude/*
+.claude/
 SKILL/*
 CLAUDE.md
 skills-lock.json
 
-
+bettergi.d.ts
 WebView2Data/*
 AutoCommission - 副本/
 Data/commissions_data.json
