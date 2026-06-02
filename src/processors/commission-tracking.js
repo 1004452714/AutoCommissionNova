@@ -1,7 +1,7 @@
 /**
  * 追踪委托步骤处理器
  */
-import { RO } from "../vision/index.js";
+import { isInTalkUI, RO } from "../vision/index.js";
 import { defineStep } from "./define-step.js";
 
 /**
@@ -28,8 +28,8 @@ function pickIconRo(iconType) {
  *
  * 坐标说明（基于1920×1080分辨率）：
  * - 屏幕中心约在 (960, 540)
- * - 图标在 (920-980, <540) 范围内认为视角已调正
- * - 图标Y坐标 >= 520 时需要重新调整视角
+ * - 图标在 (900-1020, <540) 范围内认为视角已调正
+ * - 图标Y坐标 >= 520 时说明目标在镜头背后，需大幅调整X轴转身
  *
  * @param {Object} options - 配置选项
  * @param {string} [options.npcName] - 目标 NPC 名称
@@ -47,28 +47,56 @@ async function autoNavigateToTalk(options = {}) {
     // 前进次数计数器（用于超时检测）
     let forwardAttemptCount = 0;
 
-    // 打开大地图
     middleButtonClick();
     await sleep(800);
 
     // 停止信号（用于终止后台异步任务）
     const cancel = { flag: false };
 
-    // === 异步：持续微调视角 ===
-    const adjustTask = async () => {
-        while (!cancel.flag) {
+    /**
+     * 持续微调视角的异步任务
+     * 根据图标在椭圆环上的位置动态调整视角
+     * 移动距离与偏离距离完全线性成比例，无阈值
+     * 
+     * @param {number} [maxAdjustCount] - 最大调整次数，未传入时使用 cancel.flag 持续调整
+     */
+    const adjustTask = async (maxAdjustCount = null) => {
+        let adjustCount = 0;
+        let failCount = 0;
+        while (!cancel.flag && (maxAdjustCount === null || adjustCount < maxAdjustCount)) {
+            adjustCount++;
             await sleep(250);
             try {
                 const cap = captureGameRegion();
                 try {
                     const iconRes = cap.Find(iconTemplateRO);
-                    if (iconRes.x >= 920 && iconRes.x <= 980 && iconRes.y < 540) continue;
-                    if (iconRes.y >= 520) moveMouseBy(0, 600);
-                    const adjustAmount = iconRes.x < 920 ? -8 : 8;
-                    const distanceToCenter = Math.abs(iconRes.x - 920);
-                    const scaleFactor = Math.max(1, Math.floor(distanceToCenter / 80));
-                    moveMouseBy(adjustAmount * Math.min(scaleFactor, 3), 0);
-                    keyPress("v");
+
+                    // 识别失败处理
+                    if (iconRes.isEmpty()) {
+                        failCount++;
+                        log.warn("图标识别失败，连续失败次数: {count}/5", failCount);
+                        if (failCount >= 5) {
+                            log.error("图标连续识别失败5次");
+                            cancel.flag = true;
+                            return;
+                        }
+                        continue;
+                    }
+
+                    // 识别成功，重置失败计数
+                    failCount = 0;
+
+                    if (iconRes.x >= 900 && iconRes.x <= 1020 && iconRes.y < 540) continue;
+
+                    const distanceToCenter = iconRes.x - 960;
+
+                    if (iconRes.y >= 520) {
+                        const moveX = distanceToCenter * 1.5;
+                        moveMouseBy(Math.round(moveX), 0);
+                    } else {
+                        const moveX = distanceToCenter;
+                        moveMouseBy(Math.round(moveX), 0);
+                    }
                 } finally { cap.Dispose(); }
             } catch (e) {
                 log.error("视角调整异常: {e}", e);
@@ -78,37 +106,26 @@ async function autoNavigateToTalk(options = {}) {
 
     // === 异步：持续前进 ===
     const moveTask = async () => {
+        let jump = 1;
         while (!cancel.flag) {
+            jump++;
             keyDown("w");
-            await sleep(200);
-            keyPress("VK_SPACE");
-            await sleep(100);
+            await sleep(1000);
+            if (jump % 2 === 0) {
+                keyPress("VK_SPACE");
+                await sleep(100);
+            }
+
             keyUp("w");
             await sleep(200);
             forwardAttemptCount++;
         }
     };
 
-    // === 阶段1：粗调视角（先大致对准方向再并行移动）===
-    for (let i = 0; i < 15; i++) {
-        const cap = captureGameRegion();
-        try {
-            const iconRes = cap.Find(iconTemplateRO);
-            if (iconRes.x >= 750 && iconRes.x <= 1150 && iconRes.y < 600) {
-                log.info("粗调完成");
-                break;
-            }
-            if (iconRes.y >= 520) moveMouseBy(0, 920);
-            const adjustAmount = iconRes.x < 750 ? -20 : 20;
-            const distanceToCenter = Math.abs(iconRes.x - 750);
-            moveMouseBy(adjustAmount * Math.max(1, Math.floor(distanceToCenter / 80)), 0);
-        } finally {
-            cap.Dispose();
-        }
-        await sleep(100);
-    }
+    // 先执行固定次数的视角调整
+    await adjustTask(15);
 
-    // === 启动并行异步任务（不带 await）===
+    // === 启动并行异步任务 ===
     adjustTask();
     moveTask();
 
@@ -125,8 +142,15 @@ async function autoNavigateToTalk(options = {}) {
                 if (rewardResult.text === targetText) {
                     cancel.flag = true;
                     log.info("已到达指定位置，检测到文字: " + rewardResult.text);
-                    if (autoTalk) keyPress("VK_F");
+                    if (autoTalk) {
+                        log.info("按F键开始对话");
+                        keyPress("VK_F")
+                    }
                     return;
+                } else if (isInTalkUI()) {
+                    log.info("已进入对话界面");
+                    cancel.flag = true;
+
                 } else if (forwardAttemptCount > 80) {
                     cancel.flag = true;
                     throw new Error("前进时间超时");
