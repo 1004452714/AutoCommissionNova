@@ -46,6 +46,7 @@ async function autoNavigateToTalk(options = {}) {
 
     // 前进次数计数器（用于超时检测）
     let forwardAttemptCount = 0;
+    let lookedDownOnce = false;
 
     middleButtonClick();
     await sleep(800);
@@ -87,6 +88,13 @@ async function autoNavigateToTalk(options = {}) {
                     failCount = 0;
 
                     if (iconRes.x >= 900 && iconRes.x <= 1020 && iconRes.y < 540) continue;
+
+                    if (iconRes.y >= 520 && !lookedDownOnce) {
+                        lookedDownOnce = true;
+                        log.debug("图标位于画面下方，先下拉镜头后重新判断");
+                        moveMouseBy(0, 520);
+                        continue;
+                    }
 
                     const distanceToCenter = iconRes.x - 960;
 
