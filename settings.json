@@ -10,6 +10,11 @@
         "label": "元素采集的队伍名称（必填）"
     },
     {
+        "name": "uid",
+        "type": "input-text",
+        "label": "账号UID（多个UID可用非数字字符分隔）"
+    },
+    {
         "name": "prepare",
         "type": "checkbox",
         "label": "切换队伍不前往七天神像及完成后不去安全地点"

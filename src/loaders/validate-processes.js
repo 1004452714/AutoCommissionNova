@@ -227,7 +227,19 @@ function validateBranchConfig() {
 
         const descriptions = cfg.descriptions || {};
         const conditions = cfg.conditions || {};
-        const completed = Array.isArray(cfg.completed) ? cfg.completed : [];
+        const completedByUid = cfg.completedByUid || {};
+        if (cfg.completedByUid === undefined) {
+            log.error("[{path}] 缺少 completedByUid", filePath);
+            errors++;
+        }
+        if (cfg.completed !== undefined) {
+            log.error("[{path}] completed 已废弃，请使用 completedByUid", filePath);
+            errors++;
+        }
+        if (!completedByUid || typeof completedByUid !== "object" || Array.isArray(completedByUid)) {
+            log.error("[{path}] completedByUid 必须是对象", filePath);
+            errors++;
+        }
 
         // 1-2: 每个 condition 用探针注册表校验
         for (const branchKey of Object.keys(conditions)) {
@@ -265,11 +277,24 @@ function validateBranchConfig() {
             log.warn("[{path}] default = {br} 不在 descriptions 中", filePath, cfg.default);
         }
 
-        // 4: completed 中的分支必须在 conditions 中（否则偏好分支被错误标记完成）
-        for (const branchKey of completed) {
-            if (!conditions[branchKey]) {
-                log.warn("[{path}] completed 包含偏好分支 {br}（未在 conditions 中声明），运行时不会被使用",
-                    filePath, branchKey);
+        // 4: completedByUid 中的分支必须在 conditions 中
+        if (completedByUid && typeof completedByUid === "object" && !Array.isArray(completedByUid)) {
+            for (const uid of Object.keys(completedByUid)) {
+                if (!/^\d+$/.test(uid)) {
+                    log.warn("[{path}] completedByUid 包含非数字 UID: {uid}", filePath, uid);
+                }
+                const completed = completedByUid[uid];
+                if (!Array.isArray(completed)) {
+                    log.error("[{path}] completedByUid.{uid} 必须是数组", filePath, uid);
+                    errors++;
+                    continue;
+                }
+                for (const branchKey of completed) {
+                    if (!conditions[branchKey]) {
+                        log.warn("[{path}] completedByUid.{uid} 包含偏好分支 {br}（未在 conditions 中声明），运行时不会被使用",
+                            filePath, uid, branchKey);
+                    }
+                }
             }
         }
     }

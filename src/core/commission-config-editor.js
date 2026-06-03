@@ -11,7 +11,9 @@
  */
 
 import { isCancellationError } from "../utils/error-utils.js";
-import { loadAllBranchConfigs, writeAllBranchConfigs } from "../loaders/branch-config.js";
+import { createBranchConfigView, getBranchConfigUids, loadAllBranchConfigs, mergeBranchConfigView, writeAllBranchConfigs } from "../loaders/branch-config.js";
+import { loadKnownCommissionUids } from "../data/index.js";
+import { getCurrentUid } from "../utils/account-utils.js";
 
 const HTML_PATH = "commission-config-mask.html";
 const WINDOW_TAG = "commission-config";
@@ -44,6 +46,16 @@ export async function openCommissionConfigEditor() {
 
     htmlMask.setClickThrough(windowId, false);
     log.info("分支配置面板已打开,按 ~ 键切换显示,点击关闭按钮继续主流程");
+
+    const initialBranchConfig = loadAllBranchConfigs();
+    const knownUids = Array.from(new Set([
+        ...getBranchConfigUids(initialBranchConfig),
+        ...loadKnownCommissionUids(),
+    ]));
+    const accountUid = await getCurrentUid({ knownUids });
+    if (!accountUid) {
+        log.warn("无法确认当前UID，分支配置面板不会更新账号分支完成进度");
+    }
 
     const hook = new KeyMouseHook();
     let isVisible = true;
@@ -105,7 +117,7 @@ export async function openCommissionConfigEditor() {
 
             if (msg.url === "/loadConfig") {
                 try {
-                    const composite = loadAllBranchConfigs();
+                    const composite = createBranchConfigView(loadAllBranchConfigs(), accountUid);
                     const payload = msg.requestId
                         ? JSON.stringify({ requestId: msg.requestId, data: composite })
                         : JSON.stringify(composite);
@@ -130,10 +142,11 @@ export async function openCommissionConfigEditor() {
                     if (typeof content !== "string") {
                         throw new Error("缺少 content 字段");
                     }
-                    const composite = JSON.parse(content);
-                    if (!composite || typeof composite !== "object") {
+                    const viewComposite = JSON.parse(content);
+                    if (!viewComposite || typeof viewComposite !== "object") {
                         throw new Error("content 必须解析为对象");
                     }
+                    const composite = mergeBranchConfigView(viewComposite, accountUid, loadAllBranchConfigs());
                     writeAllBranchConfigs(composite);
                     log.debug("分支配置已保存（{n} 个委托）", Object.keys(composite).length);
                 } catch (err) {

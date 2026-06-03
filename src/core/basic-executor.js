@@ -14,7 +14,7 @@ import { createCommissionContext, runStepsWithContext } from "./commission-conte
  * @param {Object} stepRegistry - 步骤处理器注册表
  * @returns {Promise<Object>} 包含 success 和 context 的对象
  */
-export async function executeBasicCommission(commission, stepRegistry) {
+export async function executeBasicCommission(commission, stepRegistry, accountUid) {
     try {
         const matched = await findNearestBasicProcess(
             commission.name,
@@ -39,6 +39,7 @@ export async function executeBasicCommission(commission, stepRegistry) {
 
         const context = createCommissionContext({
             type: COMMISSION_TYPE.BASIC,
+            accountUid,
             commissionName: commission.name,
             location: commission.location,
             processSteps,

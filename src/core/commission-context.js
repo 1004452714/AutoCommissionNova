@@ -39,9 +39,10 @@ function createResolveResource({ type, commissionName, location, processDir }) {
  * @param {string} [options.processDir] - Basic 委托的流程目录；NPC 委托省略
  * @returns {Object} 共享上下文对象
  */
-export function createCommissionContext({ type, commissionName, location, processSteps, stepRegistry, processDir }) {
+export function createCommissionContext({ type, commissionName, location, processSteps, stepRegistry, processDir, accountUid }) {
     const context = {
         type,
+        accountUid,
         commissionName,
         location,
         processSteps,

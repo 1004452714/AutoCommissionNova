@@ -82,6 +82,8 @@ export const THRESHOLDS = {
     LOCATION: 0.6,
     /** 委托描述匹配阈值，用于将 OCR 识别的委托描述与期望描述比较（cleanText 去标点后做编辑距离） */
     COMMISSION_DESC: 0.8,
+    /** UID OCR 纠错阈值，配置 UID 候选或已有账号槽的相似度必须严格大于该值 */
+    UID: 0.8,
 };
 
 /** 文件路径常量 */

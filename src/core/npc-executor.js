@@ -14,7 +14,7 @@ import { createCommissionContext, runStepsWithContext } from "./commission-conte
  * @param {Object} stepRegistry - 步骤处理器注册表
  * @returns {Promise<Object>} 包含 success 和 context 的对象
  */
-export async function executeNpcCommission(commissionName, location, stepRegistry) {
+export async function executeNpcCommission(commissionName, location, stepRegistry, accountUid) {
     try {
         const processSteps = await loadNpcProcessFile(commissionName, location, "process.json");
         if (!processSteps || processSteps.length === 0) {
@@ -27,6 +27,7 @@ export async function executeNpcCommission(commissionName, location, stepRegistr
 
         const context = createCommissionContext({
             type: COMMISSION_TYPE.NPC,
+            accountUid,
             commissionName,
             location,
             processSteps,

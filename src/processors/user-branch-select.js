@@ -28,7 +28,8 @@
  *   commission-executor.updateBranchCompletion 据此判定是否把 activeBranch 写入 completed。
  */
 import { defineStep } from "./define-step.js";
-import { loadAllBranchConfigs } from "../loaders/branch-config.js";
+import { getBranchCompletedByUid, getBranchConfigUids, loadAllBranchConfigs } from "../loaders/branch-config.js";
+import { getCurrentUid } from "../utils/account-utils.js";
 
 function getBranchName(descriptions, branchKey) {
     if (descriptions && descriptions[branchKey]) {
@@ -57,9 +58,9 @@ function loadBranchConfig(context) {
  * 根据 conditions 和 completed 决策本次要执行的分支
  * 返回 { branchKey, condition } —— condition 为 null 表示偏好分支
  */
-function decideBranch(commissionConfig, step, descriptions) {
+function decideBranch(commissionConfig, step, descriptions, accountUid) {
     const conditions = (commissionConfig && commissionConfig.conditions) || {};
-    const completed = (commissionConfig && commissionConfig.completed) || [];
+    const completed = getBranchCompletedByUid(commissionConfig, accountUid);
 
     // 按声明顺序遍历 conditions，挑第一个未完成的
     const queue = Object.keys(conditions).filter(k => !completed.includes(k));
@@ -85,6 +86,13 @@ export default defineStep({
     swallow: true,
     run: async (step, context) => {
         const config = loadBranchConfig(context);
+        if (!context.accountUid) {
+            const accountUid = await getCurrentUid({ knownUids: getBranchConfigUids(config) });
+            if (accountUid) {
+                context.accountUid = accountUid;
+            }
+        }
+
         const commissionConfig = config[context.commissionName];
         const descriptions = (commissionConfig && commissionConfig.descriptions) || {};
 
@@ -102,7 +110,7 @@ export default defineStep({
         }
 
         // 首次决策
-        const { branchKey, condition } = decideBranch(commissionConfig, step, descriptions);
+        const { branchKey, condition } = decideBranch(commissionConfig, step, descriptions, context.accountUid);
         if (!branchKey) {
             return;
         }
