@@ -21,6 +21,7 @@ import userBranchSelect from "./user-branch-select.js";
 import flowBranch from "./flow-branch.js";
 import achievementDetect from "./achievement-detect.js";
 import useItem from "./use-item.js";
+import basicDestroyWatchtower from "./basic-destroy-watchtower.js";
 
 const processors = [
     wait,
@@ -41,6 +42,7 @@ const processors = [
     flowBranch,
     achievementDetect,
     useItem,
+    basicDestroyWatchtower,
 ];
 
 /**

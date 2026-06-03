@@ -19,7 +19,7 @@ import { stepRegistry } from "../processors/registry.js";
  */
 const TEST_CONFIG = {
     mode: "case",             // 测试模式: "case"=测试用例, "commission"=真实委托, "unit"=纯函数单元测试
-    caseName: "成就检测测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
+    caseName: "摧毁哨塔测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
     commissionName: "餐品订单",         // mode="commission" 时生效，对应 process/NPC/ 下的目录名
     location: "蒙德城",           // mode="commission" 时生效，委托地点
     processFile: "process.json",      // mode="commission" 时生效，流程文件名
