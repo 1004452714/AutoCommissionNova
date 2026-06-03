@@ -185,5 +185,5 @@ export const OCR_REGIONS = {
     /** 大地图 - 选中委托后 - 停止追踪按钮 */
     COMMISSION_TRACKING: new rect(1626, 987, 127, 40),
     /** 主界面 - 追踪任务时 - 委托描述文本 */
-    COMMISSION_DETAIL: new rect(80, 250, 380, 32),
+    COMMISSION_DETAIL: new rect(80, 250, 380, 27),
 };

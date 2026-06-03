@@ -56,31 +56,27 @@ export default defineStep({
             keyPress("v");
             await sleep(300);
 
+            let lastOcrResult = "";
+            let stableOcrResult = "";
+
             for (let c = 0; c < 13; c++) {
                 try {
                     const ocrResult = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
                     // OCR 可能识别出与委托名一致（说明详情还没刷新出来）或空文本 → 继续等
                     // 使用标准化后比较，容忍 OCR 抖动
                     if (ocrResult === "" || standardizeCommissionName(ocrResult) === context.commissionName) {
+                        lastOcrResult = ""; // 重置上次结果
                         await sleep(1000);
                         log.debug("检测到委托名称或空文本，继续等待...");
-                    } else if (matchesDescription(ocrResult, targetDescription, useKeyword)) {
-                        log.info("委托描述检测成功，执行后续步骤");
-                        if (executeFile && runType === "process") {
-                            const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);
-                            if (nextSteps && Array.isArray(nextSteps)) {
-                                context.insertSubSteps(nextSteps);
-                                log.info("已插入 {count} 个后续步骤", nextSteps.length);
-                            }
-                        } else if (executeFile && runType === "path") {
-                            const filePath = context.resolveResource(executeFile);
-                            try { await pathingScript.runFile(filePath); }
-                            catch (error) { log.warn("未找到地图追踪文件: {path}", filePath); return false; }
-                        }
+                    } else if (ocrResult === lastOcrResult) {
+                        // 连续两次 OCR 结果相同，认为描述已稳定加载
+                        stableOcrResult = ocrResult;
+                        log.debug("OCR结果稳定: {result}", ocrResult);
                         break;
                     } else {
-                        log.warn("委托描述不匹配,识别：{actual},期望：{expected}", ocrResult, targetDescription);
-                        break;
+                        // 第一次识别或结果不一致，记录并继续等待
+                        log.debug("OCR结果: {result}，等待确认...", ocrResult);
+                        lastOcrResult = ocrResult;
                     }
                 } catch (ocrError) {
                     if (isCancellationError(ocrError)) { throw ocrError; }
@@ -88,6 +84,26 @@ export default defineStep({
                     break;
                 }
                 await sleep(1);///不是为了等待，而是为了能及时响应停止脚本的信号
+            }
+
+            // 使用稳定的 OCR 结果进行匹配判断
+            if (stableOcrResult && matchesDescription(stableOcrResult, targetDescription, useKeyword)) {
+                log.info("委托描述检测成功，执行后续步骤");
+                if (executeFile && runType === "process") {
+                    const nextSteps = await loadNpcProcessFile(context.commissionName, context.location, executeFile);
+                    if (nextSteps && Array.isArray(nextSteps)) {
+                        context.insertSubSteps(nextSteps);
+                        log.info("已插入 {count} 个后续步骤", nextSteps.length);
+                    }
+                } else if (executeFile && runType === "path") {
+                    const filePath = context.resolveResource(executeFile);
+                    try { await pathingScript.runFile(filePath); }
+                    catch (error) { log.warn("未找到地图追踪文件: {path}", filePath); return false; }
+                }
+            } else if (stableOcrResult) {
+                log.warn("委托描述不匹配,识别：{actual},期望：{expected}", stableOcrResult, targetDescription);
+            } else {
+                log.warn("未能获取稳定的OCR结果");
             }
         } catch (error) {
             if (isCancellationError(error)) { throw error; }

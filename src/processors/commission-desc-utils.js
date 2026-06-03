@@ -34,23 +34,31 @@ export async function readCommissionDescription(context) {
     keyPress("v");
     await sleep(300);
 
+    let lastOcrResult = "";
     for (let c = 0; c < 13; c++) {
         try {
             const ocrResult = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
             // OCR 可能识别出与委托名一致（说明详情还没刷新出来）或空文本 → 继续等
             // 使用标准化后比较，容忍 OCR 抖动
             if (ocrResult === "" || standardizeCommissionName(ocrResult) === context.commissionName) {
+                keyPress("v"); // 识别到委托名按V追踪
                 await sleep(1000);
                 log.debug("检测到委托名称或空文本，继续等待...");
-            } else {
+            } else if (ocrResult === lastOcrResult) {
+                // 连续两次 OCR 结果相同，认为描述已稳定加载
+                log.debug("OCR结果稳定: {result}", ocrResult);
                 return ocrResult;
+            } else {
+                // 第一次识别或结果不一致，记录并继续等待
+                log.debug("OCR结果: {result}，等待确认...", ocrResult);
+                lastOcrResult = ocrResult;
             }
         } catch (ocrError) {
             if (isCancellationError(ocrError)) { throw ocrError; }
             log.error("委托描述OCR识别出错: {error}", ocrError.message);
             return "";
         }
-        await sleep(1);///不是为了等待，而是为了能及时响应停止脚本的信号
+        await sleep(200);
     }
     return "";
 }
@@ -66,7 +74,7 @@ export async function shouldExecuteStepByDesc(step, context) {
     const expectedDesc = typeof step.desc === "string" ? step.desc.trim() : "";
     if (!expectedDesc) return true;
 
-    log.info("检查步骤 desc 门禁: {desc}", expectedDesc);
+    log.info("检查委托描述是否包含 : {desc}", expectedDesc);
     const ocrText = await readCommissionDescription(context);
     const matched = matchesDescription(ocrText, expectedDesc, true);
     if (!matched) {
