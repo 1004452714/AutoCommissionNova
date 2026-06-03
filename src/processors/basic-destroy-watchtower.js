@@ -11,6 +11,8 @@ const WATCHTOWER_CONFIG = {
     maxDestroyCount: 2,
     /** 距离阈值：OCR 识别到哨塔距离小于该值时，停止靠近并进入攻击阶段。 */
     distanceThreshold: 3,
+    /** 距离文字连续识别失败上限：达到后认为当前图标不是哨塔，直接结束步骤。 */
+    missingDistanceLimit: 5,
     /** 靠近阶段超时时间（毫秒）：超过后仍未进入距离阈值则返回失败。 */
     approachTimeout: 45 * 1000,
     /** 攻击阶段超时时间（毫秒）：超过后中心图标仍未消失则返回失败。 */ 
@@ -142,7 +144,7 @@ async function walkForward(duration) {
 
 /**
  * 持续识别任务图标、调整镜头并向哨塔靠近，直到距离小于阈值。
- * @returns {Promise<boolean>} 是否成功靠近哨塔
+ * @returns {Promise<boolean|null>} true 表示成功靠近哨塔，null 表示当前图标不是哨塔
  */
 async function approachWatchtower() {
     middleButtonClick();
@@ -150,6 +152,7 @@ async function approachWatchtower() {
 
     const startTime = Date.now();
     let failCount = 0;
+    let missingDistanceCount = 0;
     const adjustState = { lookedDownOnce: false };
     while (Date.now() - startTime < WATCHTOWER_CONFIG.approachTimeout) {
         const cap = captureGameRegion();
@@ -166,12 +169,20 @@ async function approachWatchtower() {
             failCount = 0;
             const { text, distance } = readDistanceFromCapture(cap, iconRes);
             if (distance !== null) {
+                missingDistanceCount = 0;
                 log.debug("哨塔距离: {distance}m", distance);
                 if (distance < WATCHTOWER_CONFIG.distanceThreshold) {
                     return true;
                 }
             } else {
-                log.debug("未解析到哨塔距离文本: {text}", text);
+                missingDistanceCount++;
+                log.warn("未解析到哨塔距离文本: {text}，连续失败次数: {count}/{limit}", text, missingDistanceCount, WATCHTOWER_CONFIG.missingDistanceLimit);
+                if (missingDistanceCount >= WATCHTOWER_CONFIG.missingDistanceLimit) {
+                    log.info("连续未识别到距离文字，判断当前图标不是哨塔，结束摧毁哨塔步骤");
+                    return null;
+                }
+                await sleep(300);
+                continue;
             }
 
             if (adjustViewToIcon(iconRes, adjustState)) {
@@ -297,7 +308,11 @@ async function destroyAllWatchtowers() {
     while (destroyedCount < WATCHTOWER_CONFIG.maxDestroyCount && hasAnyBigmapIcon()) {
         log.info("发现哨塔图标，开始处理第 {count} 个", destroyedCount + 1);
 
-        if (!(await approachWatchtower())) {
+        const approachResult = await approachWatchtower();
+        if (approachResult === null) {
+            return true;
+        }
+        if (!approachResult) {
             if (!hasAnyBigmapIcon()) {
                 log.info("靠近过程中全屏哨塔图标已消失，结束摧毁哨塔步骤");
                 return true;
