@@ -167,6 +167,11 @@ async function approachWatchtower() {
             }
 
             failCount = 0;
+            if (!adjustViewToIcon(iconRes, adjustState)) {
+                await sleep(250);
+                continue;
+            }
+
             const { text, distance } = readDistanceFromCapture(cap, iconRes);
             if (distance !== null) {
                 missingDistanceCount = 0;
@@ -185,11 +190,7 @@ async function approachWatchtower() {
                 continue;
             }
 
-            if (adjustViewToIcon(iconRes, adjustState)) {
-                await walkForward(WATCHTOWER_CONFIG.forwardMs);
-            } else {
-                await sleep(250);
-            }
+            await walkForward(WATCHTOWER_CONFIG.forwardMs);
         } finally {
             cap.Dispose();
         }
