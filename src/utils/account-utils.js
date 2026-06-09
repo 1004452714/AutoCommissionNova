@@ -2,6 +2,8 @@ import { THRESHOLDS } from "../config/index.js";
 import { calculateSimilarity } from "../recognition/text-similarity.js";
 import { getSetting } from "./settings-utils.js";
 
+let cachedCurrentUid = "";
+
 function digitsOnly(value) {
     return String(value ?? "").replace(/\D/g, "");
 }
@@ -34,7 +36,15 @@ export function matchUidCandidate(recognizedUid, candidates) {
     };
 }
 
+export function resetCurrentUidCache() {
+    cachedCurrentUid = "";
+}
+
 export async function getCurrentUid(options = {}) {
+    if (cachedCurrentUid) {
+        return cachedCurrentUid;
+    }
+
     const knownUids = normalizeUidCandidates(options.knownUids || []);
 
     let rawUid;
@@ -69,6 +79,7 @@ export async function getCurrentUid(options = {}) {
             match.uid,
             recognizedUid,
             match.bestSimilarity.toFixed(3));
+        cachedCurrentUid = match.uid;
         return match.uid;
     }
 
@@ -79,6 +90,7 @@ export async function getCurrentUid(options = {}) {
                 match.uid,
                 recognizedUid,
                 match.bestSimilarity.toFixed(3));
+            cachedCurrentUid = match.uid;
             return match.uid;
         }
         log.info("当前UID未匹配到已有账号槽，使用识别值创建/读取账号槽: {uid}", recognizedUid);
@@ -86,5 +98,6 @@ export async function getCurrentUid(options = {}) {
         log.info("当前UID: {uid}", recognizedUid);
     }
 
+    cachedCurrentUid = recognizedUid;
     return recognizedUid;
 }

@@ -260,12 +260,13 @@ export async function saveCommissionsData(commissions) {
  *
  * @param {string} commissionName - 委托名称
  * @param {string} status - 目标状态（取 COMMISSION_STATUS 中的值）
+ * @param {string} [accountUid=""] - 已解析的当前账号 UID；传入时不会重新识别 UID
  * @returns {Promise<void>}
  */
-export async function updateCommissionStatus(commissionName, status) {
+export async function updateCommissionStatus(commissionName, status, accountUid = "") {
     try {
         const data = readCommissionsData();
-        const uid = await getCurrentUid({ knownUids: getKnownAccountUids(data) });
+        const uid = accountUid || (await getCurrentUid({ knownUids: getKnownAccountUids(data) }));
         if (!uid) {
             log.error("无法确认当前UID，跳过委托状态更新: {name}", commissionName);
             return;
