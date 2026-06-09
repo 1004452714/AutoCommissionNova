@@ -27,7 +27,7 @@ export async function executeBasicCommission(commission, stepRegistry, accountUi
             return { success: false, context: null };
         }
 
-        log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, matched.distance.toFixed(2));
+        log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, Math.round(matched.distance));
 
         const processSteps = await loadBasicProcess(matched.processPath);
         if (!processSteps || processSteps.length === 0) {

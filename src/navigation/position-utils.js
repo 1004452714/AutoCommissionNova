@@ -71,7 +71,7 @@ export async function getPositionWithVoting() {
         clusters.sort((a, b) => b.length - a.length);
         if (clusters.length > 0) {
             const bestPosition = clusters[0][0];
-            log.info('位置识别成功: ({x}, {y})', bestPosition.x, bestPosition.y);
+            log.info('位置识别成功: ({x}, {y})', Math.round(bestPosition.x), Math.round(bestPosition.y));
             return bestPosition;
         }
     }
@@ -100,7 +100,8 @@ export async function getCommissionTargetPosition(scriptPath) {
             log.warn("路径追踪文件 {path} 的最后一个路径点缺少坐标数据", scriptPath);
             return null;
         }
-        log.debug("从脚本路径 {path} 获取到目标坐标: ({x}, {y})", scriptPath, lastPosition.x, lastPosition.y);
+        log.debug("从脚本路径 {path} 获取到目标坐标: ({x}, {y})",
+            scriptPath, Math.round(lastPosition.x), Math.round(lastPosition.y));
         return { x: lastPosition.x, y: lastPosition.y };
     } catch (error) {
         if (isCancellationError(error)) { throw error; }

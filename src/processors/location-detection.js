@@ -18,7 +18,8 @@ export default defineStep({
         const { x: targetX, y: targetY, tolerance } = step.data;
         const executeFile = step.run;
 
-        log.info("地址检测: 目标({x}, {y}), 容差: {tolerance}", targetX, targetY, tolerance);
+        log.info("地址检测: 目标({x}, {y}), 容差: {tolerance}",
+            Math.round(targetX), Math.round(targetY), Math.round(tolerance));
 
         const commissionTarget = await findCommissionTarget(context.commissionName);
         if (!commissionTarget) {
@@ -29,10 +30,14 @@ export default defineStep({
 
         const distance = calculateDistance(commissionTarget, { x: targetX, y: targetY });
         log.info("地址检测 - 委托位置: ({x}, {y}), 目标位置: ({tx}, {ty}), 距离: {d}",
-            commissionTarget.x, commissionTarget.y, targetX, targetY, distance);
+            Math.round(commissionTarget.x),
+            Math.round(commissionTarget.y),
+            Math.round(targetX),
+            Math.round(targetY),
+            Math.round(distance));
 
         if (distance >= tolerance) {
-            log.info("地址检测失败，距离过远: {distance}", distance);
+            log.info("地址检测失败，距离过远: {distance}", Math.round(distance));
             context.locationDetected = false;
             return;
         }

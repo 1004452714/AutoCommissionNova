@@ -13,7 +13,7 @@ export default defineStep({
     },
     run: async (step, context) => {
         const { x, y, force } = step.data;
-        log.info("传送到坐标: ({x}, {y}), 强制: {force}", x, y, force);
+        log.info("传送到坐标: ({x}, {y}), 强制: {force}", Math.round(x), Math.round(y), force);
         await genshin.tp(x, y, force);
         log.info("传送完成");
         await sleep(2000);
