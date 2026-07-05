@@ -5,7 +5,7 @@
 import { COMMISSION_TYPE, COMMISSION_STATUS, OCR_REGIONS, UI_REGIONS } from "../config/index.js";
 import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll, detectCommissionStatusByImage } from "../vision/index.js";
 import { standardizeCommissionName, standardizeCommissionLocation } from "./commission-standardizer.js";
-import { getCommissionPosition, clickCommissionAndOpenMap } from "./commission-scanner.js";
+import { getCommissionPosition, clickCommissionAndOpenMap, resolveCommissionNameOcrRegions } from "./commission-scanner.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { RO } from "../vision/index.js";
 /**
@@ -93,13 +93,14 @@ export async function recognizeCommissions(supportedCommissions) {
     try {
         const allCommissions = [];
         const page = new BvPage();
+        const commissionNameRegions = await resolveCommissionNameOcrRegions();
         let commission;
         for (let i = 0; i < 4; i++) {
             try {
                 commission = {};
                 if (i === 3) { await pageScroll(1) };  // 第4个委托需要翻页
                 const id = i + 1;
-                const rawName = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_NAME[i]);
+                const rawName = bvPageOcrRegionText(commissionNameRegions[i]);
                 log.info("识别到第{id}个委托名称: {name}", id, rawName);
 
                 const standardizedName = standardizeCommissionName(rawName);

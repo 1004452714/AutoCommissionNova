@@ -142,6 +142,8 @@ export const UI_REGIONS = {
     COMMISSION_TAB: new rect(260, 317, 89, 47),
     /** 每日委托奖励区域 */
     DAILY_COMMISSION_REWARD: new rect(427, 345, 142, 36),
+    /** 冒险历练启用状态判断区域：检测"长效历练点" */
+    ADVENTURE_ENCOUNTERS_ENABLED_INDICATOR: new rect(759, 817, 125, 47),
     /** 追踪按钮模板匹配区域 [x, y, width, height] */
     TRACK_BUTTON: [1428, 965, 87, 86],
     /** 剧情图标识别区域 [x, y, width, height] */
@@ -174,12 +176,19 @@ export const UI_REGIONS = {
 
 /** OCR 识别区域坐标常量 */
 export const OCR_REGIONS = {
-    /** 冒险之证 - 委托界面 - 委托名称 */
-    COMMISSION_NAME: [
-        new rect(810, 293, 440, 40),
-        new rect(810, 401, 440, 40),
-        new rect(810, 509, 440, 40),
-        new rect(810, 544, 440, 40),
+    /** 冒险之证 - 委托界面 - 委托名称（冒险历练启用） */
+    COMMISSION_NAME_ADVENTURE_ENCOUNTERS_ENABLED: [
+        new rect(810, 300, 340, 40),
+        new rect(810, 405, 340, 40),
+        new rect(810, 510, 340, 40),
+        new rect(810, 545, 340, 40),
+    ],
+    /** 冒险之证 - 委托界面 - 委托名称（冒险历练未启用） */
+    COMMISSION_NAME_ADVENTURE_ENCOUNTERS_DISABLED: [
+        new rect(810, 330, 340, 35),
+        new rect(810, 455, 340, 35),
+        new rect(810, 580, 340, 35),
+        new rect(810, 625, 340, 35),
     ],
     LOCATION_IN_OTHER_COUNTRY: new rect(1530, 100, 250, 30),
     LOCATION_IN_NOD_KRAI: new rect(1580, 100, 250, 30),

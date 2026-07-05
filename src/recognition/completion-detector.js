@@ -2,10 +2,11 @@
  * 委托完成检测模块
  * 检查委托是否已完成
  */
-import { OCR_REGIONS, COMMISSION_STATUS } from "../config/index.js";
+import { COMMISSION_STATUS } from "../config/index.js";
 import { enterCommissionScreen, detectCommissionStatusByImage, bvPageOcrRegionText, pageScroll } from "../vision/index.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { resolveCommissionNameOcrRegions } from "./commission-scanner.js";
 
 /**
  * 检查指定委托是否已完成
@@ -22,9 +23,10 @@ export async function isCompleted(commissionName) {
         }
         await sleep(900);
 
+        const commissionNameRegions = await resolveCommissionNameOcrRegions();
         for (let i = 0; i < 4; i++) {
             if (i === 3) { await pageScroll(1); }  // 第4个委托需要翻页
-            const ocrRegion = OCR_REGIONS.COMMISSION_NAME[i];
+            const ocrRegion = commissionNameRegions[i];
             const rawName = bvPageOcrRegionText(ocrRegion);
             const standardizedName = standardizeCommissionName(rawName);
 

@@ -4,10 +4,24 @@
  * 避免代码重复，提高可维护性
  */
 import { OCR_REGIONS, MIN_TEXT_LENGTH, COMMISSION_POSITIONING_BUTTONS } from "../config/index.js";
-import { bvPageOcrRegion, bvPageOcrRegionText, pageScroll, RO } from "../vision/index.js";
+import { bvPageOcrRegion, bvPageOcrRegionText, isAdventureEncountersEnabled, pageScroll, RO } from "../vision/index.js";
 import { cleanText } from "../utils/text-utils.js";
 import { getPositionWithVoting } from "../navigation/position-utils.js";
 import { standardizeCommissionName } from "./commission-standardizer.js";
+
+/**
+ * 根据冒险历练启用状态选择委托名 OCR 区域
+ *
+ * @returns {Promise<OpenCvSharp.OpenCvSharp.Rect[]>} 委托名 OCR 区域列表
+ */
+export async function resolveCommissionNameOcrRegions() {
+    const enabled = await isAdventureEncountersEnabled();
+    const mode = enabled ? "enabled" : "disabled";
+    log.info("冒险历练状态: {mode}，使用对应委托名 OCR 区域", mode);
+    return enabled
+        ? OCR_REGIONS.COMMISSION_NAME_ADVENTURE_ENCOUNTERS_ENABLED
+        : OCR_REGIONS.COMMISSION_NAME_ADVENTURE_ENCOUNTERS_DISABLED;
+}
 
 /**
  * 扫描指定位置的委托名称
@@ -23,7 +37,8 @@ export async function scanCommissionAtPosition(positionIndex) {
         await pageScroll(1);
     }
 
-    const region = OCR_REGIONS.COMMISSION_NAME[positionIndex];
+    const commissionNameRegions = await resolveCommissionNameOcrRegions();
+    const region = commissionNameRegions[positionIndex];
 
     try {
         const results = bvPageOcrRegion(region);
@@ -53,6 +68,7 @@ export async function scanCommissionAtPosition(positionIndex) {
  * @returns {Promise<number>} 委托位置索引（0-3），未找到返回-1
  */
 export async function findCommissionIndex(targetName) {
+    const commissionNameRegions = await resolveCommissionNameOcrRegions();
 
     for (let positionIndex = 0; positionIndex < 4; positionIndex++) {
 
@@ -61,7 +77,7 @@ export async function findCommissionIndex(targetName) {
 
         //ocr委托名称然后标准化名称
         const name = standardizeCommissionName(
-            bvPageOcrRegionText(OCR_REGIONS.COMMISSION_NAME[positionIndex])
+            bvPageOcrRegionText(commissionNameRegions[positionIndex])
         );
         if (name === targetName) {
             log.info("找到委托 {name} 在位置 {index}", targetName, positionIndex + 1);

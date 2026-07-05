@@ -24,6 +24,30 @@ export function isInTalkUI() {
 }
 
 /**
+ * 检测冒险历练是否启用
+ *
+ * 委托页出现"长效历练点"时，委托名区域使用当前 ROI；未出现时使用备用 ROI。
+ * 检测异常时默认启用，保持既有识别行为。
+ *
+ * @returns {Promise<boolean>} 是否启用冒险历练
+ */
+export async function isAdventureEncountersEnabled() {
+    try {
+        const page = new BvPage();
+        for (let i = 0; i < 3; i++) {
+            if (page.locator("长效历练点", UI_REGIONS.ADVENTURE_ENCOUNTERS_ENABLED_INDICATOR).isExist()) {
+                return true;
+            }
+            await sleep(200);
+        }
+        return false;
+    } catch (error) {
+        log.warn("检测冒险历练启用状态失败，默认使用当前委托名 OCR 区域: {error}", error.message);
+        return true;
+    }
+}
+
+/**
  * 检测委托完成状态（使用图像识别）
  * @param {number} buttonIndex - 委托按钮索引（0-3）
  * @returns {Promise<string>} COMMISSION_STATUS.COMPLETED / UNCOMPLETED / UNKNOWN
