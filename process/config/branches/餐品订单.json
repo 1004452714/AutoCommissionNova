@@ -12,5 +12,10 @@
     },
     "note": "",
     "default": "branch-1",
-    "completedByUid": {}
+    "noteLevel": "info",
+    "completedByUid": {
+        "103063933": [
+            "branch-2"
+        ]
+    }
 }

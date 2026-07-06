@@ -25,7 +25,10 @@
             ]
         }
     },
-    "note": "<div style=\"color: #ff0000;\">流程暂未支持,暂时先选择山腰</div>",
+    "note": "流程暂未支持,暂时先选择山腰",
+    "noteLevel": "warn",
     "default": "branch-2",
-    "completedByUid": {}
+    "completedByUid": {
+        "103063933": []
+    }
 }
