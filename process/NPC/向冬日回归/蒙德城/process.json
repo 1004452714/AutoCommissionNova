@@ -17,7 +17,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "维克多",
-            "iconType": "Bigmap",
+            "iconType": "Base",
             "autoTalk": true
         },
         "note": "追踪维克多"
@@ -48,7 +48,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "害怕的舒特",
-            "iconType": "Bigmap",
+            "iconType": "Base",
             "autoTalk": true
         },
         "note": "追踪害怕的舒特"
@@ -88,7 +88,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "维克多",
-            "iconType": "Bigmap",
+            "iconType": "Base",
             "autoTalk": true
         },
         "note": "追踪维克多"
@@ -106,7 +106,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "莉莉",
-            "iconType": "Bigmap"
+            "iconType": "Base"
         },
         "note": "追踪莉莉"
     },
@@ -145,7 +145,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "维克多",
-            "iconType": "Bigmap",
+            "iconType": "Base",
             "autoTalk": true
         },
         "note": "追踪维克多"

@@ -33,8 +33,10 @@ const _statics = {
     inBag:               staticDef({ path: "Data/RecognitionObject/bag/inBag.png", region: [39, 975, 76, 84] }),
     /** 地图上的大型委托图标（蓝色菱形） */
     iconBigmap:          staticDef({ path: PATHS.ICON_BIGMAP_COMMISSION }),
-    /** 地图上的大型委托图标（中心限定区域） */
-    iconBigmapCenter:    staticDef({ path: PATHS.ICON_BIGMAP_COMMISSION, region: [423, 197, 1055, 542] }),
+    /** 地图上的基础委托图标（中心限定区域，启用 mask） */
+    iconBase:            staticDef({ path: PATHS.ICON_BASE_COMMISSION, region: [423, 197, 1055, 542] }),
+    /** 地图上的基础委托图标（全屏匹配，启用 mask） */
+    iconBaseFull:        staticDef({ path: PATHS.ICON_BASE_COMMISSION }),
     /** 地图上的问号委托图标 */
     iconQuestion:        staticDef({ path: PATHS.ICON_QUESTION_COMMISSION }),
     /** 地图上的普通任务委托图标 */
@@ -55,7 +57,8 @@ const _statics = {
  * @property {Object} track                                                     大地图 - 委托追踪按钮
  * @property {Object} inBag                                                     背包已打开标识
  * @property {Object} iconBigmap                                                大地图委托图标
- * @property {Object} iconBigmapCenter                                          大地图委托图标（中心限定区域）
+ * @property {Object} iconBase                                                  基础委托图标（中心限定区域）
+ * @property {Object} iconBaseFull                                              基础委托图标（全屏匹配）
  * @property {Object} iconQuestion                                              问号委托图标
  * @property {Object} iconTask                                                  普通任务委托图标
  * @property {Object} achievementNoResult                                       成就搜索无结果占位

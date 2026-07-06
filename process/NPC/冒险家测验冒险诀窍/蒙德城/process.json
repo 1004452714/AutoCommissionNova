@@ -35,7 +35,7 @@
         "type": "追踪委托",
         "data": {
             "name": "采摘",
-            "iconType": "Bigmap"
+            "iconType": "Base"
         },
         "note": "采摘嘟嘟莲"
     },
@@ -53,7 +53,7 @@
         "type": "追踪委托",
         "data": {
             "name": "采摘",
-            "iconType": "Bigmap"
+            "iconType": "Base"
         },
         "note": "采摘小灯草"
     },
@@ -71,7 +71,7 @@
         "type": "追踪委托",
         "data": {
             "name": "采摘",
-            "iconType": "Bigmap"
+            "iconType": "Base"
         },
         "note": "采摘塞西莉亚花"
     },

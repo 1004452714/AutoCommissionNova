@@ -35,7 +35,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "吉丽安娜",
-            "iconType": "Bigmap"
+            "iconType": "Base"
         },
         "note": "蹦蹦跳跳去找吉丽安娜"
     },

@@ -6,10 +6,10 @@
  * 的形态取 ro。首次访问懒加载，后续命中缓存；脚本退出时由 releaseAllTemplates 统一释放。
  *
  * 两种 def：
- *   staticDef({ path, region?, useMask? })
+ *   staticDef({ path, region?, useMask?, threshold? })
  *     无参数。由 index.js 用 Object.defineProperty getter 挂到 RO；首次访问触发加载
  *
- *   dynamicDef({ path?|pathFn?, region?|regionFn?, useMask? })
+ *   dynamicDef({ path?|pathFn?, region?|regionFn?, useMask?, threshold? })
  *     带参数。返回一个函数，按 arg 维度独立缓存 mat/ro（不同参数互不影响）
  *
  * 资源生命周期：
@@ -44,6 +44,7 @@ function _resolve(entry, arg) {
         ? RecognitionObject.templateMatch(mat, ...region)
         : RecognitionObject.templateMatch(mat);
     if (def.useMask) ro.useMask = true;
+    if (def.threshold !== undefined) ro.threshold = def.threshold;
 
     const created = { mat, ro };
     entry.cache.set(key, created);
@@ -55,6 +56,9 @@ function _register(def) {
     if (!def.path && !def.pathFn) throw new Error("模板必须提供 path 或 pathFn");
     if (def.path && def.pathFn) throw new Error(`模板 ${def.path} 不能同时声明 path 和 pathFn`);
     if (def.region && def.regionFn) throw new Error(`模板 ${def.path || "(dynamic)"} 不能同时声明 region 和 regionFn`);
+    if (def.threshold !== undefined && typeof def.threshold !== "number") {
+        throw new Error(`模板 ${def.path || "(dynamic)"} 的 threshold 必须是 number`);
+    }
     const entry = { def, cache: new Map() };
     _registry.push(entry);
     return entry;

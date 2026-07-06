@@ -106,6 +106,7 @@ export const PATHS = {
     TEAM_CONFIG_IMAGE: "Data/RecognitionObject/队伍配置.png",
     DISABLED_UI_IMAGE: "Data/RecognitionObject/disabled_ui.png",
     ICON_BIGMAP_COMMISSION: "Data/RecognitionObject/IconBigmapCommission.jpg",
+    ICON_BASE_COMMISSION: "Data/RecognitionObject/IconBaseCommission.png",
     ICON_QUESTION_COMMISSION: "Data/RecognitionObject/IconQuestionCommission.png",
     ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
     TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",

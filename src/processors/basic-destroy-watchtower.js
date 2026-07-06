@@ -47,27 +47,27 @@ function parseDistance(text) {
 }
 
 /**
- * 查找任务图标，优先使用中心限定区域，失败后回退到全屏大地图委托图标。
+ * 查找任务图标，优先使用中心限定区域基础委托图标，失败后回退到全屏基础委托图标。
  * @param {Object} cap - captureGameRegion() 返回的截图对象
  * @returns {Object|null} 图标匹配结果
  */
 function findTaskIcon(cap) {
-    const centerIconRes = cap.Find(RO.iconBigmapCenter);
+    const centerIconRes = cap.Find(RO.iconBase);
     if (centerIconRes && !centerIconRes.isEmpty()) return centerIconRes;
 
-    const iconRes = cap.Find(RO.iconBigmap);
+    const iconRes = cap.Find(RO.iconBaseFull);
     if (!iconRes || iconRes.isEmpty()) return null;
     return iconRes;
 }
 
 /**
- * 判断全屏范围内是否仍存在大地图委托图标。
+ * 判断全屏范围内是否仍存在基础委托图标。
  * @returns {boolean}
  */
-function hasAnyBigmapIcon() {
+function hasAnyBaseIcon() {
     const cap = captureGameRegion();
     try {
-        const iconRes = cap.Find(RO.iconBigmap);
+        const iconRes = cap.Find(RO.iconBaseFull);
         return !!iconRes && !iconRes.isEmpty();
     } finally {
         cap.Dispose();
@@ -257,13 +257,13 @@ async function switchToMeleeAvatar() {
 }
 
 /**
- * 判断 RO.iconBigmapCenter 限定区域内是否存在大地图委托图标。
+ * 判断 RO.iconBase 限定区域内是否存在基础委托图标。
  * @returns {boolean}
  */
-function hasCenterBigmapIcon() {
+function hasCenterBaseIcon() {
     const cap = captureGameRegion();
     try {
-        const iconRes = cap.Find(RO.iconBigmapCenter);
+        const iconRes = cap.Find(RO.iconBase);
         return iconRes.isExist();
     } finally {
         cap.Dispose();
@@ -278,7 +278,7 @@ async function attackUntilCenterIconDisappear() {
     const startTime = Date.now();
     let missingCount = 0;
     while (Date.now() - startTime < WATCHTOWER_CONFIG.attackTimeout) {
-        const exists = hasCenterBigmapIcon();
+        const exists = hasCenterBaseIcon();
         if (!exists) {
             missingCount++;
             if (missingCount >= 3) {
@@ -306,16 +306,16 @@ async function destroyAllWatchtowers() {
     let switchedToMelee = false;
     let destroyedCount = 0;
 
-    while (destroyedCount < WATCHTOWER_CONFIG.maxDestroyCount && hasAnyBigmapIcon()) {
-        log.info("发现哨塔图标，开始处理第 {count} 个", destroyedCount + 1);
+    while (destroyedCount < WATCHTOWER_CONFIG.maxDestroyCount && hasAnyBaseIcon()) {
+        log.info("发现基础委托图标，开始处理第 {count} 个哨塔", destroyedCount + 1);
 
         const approachResult = await approachWatchtower();
         if (approachResult === null) {
             return true;
         }
         if (!approachResult) {
-            if (!hasAnyBigmapIcon()) {
-                log.info("靠近过程中全屏哨塔图标已消失，结束摧毁哨塔步骤");
+            if (!hasAnyBaseIcon()) {
+                log.info("靠近过程中全屏基础委托图标已消失，结束摧毁哨塔步骤");
                 return true;
             }
             return false;
@@ -341,7 +341,7 @@ async function destroyAllWatchtowers() {
         return true;
     }
 
-    log.info("全屏未识别到剩余哨塔图标，摧毁哨塔步骤完成，共处理 {count} 个", destroyedCount);
+    log.info("全屏未识别到剩余基础委托图标，摧毁哨塔步骤完成，共处理 {count} 个", destroyedCount);
     return true;
 }
 

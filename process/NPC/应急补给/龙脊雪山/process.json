@@ -105,7 +105,7 @@
         "type": "追踪委托",
         "data": {
             "npc": "里瑟",
-            "iconType": "Bigmap",
+            "iconType": "Base",
             "autoTalk": true
         },
         "note": "追踪里瑟"
