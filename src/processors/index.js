@@ -19,7 +19,7 @@ import commissionTracking from "./commission-tracking.js";
 import locationDetection from "./location-detection.js";
 import commissionDescDetect from "./commission-desc-detect.js";
 import userBranchSelect from "./user-branch-select.js";
-import flowBranch from "./flow-branch.js";
+import executeSubprocess from "./execute-subprocess.js";
 import achievementDetect from "./achievement-detect.js";
 import useItem from "./use-item.js";
 import basicDestroyWatchtower from "./basic-destroy-watchtower.js";
@@ -41,7 +41,7 @@ const processors = [
     locationDetection,
     commissionDescDetect,
     userBranchSelect,
-    flowBranch,
+    executeSubprocess,
     achievementDetect,
     useItem,
     basicDestroyWatchtower,

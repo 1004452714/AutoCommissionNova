@@ -508,28 +508,59 @@
     .mode-group {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.04);
       margin-bottom: 12px;
     }
 
     .radio-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      min-height: 34px;
-      padding: 0 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.18);
+      justify-content: center;
+      flex: 1 1 112px;
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: transparent;
       color: var(--text-secondary);
       cursor: pointer;
       font-size: 12px;
+      font-weight: 600;
       line-height: 1.4;
+      text-align: center;
+      transition: background-color 0.16s, border-color 0.16s, color 0.16s;
     }
 
     .radio-pill input {
-      margin: 0;
-      accent-color: var(--accent);
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .radio-pill:hover {
+      background: var(--bg-soft-hover);
+      color: var(--text-primary);
+    }
+
+    .radio-pill:focus-within {
+      border-color: rgba(77, 141, 255, 0.55);
+    }
+
+    .radio-pill.active {
+      background: rgba(77, 141, 255, 0.18);
+      border-color: rgba(77, 141, 255, 0.3);
+      color: #dbe7ff;
+    }
+
+    .radio-pill.active:hover {
+      background: rgba(77, 141, 255, 0.24);
+      border-color: rgba(77, 141, 255, 0.48);
     }
 
     .segment {
@@ -894,17 +925,17 @@
               <div class="section-title">全局设置</div>
               <div class="field-grid global-field-grid">
                 <label class="field">
-                  <span class="field-label">全局战斗队伍名</span>
+                  <span class="field-label">战斗队伍名称</span>
                   <input class="text-input" type="text" x-model="partyView.global.battleTeamName" @input="scheduleSave()" placeholder="输入战斗队伍名">
                 </label>
 
                 <label class="field">
-                  <span class="field-label">全局元素采集队伍名</span>
+                  <span class="field-label">元素采集队伍名称</span>
                   <input class="text-input" type="text" x-model="partyView.global.elementTeamName" @input="scheduleSave()" placeholder="输入元素采集队伍名">
                 </label>
 
                 <label class="field field-wide">
-                  <span class="field-label">全局战斗策略</span>
+                  <span class="field-label">战斗策略</span>
                   <div class="input-row">
                     <input class="text-input" type="text" x-model="partyView.global.battleStrategy" @input="scheduleSave()" placeholder="根据队伍自动选择">
                     <button class="btn btn-accent" type="button" @click="openStrategyPicker(partyView.global, 'battleStrategy')">选择策略</button>
@@ -937,13 +968,13 @@
                               <div class="config-title">战斗</div>
 
                               <div class="mode-group">
-                                <label class="radio-pill">
+                                <label class="radio-pill" :class="{ active: scope.config.battle.mode === 'global' }">
                                   <input type="radio" value="global" x-model="scope.config.battle.mode" @change="scheduleSave()">
-                                  <span>使用全局队伍与策略</span>
+                                  <span>使用全局设置</span>
                                 </label>
-                                <label class="radio-pill">
+                                <label class="radio-pill" :class="{ active: scope.config.battle.mode === 'custom' }">
                                   <input type="radio" value="custom" x-model="scope.config.battle.mode" @change="scheduleSave()">
-                                  <span>当前委托自定义</span>
+                                  <span>自定义队伍</span>
                                 </label>
                               </div>
 
@@ -956,7 +987,7 @@
 
                                   <template x-if="scope.config.battle.teamMode === 'teamName'">
                                     <label class="field">
-                                      <span class="field-label">自定义战斗队伍名</span>
+                                      <span class="field-label">战斗队伍名称</span>
                                       <input class="text-input" type="text" x-model="scope.config.battle.teamName" @input="scheduleSave()" placeholder="输入队伍名">
                                     </label>
                                   </template>
@@ -973,7 +1004,7 @@
                                   </template>
 
                                   <label class="field" style="margin-top: 12px;">
-                                    <span class="field-label">自定义战斗策略</span>
+                                    <span class="field-label">战斗策略</span>
                                     <div class="input-row">
                                       <input class="text-input" type="text" x-model="scope.config.battle.strategy" @input="scheduleSave()" placeholder="根据队伍自动选择">
                                       <button class="btn btn-accent" type="button" @click="openStrategyPicker(scope.config.battle, 'strategy')">选择策略</button>
@@ -988,13 +1019,13 @@
                               <div class="config-title">元素采集</div>
 
                               <div class="mode-group">
-                                <label class="radio-pill">
+                                <label class="radio-pill" :class="{ active: scope.config.collect.mode === 'global' }">
                                   <input type="radio" value="global" x-model="scope.config.collect.mode" @change="scheduleSave()">
-                                  <span>使用全局队伍</span>
+                                  <span>使用全局设置</span>
                                 </label>
-                                <label class="radio-pill">
+                                <label class="radio-pill" :class="{ active: scope.config.collect.mode === 'custom' }">
                                   <input type="radio" value="custom" x-model="scope.config.collect.mode" @change="scheduleSave()">
-                                  <span>当前委托自定义</span>
+                                  <span>自定义队伍</span>
                                 </label>
                               </div>
 
@@ -1007,7 +1038,7 @@
 
                                   <template x-if="scope.config.collect.teamMode === 'teamName'">
                                     <label class="field">
-                                      <span class="field-label">自定义元素采集队伍名</span>
+                                      <span class="field-label">元素采集队伍</span>
                                       <input class="text-input" type="text" x-model="scope.config.collect.teamName" @input="scheduleSave()" placeholder="输入队伍名">
                                     </label>
                                   </template>

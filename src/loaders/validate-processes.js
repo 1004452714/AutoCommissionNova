@@ -6,7 +6,7 @@
  *   (1) step.type 是否已在 registry 注册
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
  *   (3) 用户分支选择 的 step.data[branchKey] 嵌套 step 递归校验
- *   (4) 流程分支 / 委托描述检测 引用的子流程文件递归校验
+ *   (4) 执行子流程 / 委托描述检测 引用的子流程文件递归校验
  *
  * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
@@ -165,9 +165,9 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
             }
         }
 
-        // 子流程文件校验（流程分支 / 委托描述检测）
+        // 子流程文件校验（执行子流程 / 委托描述检测）
         let subFile = null;
-        if (stepType === "流程分支" && step.data && typeof step.data.path === "string") {
+        if (stepType === "执行子流程" && step.data && typeof step.data.path === "string") {
             subFile = step.data.path;
         } else if (stepType === "委托描述检测" && typeof step.run === "string") {
             subFile = step.run;

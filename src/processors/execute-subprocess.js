@@ -1,5 +1,5 @@
 /**
- * 流程分支步骤处理器
+ * 执行子流程步骤处理器
  *
  * 加载子流程文件，把其中的 step 依次插入到当前 step 之后执行
  *   - 与 [委托描述检测] / [地址检测] 命中后的 splice 机制一致
@@ -13,7 +13,7 @@
 import { defineStep } from "./define-step.js";
 
 export default defineStep({
-    type: "流程分支",
+    type: "执行子流程",
     schema: {
         path: "string",
     },
