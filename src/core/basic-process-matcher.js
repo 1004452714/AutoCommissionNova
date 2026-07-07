@@ -2,7 +2,9 @@
  * Basic流程匹配器模块
  * 负责扫描Basic委托子目录，读取 _path.json 获取目标坐标，计算距离并匹配最近的流程
  */
+import { PATHS } from "../config/index.js";
 import { calculateDistance, getCommissionTargetPosition } from "../navigation/index.js";
+import { buildProcessBasePath } from "../loaders/process-scope.js";
 import { parseLocationDir } from "../utils/location-dir.js";
 
 /**
@@ -35,8 +37,8 @@ function scanSubDirectories(dirPath) {
  * @param {Object} commissionPosition - 委托坐标 {x, y}
  * @returns {Promise<{processPath: string, processDir: string, distance: number}|null>}
  */
-export async function findNearestBasicProcess(commissionName, location, commissionPosition) {
-    const baseDir = `process/Basic/${commissionName}`;
+export async function findNearestBasicProcess(commissionName, location, commissionPosition, country = "蒙德") {
+    const baseDir = `${buildProcessBasePath(country, "BASIC")}/${commissionName}`;
     const subDirs = scanSubDirectories(baseDir);
 
     const matchedDirs = subDirs.filter(dir => {

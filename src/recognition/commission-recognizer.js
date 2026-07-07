@@ -133,7 +133,7 @@ export async function recognizeCommissions(supportedCommissions) {
 
                 const rawLocation = await recognizeCommissionLocation(country);
                 if (rawLocation) {
-                    commission.location = standardizeCommissionLocation(commission.name, rawLocation);
+                    commission.location = standardizeCommissionLocation(commission.name, rawLocation, country);
                     commission.status = COMMISSION_STATUS.UNCOMPLETED;
                 }
                 

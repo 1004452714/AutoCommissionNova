@@ -40,7 +40,7 @@ const WEAPON_CLICK_MAP = {
  * 解析 step.data → 排序后的角色数组 [{num, name}]
  * 任何校验失败一律返回 null，由调用方 return false（不抛错）
  */
-function parseRoles(data) {
+export function parseRoles(data) {
     if (!data || typeof data !== "object" || Array.isArray(data)) {
         log.warn("切换角色步骤需要对象格式的 data");
         return null;
@@ -215,28 +215,31 @@ async function filterAndPickAvatar(role, avatarData, templatePaths) {
     return found;
 }
 
+export async function switchRolesByMap(roleMap) {
+    const roles = parseRoles(roleMap);
+    if (!roles) return false;
+
+    log.info("开始切换角色，共 {count} 个角色", roles.length);
+
+    const resources = prepareRoleResources(roles);
+    if (!resources) return false;
+
+    await openTeamConfigPage();
+    await clearTeamSlots(roles);
+
+    for (const { role, avatarData, templatePaths } of resources) {
+        await filterAndPickAvatar(role, avatarData, templatePaths);
+    }
+    await page.locator("保存配置", new OpenCvSharp.OpenCvSharp.Rect(360, 999, 128, 40)).clickUntilDisappears();
+    await genshin.returnMainUi();
+    return true;
+}
+
 export default defineStep({
     type: "切换角色",
     run: async (step, context) => {
         try {
-            const roles = parseRoles(step.data);
-            if (!roles) return false;
-
-            log.info("开始切换角色，共 {count} 个角色", roles.length);
-
-            // 预校验：所有 role 必须有 avatarInfo 和头像模板图，缺一个就直接退出
-            const resources = prepareRoleResources(roles);
-            if (!resources) return false;
-
-            await openTeamConfigPage();
-            await clearTeamSlots(roles);
-
-            for (const { role, avatarData, templatePaths } of resources) {
-                await filterAndPickAvatar(role, avatarData, templatePaths);
-            }
-            await page.locator("保存配置", new OpenCvSharp.OpenCvSharp.Rect(360, 999, 128, 40)).clickUntilDisappears();
-            await genshin.returnMainUi();
-            return true;
+            return await switchRolesByMap(step.data);
         } catch (error) {
             if (isCancellationError(error)) throw error;
             log.error("执行切换角色步骤时出错: {error}", error.message);

@@ -20,7 +20,7 @@ import { stepRegistry } from "../processors/registry.js";
 const TEST_CONFIG = {
     mode: "case",             // 测试模式: "case"=测试用例, "commission"=真实委托, "unit"=纯函数单元测试
     caseName: "追踪委托测试",       // mode="case" 时生效，对应 test/process/ 下的目录名
-    commissionName: "餐品订单",         // mode="commission" 时生效，对应 process/NPC/ 下的目录名
+    commissionName: "餐品订单",         // mode="commission" 时生效，对应 process/蒙德/NPC/ 下的目录名
     location: "蒙德城",           // mode="commission" 时生效，委托地点
     processFile: "process.json",      // mode="commission" 时生效，流程文件名
     /**
@@ -92,7 +92,7 @@ async function runTestCase(caseName) {
 }
 
 /**
- * 运行真实委托（从 process/NPC/ 加载）
+ * 运行真实委托（从 process/蒙德/NPC/ 加载）
  * @param {string} commissionName - 委托名称
  * @param {string} location - 委托地点
  * @param {string} processFile - 流程文件名

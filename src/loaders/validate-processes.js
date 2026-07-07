@@ -1,7 +1,7 @@
 /**
  * 流程文件静态校验
  *
- * 启动期遍历 process/NPC/** 与 process/Basic/** 下所有 process.json，
+ * 启动期遍历 process/蒙德/NPC/** 与 process/蒙德/Basic/** 下所有 process.json，
  * 对每个 step 检查：
  *   (1) step.type 是否已在 registry 注册
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
@@ -28,6 +28,7 @@ export async function validateAllProcesses(registry) {
     errors += await validateNpcProcesses(registry);
     errors += await validateBasicProcesses(registry);
     errors += validateBranchConfig();
+    errors += validatePartyConfig();
 
     if (errors > 0) {
         log.error("流程文件静态校验发现 {n} 处问题，详见上面的日志", errors);
@@ -203,6 +204,7 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
  *   2. 委托给探针自己的 validate(cond)（schema 检查下沉到探针）
  *   3. conditions / default 中出现的分支 key 必须在 descriptions 中（孤儿告警）
  *   4. completed 中的分支必须在 conditions 中（偏好分支不应进 completed）
+ *   5. note 仅允许纯文本，UI 不再消费 noteLevel
  *
  * 加载错误（目录不存在 / 单文件 JSON 解析失败）由 loadAllBranchConfigs 自己 log.error，
  * 此处只校验已成功解析的内容
@@ -239,6 +241,13 @@ function validateBranchConfig() {
         if (!completedByUid || typeof completedByUid !== "object" || Array.isArray(completedByUid)) {
             log.error("[{path}] completedByUid 必须是对象", filePath);
             errors++;
+        }
+        if (cfg.note !== undefined && typeof cfg.note !== "string") {
+            log.error("[{path}] note 必须是字符串", filePath);
+            errors++;
+        }
+        if (cfg.noteLevel !== undefined) {
+            log.warn("[{path}] noteLevel 已废弃，请移除该字段", filePath);
         }
 
         // 1-2: 每个 condition 用探针注册表校验
@@ -297,6 +306,132 @@ function validateBranchConfig() {
                 }
             }
         }
+    }
+    return errors;
+}
+
+function walkJsonFiles(dir) {
+    const files = [];
+    let entries;
+    try {
+        entries = Array.from(file.readPathSync(dir) || []);
+    } catch (error) {
+        log.debug("读取目录失败 [{path}]: {err}", dir, error.message);
+        return files;
+    }
+
+    for (const entry of entries) {
+        if (file.isFolder(entry)) {
+            files.push(...walkJsonFiles(entry));
+            continue;
+        }
+        if (entry.toLowerCase().endsWith(".json")) {
+            files.push(entry);
+        }
+    }
+    return files;
+}
+
+function validatePartyModeConfig(config, filePath, fieldName, { allowStrategy }) {
+    let errors = 0;
+    if (!config || typeof config !== "object" || Array.isArray(config)) {
+        log.error("[{path}] {field} 必须是对象", filePath, fieldName);
+        return 1;
+    }
+
+    if (config.mode !== undefined && config.mode !== "global" && config.mode !== "custom") {
+        log.error("[{path}] {field}.mode 只能是 global 或 custom", filePath, fieldName);
+        errors++;
+    }
+    if (config.teamMode !== undefined && config.teamMode !== "teamName" && config.teamMode !== "roles") {
+        log.error("[{path}] {field}.teamMode 只能是 teamName 或 roles", filePath, fieldName);
+        errors++;
+    }
+    if (config.teamName !== undefined && typeof config.teamName !== "string") {
+        log.error("[{path}] {field}.teamName 必须是字符串", filePath, fieldName);
+        errors++;
+    }
+    if (config.roles !== undefined) {
+        if (!config.roles || typeof config.roles !== "object" || Array.isArray(config.roles)) {
+            log.error("[{path}] {field}.roles 必须是对象", filePath, fieldName);
+            errors++;
+        } else {
+            for (const key of Object.keys(config.roles)) {
+                if (!["1", "2", "3", "4"].includes(key)) {
+                    log.error("[{path}] {field}.roles 只能包含 1-4 键", filePath, fieldName);
+                    errors++;
+                    continue;
+                }
+                if (typeof config.roles[key] !== "string") {
+                    log.error("[{path}] {field}.roles.{key} 必须是字符串", filePath, fieldName, key);
+                    errors++;
+                }
+            }
+        }
+    }
+    if (allowStrategy) {
+        if (config.strategy !== undefined && typeof config.strategy !== "string") {
+            log.error("[{path}] {field}.strategy 必须是字符串", filePath, fieldName);
+            errors++;
+        }
+    } else if (config.strategy !== undefined) {
+        log.warn("[{path}] {field}.strategy 不会被使用，建议移除", filePath, fieldName);
+    }
+
+    return errors;
+}
+
+function validatePartyConfig() {
+    if (!file.isFolder(PATHS.PARTY_CONFIG_DIR)) {
+        return 0;
+    }
+
+    const files = walkJsonFiles(PATHS.PARTY_CONFIG_DIR);
+    if (files.length === 0) {
+        return 0;
+    }
+
+    let errors = 0;
+    for (const filePath of files) {
+        let config;
+        try {
+            const raw = file.readTextSync(filePath);
+            config = JSON.parse(raw);
+        } catch (error) {
+            log.error("[{path}] 队伍配置 JSON 解析失败: {error}", filePath, error.message);
+            errors++;
+            continue;
+        }
+
+        if (baseName(filePath) === "global.json") {
+            if (!config || typeof config !== "object" || Array.isArray(config)) {
+                log.error("[{path}] 全局队伍配置必须是对象", filePath);
+                errors++;
+                continue;
+            }
+            if (config.battleTeamName !== undefined && typeof config.battleTeamName !== "string") {
+                log.error("[{path}] battleTeamName 必须是字符串", filePath);
+                errors++;
+            }
+            if (config.elementTeamName !== undefined && typeof config.elementTeamName !== "string") {
+                log.error("[{path}] elementTeamName 必须是字符串", filePath);
+                errors++;
+            }
+            if (config.battleStrategy !== undefined && typeof config.battleStrategy !== "string") {
+                log.error("[{path}] battleStrategy 必须是字符串", filePath);
+                errors++;
+            }
+            continue;
+        }
+
+        if (!config || typeof config !== "object" || Array.isArray(config)) {
+            log.error("[{path}] 委托队伍配置必须是对象", filePath);
+            errors++;
+            continue;
+        }
+
+        errors += validatePartyModeConfig(config.battle || {}, filePath, "battle", { allowStrategy: true });
+        errors += validatePartyModeConfig(config.collect || {}, filePath, "collect", { allowStrategy: false });
     }
     return errors;
 }

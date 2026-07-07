@@ -55,9 +55,63 @@ function sameNameSet(a, b) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
         return false;
     }
-    const an = a.map((c) => c.name).sort();
-    const bn = b.map((c) => c.name).sort();
+    const an = a.map((c) => `${c.name || ""}::${c.type || ""}`).sort();
+    const bn = b.map((c) => `${c.name || ""}::${c.type || ""}`).sort();
     return an.every((name, i) => name === bn[i]);
+}
+
+function commissionIdentityKey(commission) {
+    return [
+        commission?.name || "",
+        commission?.type || "",
+        commission?.country || "",
+        commission?.location || "",
+    ].join("::");
+}
+
+function commissionGroupKey(commission) {
+    return [
+        commission?.name || "",
+        commission?.type || "",
+    ].join("::");
+}
+
+function findExistingCommission(existingCommissions, commission, usedIndexes) {
+    const exactKey = commissionIdentityKey(commission);
+    for (let i = 0; i < existingCommissions.length; i++) {
+        if (usedIndexes.has(i)) continue;
+        if (commissionIdentityKey(existingCommissions[i]) === exactKey) {
+            usedIndexes.add(i);
+            return existingCommissions[i];
+        }
+    }
+
+    const groupKey = commissionGroupKey(commission);
+    for (let i = 0; i < existingCommissions.length; i++) {
+        if (usedIndexes.has(i)) continue;
+        if (commissionGroupKey(existingCommissions[i]) === groupKey) {
+            usedIndexes.add(i);
+            return existingCommissions[i];
+        }
+    }
+
+    return null;
+}
+
+function matchCommissionRecord(record, target) {
+    if (!record || !target || record.name !== target.name) {
+        return false;
+    }
+    if (target.type && record.type !== target.type) {
+        return false;
+    }
+    if (target.country && record.country !== target.country) {
+        return false;
+    }
+    if (target.location && record.location !== target.location) {
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -222,9 +276,10 @@ export async function saveCommissionsData(commissions) {
             && Array.isArray(account.commissions)
             && sameNameSet(account.commissions, commissions);
 
+        const usedIndexes = new Set();
         const merged = commissions.map((c) => {
             const existing = canPreserve
-                ? account.commissions.find((e) => e.name === c.name)
+                ? findExistingCommission(account.commissions, c, usedIndexes)
                 : null;
             return {
                 ...c,
@@ -258,17 +313,18 @@ export async function saveCommissionsData(commissions) {
  * 用于委托执行完成后把 status 标记为「已完成」，
  * 避免 skipRecognition 复用当前 UID 旧数据时重跑。
  *
- * @param {string} commissionName - 委托名称
+ * @param {Object|string} commissionRef - 委托对象或委托名称
  * @param {string} status - 目标状态（取 COMMISSION_STATUS 中的值）
  * @param {string} [accountUid=""] - 已解析的当前账号 UID；传入时不会重新识别 UID
  * @returns {Promise<void>}
  */
-export async function updateCommissionStatus(commissionName, status, accountUid = "") {
+export async function updateCommissionStatus(commissionRef, status, accountUid = "") {
     try {
         const data = readCommissionsData();
         const uid = accountUid || (await getCurrentUid({ knownUids: getKnownAccountUids(data) }));
         if (!uid) {
-            log.error("无法确认当前UID，跳过委托状态更新: {name}", commissionName);
+            log.error("无法确认当前UID，跳过委托状态更新: {name}",
+                typeof commissionRef === "string" ? commissionRef : commissionRef?.name);
             return;
         }
 
@@ -279,9 +335,12 @@ export async function updateCommissionStatus(commissionName, status, accountUid 
             return;
         }
 
-        const target = account.commissions.find((c) => c.name === commissionName);
+        const targetRef = typeof commissionRef === "string"
+            ? { name: commissionRef }
+            : commissionRef;
+        const target = account.commissions.find((c) => matchCommissionRecord(c, targetRef));
         if (!target) {
-            log.warn("未在当前UID委托数据中找到 {name}，跳过状态更新", commissionName);
+            log.warn("未在当前UID委托数据中找到 {name}，跳过状态更新", targetRef?.name);
             return;
         }
         if (target.status === status) {
@@ -290,9 +349,11 @@ export async function updateCommissionStatus(commissionName, status, accountUid 
 
         target.status = status;
         writeCommissionsData(data);
-        log.info("委托 {name} 状态已更新为 {status}，UID: {uid}", commissionName, status, uid);
+        log.info("委托 {name} 状态已更新为 {status}，UID: {uid}", target.name, status, uid);
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
-        log.error("更新委托状态时出错: {name}, {error}", commissionName, error.message);
+        log.error("更新委托状态时出错: {name}, {error}",
+            typeof commissionRef === "string" ? commissionRef : commissionRef?.name,
+            error.message);
     }
 }

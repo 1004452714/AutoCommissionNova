@@ -7,7 +7,7 @@
  *
  * data: { path: string }
  *   path — 子流程文件相对路径，由 context.resolveResource 解析为绝对路径
- *          NPC 委托：相对 process/NPC/{commissionName}/{location}/
+ *          NPC 委托：相对 process/蒙德/NPC/{commissionName}/{location}/
  *          Basic 委托：相对 {processDir}
  */
 import { defineStep } from "./define-step.js";

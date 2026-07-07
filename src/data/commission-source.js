@@ -2,7 +2,8 @@
  * 委托数据源模块
  * 从 process/config/support-list.json 白名单和 process/ 目录扫描取交集，获取支持的委托列表
  */
-import { PATHS } from "../config/index.js";
+import { COMMISSION_TYPE, PATHS } from "../config/index.js";
+import { scanCommissionScopes } from "../loaders/process-scope.js";
 
 /**
  * 从 process/config/support-list.json 加载白名单
@@ -23,44 +24,9 @@ function loadWhitelist() {
     }
 }
 
-/**
- * 从 process/Basic/ 目录扫描可用的Basic委托
- * @returns {string[]} 可用的Basic委托名称列表
- */
-function scanBasicCommissions() {
-    const basicList = [];
-    try {
-        const assetsPath = PATHS.BASIC_SCRIPT_BASE;
-        const items = Array.from(file.readPathSync(assetsPath));
-        const folders = items.filter((item) => file.isFolder(item));
-        for (const folderPath of folders) {
-            const folderName = folderPath.split("/").pop().split("\\").pop();
-            basicList.push(folderName);
-        }
-    } catch (error) {
-        log.error("扫描Basic委托目录时出错: {error}", error.message);
-    }
-    return basicList;
-}
-
-/**
- * 从 process/NPC/ 目录扫描可用的NPC委托
- * @returns {string[]} 可用的NPC委托名称列表
- */
-function scanNpcCommissions() {
-    const npcList = [];
-    try {
-        const processPath = PATHS.NPC_PROCESS_BASE;
-        const items = Array.from(file.readPathSync(processPath));
-        const folders = items.filter((item) => file.isFolder(item));
-        for (const folderPath of folders) {
-            const folderName = folderPath.split("/").pop().split("\\").pop();
-            npcList.push(folderName);
-        }
-    } catch (error) {
-        log.error("扫描NPC委托目录时出错: {error}", error.message);
-    }
-    return npcList;
+function scanCommissionNamesByType(type) {
+    const scopes = scanCommissionScopes().list.filter((scope) => scope.type === type);
+    return Array.from(new Set(scopes.map((scope) => scope.commissionName)));
 }
 
 /**
@@ -76,8 +42,8 @@ function scanNpcCommissions() {
  */
 export async function loadSupportedCommissions() {
     const whitelist = loadWhitelist();
-    const availableBasic = scanBasicCommissions();
-    const availableNpc = scanNpcCommissions();
+    const availableBasic = scanCommissionNamesByType(COMMISSION_TYPE.BASIC);
+    const availableNpc = scanCommissionNamesByType(COMMISSION_TYPE.NPC);
 
     const supported = {
         basic: whitelist.basic.filter((name) => availableBasic.includes(name)),

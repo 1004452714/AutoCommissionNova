@@ -1,8 +1,9 @@
 /**
  * 切换队伍步骤处理器
  */
-import { getSetting } from "../utils/settings-utils.js";
+import { loadPartyConfigForContext, resolvePartySelection } from "../loaders/party-config.js";
 import { defineStep } from "./define-step.js";
+import { switchRolesByMap } from "./switch-role.js";
 
 export default defineStep({
     type: "切换队伍",
@@ -16,26 +17,31 @@ export default defineStep({
 
         if (!teamName) { log.warn("切换队伍步骤缺少队伍名称"); return false; }
 
-        let actualTeamName;
         if (teamName === "战斗" || teamName === "元素采集") {
-            const setting = getSetting();
-            actualTeamName = teamName === "战斗" ? setting.team : setting.elementTeam;
-        } else {
-            actualTeamName = teamName;
+            const configBundle = loadPartyConfigForContext(context);
+            const channel = teamName === "战斗" ? "battle" : "collect";
+            const resolved = resolvePartySelection(configBundle, channel);
+
+            if (resolved.mode === "roles") {
+                log.info("使用委托级角色配置切换{kind}队伍", teamName);
+                return await switchRolesByMap(resolved.roles);
+            }
+
+            teamName = resolved.teamName;
         }
 
-        if (!actualTeamName || actualTeamName.trim() === "") {
+        if (!teamName || teamName.trim() === "") {
             log.warn("未配置队伍名称，跳过切换操作");
             return true;
         }
 
-        const success = await genshin.switchParty(actualTeamName);
+        const success = await genshin.switchParty(teamName);
         if (success) {
-            log.info("队伍切换成功: {team}", actualTeamName);
+            log.info("队伍切换成功: {team}", teamName);
             await sleep(300);
             return true;
         } else {
-            log.error("队伍切换失败: {team}", actualTeamName);
+            log.error("队伍切换失败: {team}", teamName);
             return false;
         }
     },

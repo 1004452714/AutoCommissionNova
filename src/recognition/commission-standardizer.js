@@ -2,11 +2,11 @@
  * 委托名称/地点标准化模块
  * 使用编辑距离算法将 OCR 识别结果标准化为已知委托名称和地点
  */
-import { THRESHOLDS, PATHS } from "../config/index.js";
+import { COMMISSION_TYPE, THRESHOLDS } from "../config/index.js";
 import { getClosestMatch } from "./text-similarity.js";
 import { loadSupportedCommissions } from "../data/index.js";
-import { parseLocationDir } from "../utils/location-dir.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { scanCommissionScopes } from "../loaders/process-scope.js";
 
 const referenceData = { basic: {}, npc: {} };
 
@@ -39,24 +39,32 @@ export async function initReferenceData(supportedCommissions) {
  * @param {string[]} basicCommissions - Basic 委托名称列表
  * @returns {Object} Basic 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
  */
+function addReferenceLocation(target, commissionName, country, location) {
+    if (!target[commissionName]) {
+        target[commissionName] = { all: [], countries: {} };
+    }
+
+    if (!target[commissionName].all.includes(location)) {
+        target[commissionName].all.push(location);
+    }
+
+    if (!Array.isArray(target[commissionName].countries[country])) {
+        target[commissionName].countries[country] = [];
+    }
+    if (!target[commissionName].countries[country].includes(location)) {
+        target[commissionName].countries[country].push(location);
+    }
+}
+
 async function buildBasicReferenceMap(basicCommissions) {
     const basicList = {};
     try {
-        const assetsPath = PATHS.BASIC_SCRIPT_BASE;
-        for (const commissionName of basicCommissions) {
-            try {
-                const folderPath = assetsPath + "/" + commissionName;
-                const items = Array.from(file.readPathSync(folderPath));
-                const subDirs = items.filter((item) => file.isFolder(item));
-                const cleanSubDirs = subDirs.map((subDirPath) => {
-                    const dirName = subDirPath.split("/").pop().split("\\").pop();
-                    return parseLocationDir(dirName).location;
-                });
-                basicList[commissionName] = cleanSubDirs;
-            } catch (folderError) {
-                if (isCancellationError(folderError)) { throw folderError; }
-                log.warn("无法读取Basic委托 {name} 的目录: {error}", commissionName, folderError.message);
+        const supported = new Set(basicCommissions);
+        for (const scope of scanCommissionScopes().list) {
+            if (scope.type !== COMMISSION_TYPE.BASIC || !supported.has(scope.commissionName)) {
+                continue;
             }
+            addReferenceLocation(basicList, scope.commissionName, scope.country, scope.location);
             await sleep(1);
         }
     } catch (error) {
@@ -75,18 +83,12 @@ async function buildBasicReferenceMap(basicCommissions) {
 async function buildNpcReferenceMap(npcCommissions) {
     const npcList = {};
     try {
-        const processPath = PATHS.NPC_PROCESS_BASE;
-        for (const commissionName of npcCommissions) {
-            try {
-                const folderPath = processPath + "/" + commissionName;
-                const subItems = Array.from(file.readPathSync(folderPath));
-                const subFolders = subItems.filter((subItem) => file.isFolder(subItem));
-                const cleanSubFolders = subFolders.map((subFolderPath) => subFolderPath.split("/").pop().split("\\").pop());
-                npcList[commissionName] = cleanSubFolders;
-            } catch (folderError) {
-                if (isCancellationError(folderError)) { throw folderError; }
-                log.warn("无法读取NPC委托 {name} 的目录: {error}", commissionName, folderError.message);
+        const supported = new Set(npcCommissions);
+        for (const scope of scanCommissionScopes().list) {
+            if (scope.type !== COMMISSION_TYPE.NPC || !supported.has(scope.commissionName)) {
+                continue;
             }
+            addReferenceLocation(npcList, scope.commissionName, scope.country, scope.location);
             await sleep(1);
         }
     } catch (error) {
@@ -123,13 +125,18 @@ export function standardizeCommissionName(rawName) {
  * @param {string} rawLocation - OCR 识别的原始地点名称，可能包含识别错误
  * @returns {string} 标准化后的地点名称，如果未找到匹配或相似度低于阈值则返回原始地点
  */
-export function standardizeCommissionLocation(commissionName, rawLocation) {
-    let candidates = [];
+export function standardizeCommissionLocation(commissionName, rawLocation, country = "") {
+    let entry = null;
     if (referenceData.basic[commissionName]) {
-        candidates = referenceData.basic[commissionName];
+        entry = referenceData.basic[commissionName];
     } else if (referenceData.npc[commissionName]) {
-        candidates = referenceData.npc[commissionName];
+        entry = referenceData.npc[commissionName];
     }
+
+    const candidates = entry?.countries?.[country]?.length
+        ? entry.countries[country]
+        : (entry?.all || []);
+
     if (candidates.length === 0) {
         log.warn("没有找到委托 {name} 的参考地点列表", commissionName);
         return rawLocation;

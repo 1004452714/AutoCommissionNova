@@ -10,22 +10,23 @@
  *   locationDetected    — 位置检测命中标志（location-detection）
  *   detectedPosition    — 位置检测命中的坐标（location-detection）
  */
-import { COMMISSION_TYPE, PATHS } from "../config/index.js";
+import { COMMISSION_TYPE } from "../config/index.js";
+import { buildProcessBasePath } from "../loaders/process-scope.js";
 import { logCaughtError, rethrowIfCancellation } from "../utils/error-utils.js";
 
 /**
  * 构造 resolveResource 解析器
- * NPC 委托解析 process/NPC/{commissionName}/{location}/{filename}
+ * NPC 委托解析 process/{国家}/NPC/{commissionName}/{location}/{filename}
  * Basic 委托解析 {processDir}/{filename}
  *
  * 处理器只需调 context.resolveResource(filename) 取得绝对路径，
  * 不再各自硬编码 PATHS.NPC_PROCESS_BASE 拼接逻辑
  */
-function createResolveResource({ type, commissionName, location, processDir }) {
+function createResolveResource({ type, country, commissionName, location, processDir }) {
     if (type === COMMISSION_TYPE.BASIC) {
         return (filename) => processDir + "/" + filename;
     }
-    return (filename) => PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + filename;
+    return (filename) => buildProcessBasePath(country, COMMISSION_TYPE.NPC) + "/" + commissionName + "/" + location + "/" + filename;
 }
 
 /**
@@ -39,9 +40,10 @@ function createResolveResource({ type, commissionName, location, processDir }) {
  * @param {string} [options.processDir] - Basic 委托的流程目录；NPC 委托省略
  * @returns {Object} 共享上下文对象
  */
-export function createCommissionContext({ type, commissionName, location, processSteps, stepRegistry, processDir, accountUid }) {
+export function createCommissionContext({ type, country, commissionName, location, processSteps, stepRegistry, processDir, accountUid }) {
     const context = {
         type,
+        country,
         accountUid,
         commissionName,
         location,
@@ -50,7 +52,7 @@ export function createCommissionContext({ type, commissionName, location, proces
         stepRegistry,
         currentIndex: 0,
         currentStepLabel: null,
-        resolveResource: createResolveResource({ type, commissionName, location, processDir }),
+        resolveResource: createResolveResource({ type, country, commissionName, location, processDir }),
         // 运行时由 step 写入的字段，工厂统一初始化以保持 context shape 稳定
         branchConfigCache: null,
         activeBranch: null,

@@ -19,7 +19,8 @@ export async function executeBasicCommission(commission, stepRegistry, accountUi
         const matched = await findNearestBasicProcess(
             commission.name,
             commission.location,
-            commission.commissionPosition
+            commission.commissionPosition,
+            commission.country || "蒙德"
         );
 
         if (!matched) {
@@ -39,6 +40,7 @@ export async function executeBasicCommission(commission, stepRegistry, accountUi
 
         const context = createCommissionContext({
             type: COMMISSION_TYPE.BASIC,
+            country: commission.country || "蒙德",
             accountUid,
             commissionName: commission.name,
             location: commission.location,

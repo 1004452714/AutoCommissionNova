@@ -66,6 +66,7 @@ export function sanitizeBranchConfig(config) {
         next.completedByUid = {};
     }
     delete next.completed;
+    delete next.noteLevel;
     return next;
 }
 

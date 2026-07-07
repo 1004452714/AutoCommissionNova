@@ -9,34 +9,39 @@ import { createCommissionContext, runStepsWithContext } from "./commission-conte
 
 /**
  * 执行NPC委托
- * @param {string} commissionName - 委托名称
- * @param {string} location - 委托地点
+ * @param {Object} commission - 委托对象
  * @param {Object} stepRegistry - 步骤处理器注册表
  * @returns {Promise<Object>} 包含 success 和 context 的对象
  */
-export async function executeNpcCommission(commissionName, location, stepRegistry, accountUid) {
+export async function executeNpcCommission(commission, stepRegistry, accountUid) {
     try {
-        const processSteps = await loadNpcProcessFile(commissionName, location, "process.json");
+        const processSteps = await loadNpcProcessFile(
+            commission.name,
+            commission.location,
+            "process.json",
+            commission.country || "蒙德"
+        );
         if (!processSteps || processSteps.length === 0) {
             log.error("没有找到有效的流程步骤");
             return { success: false, context: null };
         }
 
-        log.info("执行统一NPC委托流程: {name}", commissionName);
-        await trackCommission(commissionName);
+        log.info("执行统一NPC委托流程: {name}", commission.name);
+        await trackCommission(commission.name);
 
         const context = createCommissionContext({
             type: COMMISSION_TYPE.NPC,
+            country: commission.country || "蒙德",
             accountUid,
-            commissionName,
-            location,
+            commissionName: commission.name,
+            location: commission.location,
             processSteps,
             stepRegistry,
         });
 
         const success = await runStepsWithContext(context, { sleepMs: 250, stopOnError: true });
         if (success) {
-            log.info("NPC委托流程执行完成: {name}", commissionName);
+            log.info("NPC委托流程执行完成: {name}", commission.name);
         }
         return { success, context };
     } catch (error) {

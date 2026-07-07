@@ -88,9 +88,10 @@ export const THRESHOLDS = {
 
 /** 文件路径常量 */
 export const PATHS = {
+    PROCESS_ROOT: "process",
     SUPPORT_LIST: "process/config/support-list.json",
-    BASIC_SCRIPT_BASE: "process/Basic",
-    NPC_PROCESS_BASE: "process/NPC",
+    BASIC_SCRIPT_BASE: "process/蒙德/Basic",
+    NPC_PROCESS_BASE: "process/蒙德/NPC",
     COMMISSIONS_DATA: "Data/commissions_data.json",
     HAS_NO_RESULT_IMAGE: "Data/RecognitionObject/hasNoResult.png",
     COMPLETED_IMAGE: "Data/RecognitionObject/Completed.png",
@@ -116,6 +117,7 @@ export const PATHS = {
     AVATAR_TEMPLATE_DIR: "Data/RecognitionObject/avatar",
     SWITCH_ROLE_SLOT_DIR: "Data/RecognitionObject/switch_role",
     CONFIG_BASE: "process/config",
+    PARTY_CONFIG_DIR: "process/config/party",
     /** 委托分支配置目录。每个委托一个文件：{委托名}.json
      *  内存视图（branchConfigCache / UI 编辑器）是合并后的 { 委托名: config }，
      *  磁盘按委托名拆分存储，新增委托加文件即可，零冲突 */

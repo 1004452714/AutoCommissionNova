@@ -3,30 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>委托分支配置工具</title>
+  <title>委托配置工具</title>
+  <script defer src="./vendor/alpinejs-3.15.12.min.js"></script>
   <style>
     :root {
-      --bg-primary: rgba(40, 40, 40, 0.92);
-      --bg-secondary: rgba(30, 30, 30, 0.92);
-      --bg-tertiary: rgba(60, 60, 60, 0.85);
-      --bg-item: rgba(255, 255, 255, 0.05);
-      --text-primary: #f0f0f0;
-      --text-secondary: #c0c0c0;
-      --text-tertiary: #888888;
-      --border-color: rgba(255, 255, 255, 0.12);
-      --accent-color: #4a90d9;
-      --accent-hover: #357abd;
-      --success-color: #27ae60;
-      --warning-color: #f39c12;
-      --radius: 10px;
-      --radius-sm: 6px;
-      --sidebar-width: 240px;
+      --bg-page: rgba(0, 0, 0, 0.3);
+      --bg-shell: rgba(20, 20, 20, 0.72);
+      --bg-panel: rgba(28, 28, 28, 0.92);
+      --bg-soft: rgba(255, 255, 255, 0.05);
+      --bg-soft-hover: rgba(255, 255, 255, 0.08);
+      --bg-active: rgba(50, 115, 220, 0.24);
+      --border: rgba(255, 255, 255, 0.12);
+      --border-strong: rgba(255, 255, 255, 0.2);
+      --text-primary: #f2f2f2;
+      --text-secondary: #c9c9c9;
+      --text-muted: #8e8e8e;
+      --accent: #4d8dff;
+      --accent-strong: #2e6fe6;
+      --success: #36b26d;
+      --warning: #e3b341;
+      --danger: #de5b5b;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --sidebar-width: 260px;
     }
 
     * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
     }
 
     html, body {
@@ -35,8 +40,8 @@
     }
 
     body {
-      font-family: "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: rgba(0, 0, 0, 0.3);
+      font-family: "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-page);
       color: var(--text-primary);
       display: flex;
       align-items: center;
@@ -45,102 +50,98 @@
       transition: background-color 0.2s;
     }
 
-    /* 主容器：70vw x 70vh */
-    .app-container {
-      width: 70vw;
-      height: 70vh;
+    [x-cloak] {
+      display: none !important;
+    }
+
+    .shell {
+      width: min(1380px, 90vw);
+      height: min(840px, 84vh);
       display: flex;
-      background-color: rgba(20, 20, 20, 0.6);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      border: 1px solid var(--border-color);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      background: var(--bg-shell);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
       overflow: hidden;
     }
 
-    /* 侧边栏 */
     .sidebar {
       width: var(--sidebar-width);
-      background-color: var(--bg-secondary);
-      border-right: 1px solid var(--border-color);
+      flex-shrink: 0;
       display: flex;
       flex-direction: column;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
     }
 
-    .sidebar-header {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border-color);
+    .sidebar-head {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
     }
 
     .sidebar-title {
       font-size: 16px;
       font-weight: 600;
+      color: var(--text-primary);
       margin-bottom: 10px;
-      color: var(--text-primary);
     }
 
-    .search-box {
-      position: relative;
-    }
-
-    .search-box input {
+    .search-input {
       width: 100%;
-      padding: 7px 10px 7px 26px;
-      border: 1px solid var(--border-color);
+      height: 36px;
+      border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      background-color: rgba(0, 0, 0, 0.3);
+      background: rgba(0, 0, 0, 0.24);
       color: var(--text-primary);
+      padding: 0 10px;
       font-size: 13px;
-      transition: border-color 0.2s;
     }
 
-    .search-box input::placeholder {
-      color: var(--text-tertiary);
-    }
-
-    .search-box input:focus {
+    .search-input:focus,
+    .text-input:focus,
+    .select-input:focus {
       outline: none;
-      border-color: var(--accent-color);
+      border-color: var(--accent);
     }
 
-    .search-icon {
-      position: absolute;
-      left: 9px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 12px;
-      color: var(--text-tertiary);
-      pointer-events: none;
+    .search-input::placeholder,
+    .text-input::placeholder {
+      color: var(--text-muted);
     }
 
     .commission-list {
       flex: 1;
       overflow-y: auto;
-      padding: 8px;
+      padding: 10px 8px;
     }
 
     .commission-item {
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: background-color 0.15s;
-      margin-bottom: 4px;
+      width: 100%;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      color: var(--text-secondary);
+      gap: 8px;
       border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: background-color 0.16s, border-color 0.16s, color 0.16s;
+      text-align: left;
+      margin-bottom: 4px;
     }
 
     .commission-item:hover {
-      background-color: rgba(26, 115, 232, 0.18);
+      background: var(--bg-soft-hover);
       color: var(--text-primary);
     }
 
     .commission-item.active {
-      background-color: rgba(26, 115, 232, 0.32);
+      background: var(--bg-active);
+      border-color: rgba(77, 141, 255, 0.6);
       color: #ffffff;
-      border-color: var(--accent-color);
     }
 
     .commission-name {
@@ -151,148 +152,184 @@
     }
 
     .commission-progress {
-      font-size: 11px;
-      opacity: 0.75;
-      margin-left: 8px;
       flex-shrink: 0;
+      font-size: 11px;
+      color: inherit;
+      opacity: 0.8;
     }
 
-    .empty-state {
-      padding: 30px 16px;
-      text-align: center;
-      color: var(--text-tertiary);
-      font-size: 13px;
-    }
-
-    /* 主内容区 */
-    .main-content {
+    .panel {
       flex: 1;
+      min-width: 0;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
-      background-color: var(--bg-primary);
+      background: rgba(20, 20, 20, 0.86);
     }
 
     .toolbar {
-      padding: 10px 18px;
-      border-bottom: 1px solid var(--border-color);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background-color: rgba(0, 0, 0, 0.2);
-      min-height: 44px;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.18);
     }
 
-    .toolbar-hint {
-      font-size: 12px;
-      color: var(--text-tertiary);
+    .tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    .toolbar-right {
+    .tab-btn {
+      min-width: 88px;
+      height: 34px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.16s, color 0.16s;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .toolbar-meta {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       margin-left: auto;
+      min-width: 0;
     }
 
+    .toolbar-hint,
     .save-indicator {
       font-size: 12px;
-      color: var(--text-tertiary);
-      transition: color 0.2s;
+      color: var(--text-muted);
+      white-space: nowrap;
     }
 
     .save-indicator.saving {
-      color: var(--warning-color);
+      color: var(--warning);
     }
 
     .save-indicator.saved {
-      color: var(--success-color);
+      color: var(--success);
     }
 
     .save-indicator.error {
-      color: #e74c3c;
+      color: var(--danger);
     }
 
-    .btn-close {
-      padding: 6px 14px;
+    .btn {
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--bg-soft);
+      color: var(--text-primary);
       font-size: 13px;
-      font-weight: 500;
-      color: #ffffff;
-      background-color: var(--success-color);
-      border: none;
-      border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: background-color 0.15s, transform 0.1s;
+      transition: background-color 0.16s, border-color 0.16s, color 0.16s;
+      white-space: nowrap;
     }
 
-    .btn-close:hover {
-      background-color: #1e8e4e;
+    .btn:hover {
+      background: var(--bg-soft-hover);
+      border-color: var(--border-strong);
     }
 
-    .btn-close:active {
-      transform: scale(0.97);
+    .btn-primary {
+      background: var(--success);
+      color: #ffffff;
     }
 
-    .btn-close:disabled {
+    .btn-primary:hover {
+      background: #2f985f;
+      border-color: transparent;
+    }
+
+    .btn-accent {
+      background: rgba(77, 141, 255, 0.15);
+      color: #bcd2ff;
+      border-color: rgba(77, 141, 255, 0.3);
+    }
+
+    .btn-accent:hover {
+      background: rgba(77, 141, 255, 0.24);
+      border-color: rgba(77, 141, 255, 0.48);
+    }
+
+    .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
 
-    .content-area {
+    .content {
       flex: 1;
       overflow-y: auto;
-      padding: 20px 24px;
+      padding: 22px 24px 24px;
     }
 
-    .detail-panel {
-      max-width: 760px;
+    .page {
+      max-width: 980px;
       margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
     }
 
-    .detail-header {
-      margin-bottom: 18px;
+    .page-head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    .detail-title {
+    .page-title {
       font-size: 22px;
-      font-weight: 600;
-      margin-bottom: 6px;
+      font-weight: 700;
       color: var(--text-primary);
     }
 
-    .note-section {
-      background-color: var(--bg-item);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 16px;
-    }
-
-    .note-label {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 8px;
-      color: var(--text-primary);
-    }
-
-    .note-content {
+    .page-subtitle {
       font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.6;
+      color: var(--text-muted);
     }
 
-    .branches-section {
-      background-color: var(--bg-item);
-      border: 1px solid var(--border-color);
+    .section {
+      border: 1px solid var(--border);
       border-radius: var(--radius);
+      background: var(--bg-soft);
       padding: 16px 18px;
     }
 
     .section-title {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
-      margin-bottom: 12px;
       color: var(--text-primary);
+      margin-bottom: 14px;
+    }
+
+    .note-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .hint-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
     }
 
     .branch-list {
@@ -304,172 +341,362 @@
     .branch-item {
       display: flex;
       align-items: center;
-      padding: 10px 12px;
-      background-color: rgba(0, 0, 0, 0.25);
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px;
+      border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      border: 1px solid var(--border-color);
-      transition: border-color 0.2s;
+      background: rgba(0, 0, 0, 0.18);
     }
 
-    .branch-item:hover {
-      border-color: var(--accent-color);
+    .branch-item.completed .branch-desc {
+      text-decoration: line-through;
+      color: var(--text-muted);
     }
 
-    .branch-item.completed {
-      background-color: rgba(0, 0, 0, 0.15);
-    }
-
-    .branch-content {
-      flex: 1;
-    }
-
-    .branch-description {
+    .branch-desc {
       font-size: 13px;
       color: var(--text-primary);
+      line-height: 1.5;
     }
 
-    .branch-item.completed .branch-description {
-      text-decoration: line-through;
-      color: var(--text-tertiary);
-    }
-
-    .branch-toggle-wrapper {
+    .toggle-row {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-shrink: 0;
     }
 
-    .toggle-status-label {
+    .toggle-label {
       font-size: 12px;
-      font-weight: 500;
+      color: var(--text-muted);
       min-width: 44px;
       text-align: right;
     }
 
-    .toggle-status-label.pending {
-      color: var(--text-tertiary);
+    .toggle-label.completed {
+      color: var(--success);
     }
 
-    .toggle-status-label.completed {
-      color: var(--success-color);
-    }
-
-    /* 二态滑块开关 */
-    .toggle-switch {
-      position: relative;
-      width: 40px;
-      height: 22px;
-      background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 11px;
+    .switch {
+      width: 42px;
+      height: 24px;
+      border-radius: 999px;
+      border: 0;
+      background: rgba(255, 255, 255, 0.16);
       cursor: pointer;
-      transition: background-color 0.3s;
-      flex-shrink: 0;
+      position: relative;
+      transition: background-color 0.16s;
     }
 
-    .toggle-switch.pending {
-      background-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .toggle-switch.pending::after {
-      transform: translateX(2px);
-    }
-
-    .toggle-switch.completed {
-      background-color: var(--success-color);
-    }
-
-    .toggle-switch.completed::after {
-      transform: translateX(20px);
-    }
-
-    .toggle-switch::after {
-      content: '';
+    .switch::after {
+      content: "";
       position: absolute;
+      top: 3px;
+      left: 3px;
       width: 18px;
       height: 18px;
-      background-color: #ffffff;
       border-radius: 50%;
-      top: 2px;
-      left: 0;
-      transition: transform 0.3s;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      background: #ffffff;
+      transition: transform 0.16s;
     }
 
-    .all-completed-section {
-      margin-top: 18px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border-color);
+    .switch.on {
+      background: var(--success);
     }
 
-    .all-completed-label {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-primary);
-      margin-bottom: 8px;
+    .switch.on::after {
+      transform: translateX(18px);
     }
 
-    .all-completed-select {
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .global-field-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .field-wide {
+      grid-column: 1 / -1;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .text-input,
+    .select-input {
       width: 100%;
-      padding: 8px 10px;
-      font-size: 13px;
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      background-color: rgba(0, 0, 0, 0.35);
+      min-width: 0;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.24);
       color: var(--text-primary);
+      padding: 0 10px;
+      font-size: 13px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .input-row .text-input {
+      flex: 1;
+    }
+
+    .scope-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .scope-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(0, 0, 0, 0.16);
+      padding: 16px 18px;
+    }
+
+    .scope-head {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 14px;
+    }
+
+    .scope-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .scope-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .config-block {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 14px;
+    }
+
+    .config-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .mode-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .radio-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 34px;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.18);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .radio-pill input {
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
+    .segment {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 12px;
+    }
+
+    .segment button {
+      min-width: 76px;
+      height: 32px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
     }
 
-    .all-completed-select option {
-      background-color: #2a2a2a;
-      color: var(--text-primary);
+    .segment button.active {
+      background: rgba(77, 141, 255, 0.18);
+      color: #dbe7ff;
     }
 
-    .all-completed-select:focus {
-      outline: none;
-      border-color: var(--accent-color);
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
     }
 
-    /* 空状态 */
-    .empty-detail {
+    .empty {
+      min-height: 320px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100%;
-      color: var(--text-tertiary);
+      gap: 10px;
+      color: var(--text-muted);
       text-align: center;
+      padding: 20px;
     }
 
-    .empty-detail-icon {
-      width: 56px;
-      height: 56px;
-      margin-bottom: 14px;
-      border: 2px solid var(--border-color);
-      border-radius: var(--radius);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      color: var(--text-tertiary);
-    }
-
-    .empty-detail-text {
-      font-size: 14px;
-    }
-
-    /* 状态栏 */
-    .status-bar {
-      padding: 6px 18px;
-      border-top: 1px solid var(--border-color);
-      background-color: rgba(0, 0, 0, 0.25);
+    .statusbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
+      padding: 8px 18px;
+      border-top: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.18);
       font-size: 12px;
-      color: var(--text-tertiary);
+      color: var(--text-muted);
     }
 
-    /* 滚动条 */
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.56);
+      padding: 24px;
+      z-index: 30;
+    }
+
+    .modal-card {
+      width: min(520px, 92vw);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(24, 24, 24, 0.96);
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 14px 16px 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tree-box {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.18);
+      overflow-y: auto;
+      min-height: 260px;
+      max-height: 52vh;
+      padding: 8px;
+    }
+
+    .tree-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 34px;
+      padding: 0 8px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: left;
+      transition: background-color 0.16s, color 0.16s;
+    }
+
+    .tree-row:hover {
+      background: var(--bg-soft-hover);
+      color: var(--text-primary);
+    }
+
+    .tree-row.selected {
+      background: var(--bg-active);
+      color: #ffffff;
+    }
+
+    .tree-indent {
+      flex-shrink: 0;
+      width: 12px;
+    }
+
+    .tree-toggle {
+      width: 14px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .tree-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .error-text {
+      font-size: 12px;
+      color: var(--danger);
+      line-height: 1.5;
+    }
+
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
@@ -480,367 +707,1119 @@
     }
 
     ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.24);
+    }
+
+    @media (max-width: 1180px) {
+      .shell {
+        width: 94vw;
+        height: 88vh;
+      }
+
+      .field-grid,
+      .scope-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: 240px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .toolbar {
+        flex-wrap: wrap;
+      }
+
+      .toolbar-meta {
+        width: 100%;
+        justify-content: space-between;
+      }
     }
   </style>
 </head>
-<body>
-  <div class="app-container" id="appContainer">
+<body x-data="commissionConfigEditor()" x-init="init()">
+  <div class="shell" x-show="visible" x-cloak>
     <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-title">委托分支配置</div>
-        <div class="search-box">
-          <span class="search-icon">Q</span>
-          <input type="text" id="searchInput" placeholder="搜索委托...">
-        </div>
+      <div class="sidebar-head">
+        <div class="sidebar-title">委托配置</div>
+        <input class="search-input" type="text" x-model.trim="searchTerm" placeholder="搜索委托">
       </div>
-      <div class="commission-list" id="commissionList"></div>
+
+      <div class="commission-list">
+        <template x-if="!loaded">
+          <div class="empty" style="min-height: 160px;">正在加载配置...</div>
+        </template>
+
+        <template x-if="loaded && filteredCommissions().length === 0">
+          <div class="empty" style="min-height: 160px;" x-text="searchTerm ? '未找到匹配的委托' : '暂无委托'"></div>
+        </template>
+
+        <template x-if="loaded && filteredCommissions().length > 0">
+          <div>
+            <template x-for="commission in filteredCommissions()" :key="commission.name">
+              <button
+                class="commission-item"
+                :class="{ active: commission.name === selectedCommission }"
+                type="button"
+                @click="selectCommission(commission.name)"
+              >
+                <span class="commission-name" x-text="commission.name"></span>
+                <span class="commission-progress" x-show="commission.progress" x-text="commission.progress"></span>
+              </button>
+            </template>
+          </div>
+        </template>
+      </div>
     </aside>
 
-    <main class="main-content">
+    <main class="panel">
       <div class="toolbar">
-        <div class="toolbar-hint">按 ~ 键切换显示 / 隐藏</div>
-        <div class="toolbar-right">
-          <span class="save-indicator" id="saveIndicator">就绪</span>
-          <button class="btn-close" id="closeBtn" type="button">关闭并继续</button>
+        <div class="tabs">
+          <button class="tab-btn" type="button" :class="{ active: currentTab === 'branch' }" @click="currentTab = 'branch'">分支配置</button>
+          <button class="tab-btn" type="button" :class="{ active: currentTab === 'battle' }" @click="currentTab = 'battle'">战斗配置</button>
+        </div>
+
+        <div class="toolbar-meta">
+          <span class="toolbar-hint">按 ~ 键切换显示 / 隐藏</span>
+          <span class="save-indicator" :class="saveState" x-text="saveText"></span>
+          <button class="btn btn-primary" type="button" :disabled="closing" @click="requestClose()">关闭并继续</button>
         </div>
       </div>
 
-      <div class="content-area" id="contentArea"></div>
+      <div class="content">
+        <template x-if="!loaded">
+          <div class="empty">
+            <div>正在加载配置文件...</div>
+          </div>
+        </template>
 
-      <div class="status-bar">
-        <span id="commissionCount">共 0 个委托</span>
-        <span id="filePath">process/config/branches/</span>
+        <template x-if="loaded && currentTab === 'branch'">
+          <div class="page">
+            <template x-if="!selectedCommission">
+              <div class="empty">
+                <div>请从左侧选择一个委托</div>
+              </div>
+            </template>
+
+            <template x-if="selectedCommission">
+              <div>
+                <template x-if="selectedBranchConfig()">
+                  <div class="page">
+                    <div class="page-head">
+                      <div class="page-title" x-text="selectedCommission"></div>
+                      <div class="page-subtitle">当前账号下的分支完成进度与默认分支</div>
+                    </div>
+
+                    <template x-if="selectedBranchConfig().note">
+                      <section class="section">
+                        <div class="section-title">说明</div>
+                        <div class="note-text" x-text="selectedBranchConfig().note"></div>
+                      </section>
+                    </template>
+
+                    <section class="section">
+                      <template x-if="selectedBranchConfig().type === 'achievement' && achievementBranches(selectedBranchConfig()).length > 0">
+                        <div>
+                          <div class="section-title">成就分支</div>
+                          <div class="branch-list">
+                            <template x-for="branch in achievementBranches(selectedBranchConfig())" :key="branch.id">
+                              <div class="branch-item" :class="{ completed: branch.completed }">
+                                <div class="branch-desc" x-text="branch.description"></div>
+                                <div class="toggle-row">
+                                  <span class="toggle-label" :class="{ completed: branch.completed }" x-text="branch.completed ? '已完成' : '未完成'"></span>
+                                  <button class="switch" type="button" :class="{ on: branch.completed }" @click="toggleBranchState(branch.id)"></button>
+                                </div>
+                              </div>
+                            </template>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template x-if="selectedBranchConfig().type === 'achievement' && achievementBranches(selectedBranchConfig()).length === 0">
+                        <div>
+                          <div class="section-title">成就分支</div>
+                          <div class="hint-text">该委托暂无成就分支，当前仅保留默认分支选择。</div>
+                        </div>
+                      </template>
+
+                      <template x-if="selectedBranchConfig().type !== 'achievement'">
+                        <div>
+                          <div class="section-title">分支选择</div>
+                          <div class="hint-text">该委托当前不使用成就分支，直接维护默认分支。</div>
+                        </div>
+                      </template>
+                    </section>
+
+                    <section class="section">
+                      <div class="section-title" x-text="allCompletedLabel(selectedBranchConfig())"></div>
+                      <select class="select-input" :value="selectedBranchConfig().default || ''" @change="updateAllCompleted($event.target.value)">
+                        <template x-for="branch in allBranches(selectedBranchConfig())" :key="branch.id">
+                          <option :value="branch.id" x-text="branch.description"></option>
+                        </template>
+                      </select>
+                    </section>
+                  </div>
+                </template>
+
+                <template x-if="!selectedBranchConfig()">
+                  <div class="empty">
+                    <div>该委托暂无分支配置</div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="loaded && currentTab === 'battle'">
+          <div class="page">
+            <div class="page-head">
+              <div class="page-title">战斗与队伍配置</div>
+            </div>
+
+            <section class="section">
+              <div class="section-title">全局设置</div>
+              <div class="field-grid global-field-grid">
+                <label class="field">
+                  <span class="field-label">全局战斗队伍名</span>
+                  <input class="text-input" type="text" x-model="partyView.global.battleTeamName" @input="scheduleSave()" placeholder="输入战斗队伍名">
+                </label>
+
+                <label class="field">
+                  <span class="field-label">全局元素采集队伍名</span>
+                  <input class="text-input" type="text" x-model="partyView.global.elementTeamName" @input="scheduleSave()" placeholder="输入元素采集队伍名">
+                </label>
+
+                <label class="field field-wide">
+                  <span class="field-label">全局战斗策略</span>
+                  <div class="input-row">
+                    <input class="text-input" type="text" x-model="partyView.global.battleStrategy" @input="scheduleSave()" placeholder="根据队伍自动选择">
+                    <button class="btn btn-accent" type="button" @click="openStrategyPicker(partyView.global, 'battleStrategy')">选择策略</button>
+                    <button class="btn" type="button" @click="resetStrategy(partyView.global, 'battleStrategy')">使用默认</button>
+                  </div>
+                </label>
+              </div>
+            </section>
+
+            <template x-if="!selectedCommission">
+              <div class="empty" style="min-height: 220px;">
+                <div>选择左侧委托后可设置委托级覆盖。</div>
+              </div>
+            </template>
+
+            <template x-if="selectedCommission">
+              <div>
+                <template x-if="selectedPartyScopes().length > 0">
+                  <section class="section">
+                    <div class="section-title" x-text="selectedCommission"></div>
+                    <div class="scope-list">
+                      <template x-for="scope in selectedPartyScopes()" :key="scope.key">
+                        <div class="scope-card">
+                          <div class="scope-head">
+                            <div class="scope-title" x-text="displayScopeTitle(scope)"></div>
+                          </div>
+
+                          <div class="scope-grid">
+                            <div class="config-block">
+                              <div class="config-title">战斗</div>
+
+                              <div class="mode-group">
+                                <label class="radio-pill">
+                                  <input type="radio" value="global" x-model="scope.config.battle.mode" @change="scheduleSave()">
+                                  <span>使用全局队伍与策略</span>
+                                </label>
+                                <label class="radio-pill">
+                                  <input type="radio" value="custom" x-model="scope.config.battle.mode" @change="scheduleSave()">
+                                  <span>当前委托自定义</span>
+                                </label>
+                              </div>
+
+                              <template x-if="scope.config.battle.mode === 'custom'">
+                                <div>
+                                  <div class="segment">
+                                    <button type="button" :class="{ active: scope.config.battle.teamMode === 'teamName' }" @click="setTeamMode(scope.config.battle, 'teamName')">队伍名</button>
+                                    <button type="button" :class="{ active: scope.config.battle.teamMode === 'roles' }" @click="setTeamMode(scope.config.battle, 'roles')">角色名</button>
+                                  </div>
+
+                                  <template x-if="scope.config.battle.teamMode === 'teamName'">
+                                    <label class="field">
+                                      <span class="field-label">自定义战斗队伍名</span>
+                                      <input class="text-input" type="text" x-model="scope.config.battle.teamName" @input="scheduleSave()" placeholder="输入队伍名">
+                                    </label>
+                                  </template>
+
+                                  <template x-if="scope.config.battle.teamMode === 'roles'">
+                                    <div class="role-grid">
+                                      <template x-for="slot in roleSlots" :key="scope.key + '-battle-' + slot">
+                                        <label class="field">
+                                          <span class="field-label" x-text="'角色 ' + slot"></span>
+                                          <input class="text-input" type="text" x-model="scope.config.battle.roles[slot]" @input="scheduleSave()" :placeholder="'角色 ' + slot">
+                                        </label>
+                                      </template>
+                                    </div>
+                                  </template>
+
+                                  <label class="field" style="margin-top: 12px;">
+                                    <span class="field-label">自定义战斗策略</span>
+                                    <div class="input-row">
+                                      <input class="text-input" type="text" x-model="scope.config.battle.strategy" @input="scheduleSave()" placeholder="根据队伍自动选择">
+                                      <button class="btn btn-accent" type="button" @click="openStrategyPicker(scope.config.battle, 'strategy')">选择策略</button>
+                                      <button class="btn" type="button" @click="resetStrategy(scope.config.battle, 'strategy')">使用默认</button>
+                                    </div>
+                                  </label>
+                                </div>
+                              </template>
+                            </div>
+
+                            <div class="config-block">
+                              <div class="config-title">元素采集</div>
+
+                              <div class="mode-group">
+                                <label class="radio-pill">
+                                  <input type="radio" value="global" x-model="scope.config.collect.mode" @change="scheduleSave()">
+                                  <span>使用全局队伍</span>
+                                </label>
+                                <label class="radio-pill">
+                                  <input type="radio" value="custom" x-model="scope.config.collect.mode" @change="scheduleSave()">
+                                  <span>当前委托自定义</span>
+                                </label>
+                              </div>
+
+                              <template x-if="scope.config.collect.mode === 'custom'">
+                                <div>
+                                  <div class="segment">
+                                    <button type="button" :class="{ active: scope.config.collect.teamMode === 'teamName' }" @click="setTeamMode(scope.config.collect, 'teamName')">队伍名</button>
+                                    <button type="button" :class="{ active: scope.config.collect.teamMode === 'roles' }" @click="setTeamMode(scope.config.collect, 'roles')">角色名</button>
+                                  </div>
+
+                                  <template x-if="scope.config.collect.teamMode === 'teamName'">
+                                    <label class="field">
+                                      <span class="field-label">自定义元素采集队伍名</span>
+                                      <input class="text-input" type="text" x-model="scope.config.collect.teamName" @input="scheduleSave()" placeholder="输入队伍名">
+                                    </label>
+                                  </template>
+
+                                  <template x-if="scope.config.collect.teamMode === 'roles'">
+                                    <div class="role-grid">
+                                      <template x-for="slot in roleSlots" :key="scope.key + '-collect-' + slot">
+                                        <label class="field">
+                                          <span class="field-label" x-text="'角色 ' + slot"></span>
+                                          <input class="text-input" type="text" x-model="scope.config.collect.roles[slot]" @input="scheduleSave()" :placeholder="'角色 ' + slot">
+                                        </label>
+                                      </template>
+                                    </div>
+                                  </template>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </section>
+                </template>
+
+                <template x-if="selectedPartyScopes().length === 0">
+                  <div class="empty" style="min-height: 220px;">
+                    <div>该委托暂无可配置的流程实例。</div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div class="statusbar">
+        <span x-text="'共 ' + filteredCommissions().length + ' 个委托'"></span>
+        <span>process/config/branches + process/config/party</span>
       </div>
     </main>
   </div>
 
+  <div class="modal" x-show="visible && strategyPicker.open" x-cloak @click.self="closeStrategyPicker()">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title">选择战斗策略</div>
+        <button class="btn" type="button" @click="closeStrategyPicker()">关闭</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="input-row">
+          <button class="btn btn-accent" type="button" @click="applyDefaultStrategy()">根据队伍自动选择</button>
+          <div class="hint-text" style="flex: 1;" x-text="'当前值: ' + strategyPicker.selected"></div>
+        </div>
+
+        <template x-if="strategyPicker.error">
+          <div class="error-text" x-text="strategyPicker.error"></div>
+        </template>
+
+        <div class="tree-box">
+          <template x-if="strategyPicker.loading">
+            <div class="empty" style="min-height: 180px;">正在加载策略列表...</div>
+          </template>
+
+          <template x-if="!strategyPicker.loading && strategyPicker.rows.length === 0 && !strategyPicker.error">
+            <div class="empty" style="min-height: 180px;">未找到策略文件</div>
+          </template>
+
+          <template x-if="!strategyPicker.loading && strategyPicker.rows.length > 0">
+            <div>
+              <template x-for="row in strategyPicker.rows" :key="row.key">
+                <button
+                  class="tree-row"
+                  type="button"
+                  :class="{ selected: isStrategyRowSelected(row.node) }"
+                  @click="row.node.type === 'folder' ? toggleStrategyFolder(row.node) : chooseStrategy(row.node.path)"
+                >
+                  <template x-for="n in row.depth" :key="row.key + '-indent-' + n">
+                    <span class="tree-indent"></span>
+                  </template>
+
+                  <span class="tree-toggle" x-text="row.node.type === 'folder' ? (row.node.expanded ? 'v' : '>') : '-'"></span>
+                  <span class="tree-name" x-text="strategyNodeLabel(row.node)"></span>
+                </button>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const AppState = {
-      data: {},
-      selectedCommission: null,
-      loaded: false
-    };
+    function commissionConfigEditor() {
+      const DEFAULT_STRATEGY = "根据队伍自动选择";
+      const SAVE_TIMEOUT_MS = 5000;
 
-    const elements = {
-      appContainer: document.getElementById('appContainer'),
-      commissionList: document.getElementById('commissionList'),
-      contentArea: document.getElementById('contentArea'),
-      searchInput: document.getElementById('searchInput'),
-      saveIndicator: document.getElementById('saveIndicator'),
-      commissionCount: document.getElementById('commissionCount'),
-      closeBtn: document.getElementById('closeBtn')
-    };
+      return {
+        branchData: {},
+        partyView: {
+          global: {
+            battleTeamName: "",
+            elementTeamName: "",
+            battleStrategy: DEFAULT_STRATEGY,
+          },
+          scopesByCommission: {},
+        },
+        selectedCommission: null,
+        loaded: false,
+        searchTerm: "",
+        currentTab: "branch",
+        saveState: "",
+        saveText: "就绪",
+        visible: true,
+        closing: false,
+        saveTimer: null,
+        pendingHtmlMaskRequests: {},
+        roleSlots: ["1", "2", "3", "4"],
+        strategyPicker: {
+          open: false,
+          loading: false,
+          error: "",
+          target: null,
+          field: "",
+          selected: DEFAULT_STRATEGY,
+          rootNodes: [],
+          rows: [],
+        },
 
-    let saveTimer = null;
+        init() {
+          if (window.htmlMask) {
+            window.htmlMask.onMessage = (message) => this.handleMessage(message);
+            this.loadConfig().catch((err) => {
+              this.setSaveStatus("error", "加载失败");
+              console.error("加载配置失败:", err);
+            });
+            return;
+          }
 
-    function init() {
-      bindEvents();
-      renderCommissionList();
-      renderEmptyState();
-    }
+          this.setSaveStatus("error", "未在 htmlMask 环境中");
+        },
 
-    function bindEvents() {
-      elements.searchInput.addEventListener('input', renderCommissionList);
-      elements.closeBtn.addEventListener('click', requestClose);
-    }
+        handleMessage(message) {
+          if (!message || !message.url) return;
 
-    // 关闭面板:先确保挂起的保存完成,再请求主机关闭窗口
-    async function requestClose() {
-      if (!window.htmlMask) return;
+          if (this.resolvePendingHtmlMaskResponse(message)) {
+            return;
+          }
 
-      elements.closeBtn.disabled = true;
+          if (message.url === "/loadConfig") {
+            const payload = message.data && message.data.data ? message.data.data : message.data;
+            this.applyConfigPayload(payload || {});
+            return;
+          }
 
-      // 若有挂起的防抖保存,立即触发并等待完成
-      if (saveTimer) {
-        clearTimeout(saveTimer);
-        saveTimer = null;
-        try {
-          await saveConfigNow();
-        } catch (e) {
-          // 保存失败也允许关闭,避免用户卡住
-          console.error('关闭前保存失败:', e);
-        }
-      }
+          if (message.url === "/toggleVisibility") {
+            const visible = !message.data || message.data.visible !== false;
+            this.applyVisibility(visible);
+          }
+        },
 
-      try {
-        await window.htmlMask.request('/close', {});
-      } catch (err) {
-        console.error('关闭请求失败:', err);
-        elements.closeBtn.disabled = false;
-      }
-    }
+        normalizePayload(payload) {
+          if (payload && (payload.branches || payload.party)) {
+            return {
+              branches: this.normalizeBranchMap(payload.branches || {}),
+              party: this.normalizePartyView(payload.party || {}),
+            };
+          }
 
-    // 规范化每个委托的字段
-    function normalizeData(data) {
-      Object.values(data || {}).forEach(commission => {
-        if (!commission.type) commission.type = 'achievement';
-        if (commission.default === undefined) commission.default = null;
-        if (!commission.conditions || typeof commission.conditions !== 'object') {
-          commission.conditions = {};
-        }
-        if (!Array.isArray(commission.completed)) commission.completed = [];
-        if (!commission.descriptions || typeof commission.descriptions !== 'object') {
-          commission.descriptions = {};
-        }
-        if (typeof commission.note !== 'string') commission.note = '';
-      });
-      return data;
-    }
+          return {
+            branches: this.normalizeBranchMap(payload || {}),
+            party: this.normalizePartyView({}),
+          };
+        },
 
-    function setSaveStatus(state, text) {
-      elements.saveIndicator.className = 'save-indicator ' + (state || '');
-      elements.saveIndicator.textContent = text;
-    }
+        async loadConfig() {
+          const response = await this.requestHtmlMask("/loadConfig", {}, SAVE_TIMEOUT_MS, "加载超时");
+          this.applyConfigPayload(this.unwrapHtmlMaskData(response) || {});
+        },
 
-    // 防抖保存:状态变化后 300ms 内无新修改则触发保存
-    function scheduleSave() {
-      setSaveStatus('saving', '修改中...');
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        saveTimer = null;
-        saveConfigNow().catch(err => console.error('保存失败:', err));
-      }, 300);
-    }
+        applyConfigPayload(payload) {
+          const normalized = this.normalizePayload(payload || {});
+          this.branchData = normalized.branches;
+          this.partyView = normalized.party;
+          this.loaded = true;
 
-    function saveConfigNow() {
-      if (!window.htmlMask) {
-        setSaveStatus('error', '运行环境不支持保存');
-        return Promise.reject(new Error('no htmlMask'));
-      }
-      setSaveStatus('saving', '保存中...');
-      const content = JSON.stringify(AppState.data, null, 4);
-      return window.htmlMask.request('/saveConfig', { content: content })
-        .then(function () {
-          setSaveStatus('saved', '已保存');
-        })
-        .catch(function (err) {
-          setSaveStatus('error', '保存失败');
-          throw err;
-        });
-    }
+          const names = this.allCommissionNames();
+          if (names.length > 0 && (!this.selectedCommission || !names.includes(this.selectedCommission))) {
+            this.selectedCommission = names[0];
+          }
+          if (this.selectedCommission) {
+            this.ensureBranchDefault(this.selectedCommission);
+          }
+          this.setSaveStatus("saved", "已加载");
+        },
 
-    function renderEmptyState() {
-      if (!AppState.loaded) {
-        elements.contentArea.innerHTML =
-          '<div class="empty-detail">' +
-            '<div class="empty-detail-icon">...</div>' +
-            '<div class="empty-detail-text">正在加载配置文件...</div>' +
-          '</div>';
-      } else {
-        elements.contentArea.innerHTML =
-          '<div class="empty-detail">' +
-            '<div class="empty-detail-icon">[=]</div>' +
-            '<div class="empty-detail-text">请从左侧选择一个委托进行编辑</div>' +
-          '</div>';
-      }
-    }
+        normalizeBranchMap(branches) {
+          const next = {};
+          if (!branches || typeof branches !== "object" || Array.isArray(branches)) {
+            return next;
+          }
 
-    function renderCommissionList() {
-      if (!AppState.loaded) {
-        elements.commissionList.innerHTML = '<div class="empty-state">正在加载...</div>';
-        elements.commissionCount.textContent = '共 0 个委托';
-        return;
-      }
+          Object.keys(branches).forEach((name) => {
+            next[name] = this.normalizeBranchConfig(branches[name]);
+          });
+          return next;
+        },
 
-      const searchTerm = elements.searchInput.value.toLowerCase();
-      const commissions = Object.entries(AppState.data)
-        .filter(([name]) => name.toLowerCase().includes(searchTerm))
-        .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'));
+        normalizeBranchConfig(config) {
+          const next = config && typeof config === "object" && !Array.isArray(config) ? { ...config } : {};
+          next.type = next.type || "achievement";
+          next.default = next.default === undefined ? null : next.default;
+          next.conditions = next.conditions && typeof next.conditions === "object" && !Array.isArray(next.conditions)
+            ? next.conditions
+            : {};
+          next.descriptions = next.descriptions && typeof next.descriptions === "object" && !Array.isArray(next.descriptions)
+            ? next.descriptions
+            : {};
+          next.completed = Array.isArray(next.completed)
+            ? next.completed.filter((item) => typeof item === "string")
+            : [];
+          next.note = this.sanitizeNoteText(next.note);
+          delete next.noteLevel;
+          return next;
+        },
 
-      if (commissions.length === 0) {
-        elements.commissionList.innerHTML =
-          '<div class="empty-state">' + (searchTerm ? '未找到匹配的委托' : '暂无委托') + '</div>';
-      } else {
-        elements.commissionList.innerHTML = commissions.map(([name, config]) => {
+        normalizePartyView(view) {
+          const next = view && typeof view === "object" && !Array.isArray(view) ? view : {};
+          const scopesByCommission = next.scopesByCommission && typeof next.scopesByCommission === "object" && !Array.isArray(next.scopesByCommission)
+            ? next.scopesByCommission
+            : {};
+          const normalizedScopes = {};
+
+          Object.keys(scopesByCommission).forEach((commissionName) => {
+            const items = Array.isArray(scopesByCommission[commissionName]) ? scopesByCommission[commissionName] : [];
+            normalizedScopes[commissionName] = items
+              .map((item) => this.normalizeScopeEntry(item, commissionName))
+              .sort((a, b) => a.label.localeCompare(b.label, "zh-CN"));
+          });
+
+          return {
+            global: this.normalizeGlobalPartyConfig(next.global),
+            scopesByCommission: normalizedScopes,
+          };
+        },
+
+        normalizeGlobalPartyConfig(config) {
+          const next = config && typeof config === "object" && !Array.isArray(config) ? config : {};
+          return {
+            battleTeamName: typeof next.battleTeamName === "string" ? next.battleTeamName.trim() : "",
+            elementTeamName: typeof next.elementTeamName === "string" ? next.elementTeamName.trim() : "",
+            battleStrategy: typeof next.battleStrategy === "string" && next.battleStrategy.trim()
+              ? next.battleStrategy.trim()
+              : DEFAULT_STRATEGY,
+          };
+        },
+
+        normalizeScopeEntry(entry, fallbackCommissionName) {
+          const next = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : {};
+          const commissionName = typeof next.commissionName === "string" && next.commissionName.trim()
+            ? next.commissionName.trim()
+            : fallbackCommissionName;
+          const locationDir = typeof next.locationDir === "string" ? next.locationDir : "";
+          const country = typeof next.country === "string" ? next.country : "";
+          const typeDir = typeof next.typeDir === "string" ? next.typeDir : "";
+
+          return {
+            key: typeof next.key === "string" && next.key ? next.key : [country, next.type || "", commissionName, locationDir].join("::"),
+            country,
+            type: typeof next.type === "string" ? next.type : "",
+            typeDir,
+            commissionName,
+            location: typeof next.location === "string" ? next.location : locationDir,
+            locationDir,
+            ordinal: typeof next.ordinal === "number" ? next.ordinal : null,
+            label: typeof next.label === "string" && next.label
+              ? next.label
+              : [country, typeDir || next.type || "", locationDir].filter(Boolean).join(" | "),
+            config: this.normalizeScopeConfig(next.config),
+          };
+        },
+
+        normalizeScopeConfig(config) {
+          const next = config && typeof config === "object" && !Array.isArray(config) ? config : {};
+          return {
+            battle: this.normalizeBattleConfig(next.battle),
+            collect: this.normalizeCollectConfig(next.collect),
+          };
+        },
+
+        normalizeBattleConfig(config) {
+          const next = this.normalizeTeamConfig(config);
+          next.strategy = config && typeof config.strategy === "string" && config.strategy.trim()
+            ? config.strategy.trim()
+            : DEFAULT_STRATEGY;
+          return next;
+        },
+
+        normalizeCollectConfig(config) {
+          return this.normalizeTeamConfig(config);
+        },
+
+        normalizeTeamConfig(config) {
+          const next = config && typeof config === "object" && !Array.isArray(config) ? config : {};
+          return {
+            mode: next.mode === "custom" ? "custom" : "global",
+            teamMode: next.teamMode === "roles" ? "roles" : "teamName",
+            teamName: typeof next.teamName === "string" ? next.teamName.trim() : "",
+            roles: this.normalizeRoles(next.roles),
+          };
+        },
+
+        normalizeRoles(roles) {
+          const next = {};
+          this.roleSlots.forEach((slot) => {
+            next[slot] = roles && typeof roles[slot] === "string" ? roles[slot].trim() : "";
+          });
+          return next;
+        },
+
+        sanitizeNoteText(note) {
+          if (typeof note !== "string") return "";
+          if (!note) return "";
+
+          const hasHtml = /<br\s*\/?>|<[a-z!/][^>]*>/i.test(note);
+          if (!hasHtml) return note;
+
+          const normalized = note
+            .replace(/<br\s*\/?>/gi, "\n")
+            .replace(/<\/(div|p|li|tr|h[1-6])>/gi, "\n");
+
+          const container = document.createElement("div");
+          container.innerHTML = normalized;
+          return (container.textContent || container.innerText || "")
+            .replace(/\r\n/g, "\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+        },
+
+        setSaveStatus(state, text) {
+          this.saveState = state || "";
+          this.saveText = text;
+        },
+
+        nextHtmlMaskRequestId() {
+          if (!window.htmlMask || typeof window.htmlMask._seq !== "number") {
+            return "";
+          }
+          return "__req_" + (window.htmlMask._seq + 1);
+        },
+
+        requestHtmlMask(url, data, timeoutMs, timeoutText) {
+          if (!window.htmlMask || typeof window.htmlMask.request !== "function") {
+            return Promise.reject(new Error("htmlMask request unavailable"));
+          }
+
+          const requestId = this.nextHtmlMaskRequestId();
+          return new Promise((resolve, reject) => {
+            let settled = false;
+            let timer = null;
+            const cleanup = () => {
+              if (timer) {
+                clearTimeout(timer);
+              }
+              if (requestId) {
+                delete this.pendingHtmlMaskRequests[requestId];
+                if (window.htmlMask && window.htmlMask._callbacks) {
+                  delete window.htmlMask._callbacks[requestId];
+                }
+              }
+            };
+            const settle = (type, value) => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              if (type === "resolve") {
+                resolve(value);
+              } else {
+                reject(value);
+              }
+            };
+
+            if (requestId) {
+              this.pendingHtmlMaskRequests[requestId] = {
+                url,
+                resolve: (value) => settle("resolve", value),
+                reject: (err) => settle("reject", err),
+              };
+            }
+
+            if (timeoutMs > 0) {
+              timer = setTimeout(() => {
+                settle("reject", new Error(timeoutText || "请求超时"));
+              }, timeoutMs);
+            }
+
+            let nativeRequest;
+            try {
+              nativeRequest = window.htmlMask.request(url, data || {});
+            } catch (err) {
+              settle("reject", err);
+              return;
+            }
+
+            const nativeCallbacks = requestId && window.htmlMask._callbacks
+              ? window.htmlMask._callbacks[requestId]
+              : null;
+            if (nativeCallbacks) {
+              window.htmlMask._callbacks[requestId] = {
+                resolve: (response) => settle("resolve", response),
+                reject: (err) => settle("reject", err),
+              };
+              return;
+            }
+
+            Promise.resolve(nativeRequest)
+              .then((response) => settle("resolve", response))
+              .catch((err) => settle("reject", err));
+          });
+        },
+
+        resolvePendingHtmlMaskResponse(message) {
+          const requestId = typeof message.requestId === "string"
+            ? message.requestId
+            : (message.data && typeof message.data.requestId === "string" ? message.data.requestId : "");
+          if (!requestId || !this.pendingHtmlMaskRequests[requestId]) {
+            return false;
+          }
+
+          this.pendingHtmlMaskRequests[requestId].resolve(message);
+          return true;
+        },
+
+        unwrapHtmlMaskData(response) {
+          let payload = response && response.data !== undefined ? response.data : response;
+          if (payload && typeof payload === "object" && typeof payload.requestId === "string" && payload.data !== undefined) {
+            payload = payload.data;
+          }
+          return payload;
+        },
+
+        saveErrorText(err) {
+          const message = err && err.message ? err.message : "";
+          return message && message !== "保存失败" ? "保存失败：" + message : "保存失败";
+        },
+
+        displayScopeTitle(scope) {
+          if (!scope) return "";
+          let country = typeof scope.country === "string" ? scope.country.trim() : "";
+          let location = typeof scope.locationDir === "string" && scope.locationDir.trim()
+            ? scope.locationDir.trim()
+            : (typeof scope.location === "string" ? scope.location.trim() : "");
+
+          if ((!country || !location) && typeof scope.key === "string") {
+            const keyParts = scope.key.split("::").map((part) => part.trim());
+            if (keyParts.length >= 4) {
+              country = country || keyParts[0];
+              location = location || keyParts[3];
+            }
+          }
+
+          const title = [country, location].filter(Boolean).join(" | ");
+          return title || this.cleanScopeLabel(scope.label || scope.key || "");
+        },
+
+        cleanScopeLabel(value) {
+          const raw = String(value || "").trim();
+          if (raw.includes("::")) {
+            const keyParts = raw.split("::").map((part) => part.trim());
+            if (keyParts.length >= 4) {
+              return [keyParts[0], keyParts[3]].filter(Boolean).join(" | ");
+            }
+          }
+
+          return raw
+            .split("|")
+            .map((part) => part.trim())
+            .filter((part) => part && !/^(basic|npc)$/i.test(part))
+            .join(" | ");
+        },
+
+        allCommissionNames() {
+          return Array.from(new Set([
+            ...Object.keys(this.branchData || {}),
+            ...Object.keys(this.partyView.scopesByCommission || {}),
+          ])).sort((a, b) => a.localeCompare(b, "zh-CN"));
+        },
+
+        filteredCommissions() {
+          const searchTerm = this.searchTerm.toLowerCase();
+          return this.allCommissionNames()
+            .filter((name) => name.toLowerCase().includes(searchTerm))
+            .map((name) => ({
+              name,
+              progress: this.commissionProgress(this.branchData[name]),
+            }));
+        },
+
+        commissionProgress(config) {
+          if (!config) return "";
           const conditions = config.conditions || {};
           const achievementKeys = Object.keys(conditions);
-          const achievementTotal = achievementKeys.length;
-          const completed = (config.completed || []).filter(b => achievementKeys.includes(b));
-          const isActive = name === AppState.selectedCommission;
-          const progressHtml = achievementTotal > 0
-            ? '<span class="commission-progress">' + completed.length + '/' + achievementTotal + '</span>'
-            : '';
-          return '<div class="commission-item ' + (isActive ? 'active' : '') + '" data-name="' + escapeHtml(name) + '">' +
-                   '<span class="commission-name">' + escapeHtml(name) + '</span>' +
-                   progressHtml +
-                 '</div>';
-        }).join('');
+          if (achievementKeys.length === 0) return "";
 
-        elements.commissionList.querySelectorAll('.commission-item').forEach(item => {
-          item.addEventListener('click', () => selectCommission(item.dataset.name));
-        });
-      }
+          const completed = Array.isArray(config.completed)
+            ? config.completed.filter((branchId) => achievementKeys.includes(branchId))
+            : [];
 
-      elements.commissionCount.textContent = '共 ' + commissions.length + ' 个委托';
-    }
+          return completed.length + "/" + achievementKeys.length;
+        },
 
-    function selectCommission(name) {
-      AppState.selectedCommission = name;
-      renderCommissionList();
-      renderDetailPanel();
-    }
+        selectedBranchConfig() {
+          if (!this.selectedCommission) return null;
+          return this.branchData[this.selectedCommission] || null;
+        },
 
-    function renderDetailPanel() {
-      if (!AppState.selectedCommission || !AppState.data[AppState.selectedCommission]) {
-        renderEmptyState();
-        return;
-      }
+        selectedPartyScopes() {
+          if (!this.selectedCommission) return [];
+          return this.partyView.scopesByCommission[this.selectedCommission] || [];
+        },
 
-      const name = AppState.selectedCommission;
-      const config = AppState.data[name];
-      const branches = Object.entries(config.descriptions || {});
-      const conditions = config.conditions || {};
-      const commissionType = config.type || 'achievement';
+        selectCommission(name) {
+          this.selectedCommission = name;
+          this.ensureBranchDefault(name);
+        },
 
-      // 兜底：default 缺失或不在 descriptions 中时回填第一个分支，避免 UI 默认选中与 config 失同步
-      if (branches.length > 0 && (!config.default || !config.descriptions[config.default])) {
-        config.default = branches[0][0];
-        scheduleSave();
-      }
+        ensureBranchDefault(name) {
+          const config = this.branchData[name];
+          if (!config) return;
 
-      // 分支拆分：在 conditions 中声明的是成就分支（带滑块），其余只在下拉框
-      const achievementBranches = branches.filter(([branchId]) => conditions[branchId]);
-      const preferenceBranches = branches.filter(([branchId]) => !conditions[branchId]);
+          const branches = this.allBranches(config);
+          if (branches.length === 0) return;
 
-      // 默认分支下拉框：按 descriptions 声明顺序平铺，不分组
-      const allCompletedOptions = branches.map(([branchId, description]) => {
-        const selected = config.default === branchId ? 'selected' : '';
-        return '<option value="' + escapeHtml(branchId) + '" ' + selected + '>' + escapeHtml(description) + '</option>';
-      }).join('');
-
-      const allCompletedLabel = commissionType === 'basic'
-        ? '选择分支'
-        : (achievementBranches.length > 0 ? '全部成就达成后的默认分支' : '默认分支');
-
-      let branchesHtml = '';
-      if (commissionType === 'achievement') {
-        if (achievementBranches.length === 0) {
-          branchesHtml =
-            '<div class="section-title">成就分支</div>' +
-            '<div style="color: var(--text-tertiary); padding: 12px 0; font-size: 13px;">' +
-              '该委托暂无成就分支（conditions 为空）。<br>若需成就解锁，请在 JSON 中为对应分支添加 conditions。' +
-            '</div>';
-        } else {
-          const items = achievementBranches.map(([branchId, description]) => {
-            const isCompleted = (config.completed || []).includes(branchId);
-            const stateClass = isCompleted ? 'completed' : 'pending';
-            const stateLabel = isCompleted ? '已完成' : '未完成';
-            return '<div class="branch-item ' + (isCompleted ? 'completed' : '') + '">' +
-                     '<div class="branch-content">' +
-                       '<div class="branch-description">' + escapeHtml(description) + '</div>' +
-                     '</div>' +
-                     '<div class="branch-toggle-wrapper">' +
-                       '<span class="toggle-status-label ' + stateClass + '">' + stateLabel + '</span>' +
-                       '<div class="toggle-switch ' + stateClass + '" data-branch-id="' + escapeHtml(branchId) + '" title="点击切换状态"></div>' +
-                     '</div>' +
-                   '</div>';
-          }).join('');
-          branchesHtml = '<div class="section-title">成就分支（命中条件后永久跳过）</div><div class="branch-list">' + items + '</div>';
-        }
-      }
-
-      elements.contentArea.innerHTML =
-        '<div class="detail-panel">' +
-          '<div class="detail-header">' +
-            '<div class="detail-title">' + escapeHtml(name) + '</div>' +
-          '</div>' +
-          (config.note ?
-            '<div class="note-section">' +
-              '<div class="note-label">说明</div>' +
-              '<div class="note-content">' + config.note + '</div>' +
-            '</div>' : '') +
-          '<div class="branches-section">' +
-            branchesHtml +
-            '<div class="all-completed-section">' +
-              '<div class="all-completed-label">' + allCompletedLabel + '</div>' +
-              '<select class="all-completed-select" id="allCompletedSelect">' +
-                allCompletedOptions +
-              '</select>' +
-            '</div>' +
-          '</div>' +
-        '</div>';
-
-      // 绑定事件
-      elements.contentArea.querySelectorAll('.toggle-switch[data-branch-id]').forEach(sw => {
-        sw.addEventListener('click', () => toggleBranchState(sw.dataset.branchId));
-      });
-      const select = document.getElementById('allCompletedSelect');
-      if (select) {
-        select.addEventListener('change', e => updateAllCompleted(e.target.value));
-      }
-    }
-
-    function updateAllCompleted(branchId) {
-      const config = AppState.data[AppState.selectedCommission];
-      config.default = branchId || null;
-      scheduleSave();
-    }
-
-    function toggleBranchState(branchId) {
-      const config = AppState.data[AppState.selectedCommission];
-      if (!config.completed) config.completed = [];
-
-      const isCompleted = config.completed.includes(branchId);
-      if (isCompleted) {
-        config.completed = config.completed.filter(id => id !== branchId);
-      } else {
-        config.completed.push(branchId);
-      }
-
-      renderCommissionList();
-      renderDetailPanel();
-      scheduleSave();
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text == null ? '' : String(text);
-      return div.innerHTML;
-    }
-
-    // 应用可见性切换
-    function applyVisibility(visible) {
-      elements.appContainer.style.display = visible ? 'flex' : 'none';
-      document.body.style.backgroundColor = visible
-        ? 'rgba(0, 0, 0, 0.3)'
-        : 'rgba(0, 0, 0, 0)';
-    }
-
-    // 接收主机消息
-    window.addEventListener('DOMContentLoaded', function () {
-      init();
-
-      if (window.htmlMask) {
-        window.htmlMask.onMessage = function (message) {
-          if (message.url === '/loadConfig') {
-            const payload = message.data && message.data.data ? message.data.data : message.data;
-            AppState.data = normalizeData(payload || {});
-            AppState.loaded = true;
-            AppState.selectedCommission = null;
-            setSaveStatus('saved', '已加载');
-            renderCommissionList();
-            renderEmptyState();
-          } else if (message.url === '/toggleVisibility') {
-            const visible = message.data && message.data.visible !== false;
-            applyVisibility(visible);
+          if (!config.default || !config.descriptions[config.default]) {
+            config.default = branches[0].id;
+            this.scheduleSave();
           }
-        };
+        },
 
-        // 启动时请求加载配置
-        window.htmlMask.request('/loadConfig', {}).catch(function (err) {
-          setSaveStatus('error', '加载失败');
-          console.error('加载配置失败:', err);
-        });
-      } else {
-        setSaveStatus('error', '未在 htmlMask 环境中');
-      }
-    });
+        allBranches(config) {
+          return Object.entries((config && config.descriptions) || {}).map(([branchId, description]) => ({
+            id: branchId,
+            description,
+          }));
+        },
+
+        achievementBranches(config) {
+          const conditions = (config && config.conditions) || {};
+          const completed = Array.isArray(config && config.completed) ? config.completed : [];
+          return this.allBranches(config)
+            .filter((branch) => conditions[branch.id])
+            .map((branch) => ({
+              id: branch.id,
+              description: branch.description,
+              completed: completed.includes(branch.id),
+            }));
+        },
+
+        allCompletedLabel(config) {
+          if (!config) return "默认分支";
+          if (config.type === "basic") return "选择分支";
+          return this.achievementBranches(config).length > 0 ? "全部成就达成后的默认分支" : "默认分支";
+        },
+
+        updateAllCompleted(branchId) {
+          const config = this.selectedBranchConfig();
+          if (!config) return;
+          config.default = branchId || null;
+          this.scheduleSave();
+        },
+
+        toggleBranchState(branchId) {
+          const config = this.selectedBranchConfig();
+          if (!config) return;
+          if (!Array.isArray(config.completed)) {
+            config.completed = [];
+          }
+
+          const isCompleted = config.completed.includes(branchId);
+          config.completed = isCompleted
+            ? config.completed.filter((id) => id !== branchId)
+            : config.completed.concat(branchId);
+          this.scheduleSave();
+        },
+
+        setTeamMode(target, mode) {
+          target.teamMode = mode === "roles" ? "roles" : "teamName";
+          this.scheduleSave();
+        },
+
+        scheduleSave() {
+          this.setSaveStatus("saving", "修改中...");
+
+          if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+          }
+
+          this.saveTimer = setTimeout(() => {
+            this.saveTimer = null;
+            this.saveConfigNow().catch((err) => console.error("保存失败:", err));
+          }, 300);
+        },
+
+        async saveConfigNow() {
+          if (!window.htmlMask) {
+            this.setSaveStatus("error", "运行环境不支持保存");
+            return Promise.reject(new Error("no htmlMask"));
+          }
+
+          this.setSaveStatus("saving", "保存中...");
+          const content = JSON.stringify({
+            branches: this.branchData,
+            party: this.partyView,
+          }, null, 4);
+
+          try {
+            const response = await this.requestHtmlMask("/saveConfig", { content }, SAVE_TIMEOUT_MS, "保存超时");
+            const result = this.unwrapHtmlMaskData(response);
+            if (!result || typeof result !== "object") {
+              throw new Error("未收到保存结果");
+            }
+            if (result.status !== "ok") {
+              throw new Error(result.message || "保存失败");
+            }
+            this.setSaveStatus("saved", "已保存");
+          } catch (err) {
+            this.setSaveStatus("error", this.saveErrorText(err));
+            throw err;
+          }
+        },
+
+        async requestClose() {
+          if (!window.htmlMask) return;
+          this.closing = true;
+
+          if (this.saveTimer) {
+            clearTimeout(this.saveTimer);
+            this.saveTimer = null;
+            try {
+              await this.saveConfigNow();
+            } catch (err) {
+              console.error("关闭前保存失败:", err);
+            }
+          }
+
+          try {
+            await this.requestHtmlMask("/close", {}, SAVE_TIMEOUT_MS, "关闭超时");
+          } catch (err) {
+            console.error("关闭请求失败:", err);
+            this.closing = false;
+          }
+        },
+
+        applyVisibility(visible) {
+          this.visible = visible;
+          document.body.style.backgroundColor = visible
+            ? "rgba(0, 0, 0, 0.3)"
+            : "rgba(0, 0, 0, 0)";
+        },
+
+        openStrategyPicker(target, field) {
+          this.strategyPicker.open = true;
+          this.strategyPicker.loading = true;
+          this.strategyPicker.error = "";
+          this.strategyPicker.target = target;
+          this.strategyPicker.field = field;
+          this.strategyPicker.selected = typeof target[field] === "string" && target[field].trim()
+            ? target[field].trim()
+            : DEFAULT_STRATEGY;
+          this.strategyPicker.rootNodes = [];
+          this.strategyPicker.rows = [];
+          this.loadStrategyTree();
+        },
+
+        closeStrategyPicker() {
+          this.strategyPicker.open = false;
+          this.strategyPicker.loading = false;
+          this.strategyPicker.error = "";
+        },
+
+        async loadStrategyTree() {
+          if (!window.htmlMask) {
+            this.strategyPicker.loading = false;
+            this.strategyPicker.error = "当前环境不支持读取策略文件";
+            return;
+          }
+
+          try {
+            const response = await this.requestHtmlMask("/loadStrategyTree", {}, SAVE_TIMEOUT_MS, "加载策略列表超时");
+            const payload = response && response.data ? response.data : response;
+            const result = this.unwrapHtmlMaskData(payload);
+            if (result && result.error) {
+              throw new Error(result.error);
+            }
+            this.strategyPicker.rootNodes = this.prepareStrategyNodes((result && result.children) || []);
+            this.refreshStrategyRows();
+          } catch (err) {
+            this.strategyPicker.error = err && err.message ? err.message : "加载策略列表失败";
+          } finally {
+            this.strategyPicker.loading = false;
+          }
+        },
+
+        prepareStrategyNodes(entries) {
+          return (Array.isArray(entries) ? entries : [])
+            .filter((entry) => entry && typeof entry.name === "string" && typeof entry.type === "string")
+            .map((entry) => ({
+              path: String(entry.name).replace(/\\/g, "/"),
+              type: entry.type === "folder" ? "folder" : "file",
+              expanded: false,
+              loaded: false,
+              children: [],
+            }))
+            .sort((a, b) => {
+              if (a.type !== b.type) {
+                return a.type === "folder" ? -1 : 1;
+              }
+              return a.path.localeCompare(b.path, "zh-CN");
+            });
+        },
+
+        refreshStrategyRows() {
+          const rows = [];
+          const visit = (nodes, depth) => {
+            nodes.forEach((node) => {
+              rows.push({
+                key: node.path,
+                node,
+                depth,
+              });
+              if (node.type === "folder" && node.expanded) {
+                visit(node.children || [], depth + 1);
+              }
+            });
+          };
+          visit(this.strategyPicker.rootNodes, 0);
+          this.strategyPicker.rows = rows;
+        },
+
+        async toggleStrategyFolder(node) {
+          if (!node || node.type !== "folder") return;
+
+          node.expanded = !node.expanded;
+          this.refreshStrategyRows();
+          if (!node.expanded || node.loaded) {
+            return;
+          }
+
+          try {
+            const response = await this.requestHtmlMask("/loadStrategyChildren", { path: node.path }, SAVE_TIMEOUT_MS, "读取策略目录超时");
+            const payload = response && response.data ? response.data : response;
+            const result = this.unwrapHtmlMaskData(payload);
+            if (result && result.error) {
+              throw new Error(result.error);
+            }
+            node.children = this.prepareStrategyNodes((result && result.children) || []);
+            node.loaded = true;
+          } catch (err) {
+            node.expanded = false;
+            this.strategyPicker.error = err && err.message ? err.message : "读取策略目录失败";
+          } finally {
+            this.refreshStrategyRows();
+          }
+        },
+
+        chooseStrategy(path) {
+          const target = this.strategyPicker.target;
+          const field = this.strategyPicker.field;
+          if (!target || !field) return;
+
+          const normalized = this.normalizeStrategyValue(path);
+          target[field] = normalized;
+          this.strategyPicker.selected = normalized;
+          this.scheduleSave();
+          this.closeStrategyPicker();
+        },
+
+        applyDefaultStrategy() {
+          const target = this.strategyPicker.target;
+          const field = this.strategyPicker.field;
+          if (!target || !field) return;
+
+          target[field] = DEFAULT_STRATEGY;
+          this.strategyPicker.selected = DEFAULT_STRATEGY;
+          this.scheduleSave();
+          this.closeStrategyPicker();
+        },
+
+        resetStrategy(target, field) {
+          if (!target || !field) return;
+          target[field] = DEFAULT_STRATEGY;
+          this.scheduleSave();
+        },
+
+        normalizeStrategyValue(path) {
+          if (path === DEFAULT_STRATEGY) return DEFAULT_STRATEGY;
+          return String(path || "")
+            .replace(/\\/g, "/")
+            .replace(/\.(txt|json)$/i, "");
+        },
+
+        strategyNodeLabel(node) {
+          const parts = String(node.path || "").split("/");
+          return parts[parts.length - 1] || node.path;
+        },
+
+        isStrategyRowSelected(node) {
+          if (!node || node.type !== "file") return false;
+          return this.normalizeStrategyValue(node.path) === this.strategyPicker.selected;
+        },
+      };
+    }
   </script>
 </body>
 </html>
