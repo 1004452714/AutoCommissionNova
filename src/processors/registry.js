@@ -3,6 +3,7 @@
  * 管理所有步骤处理器的注册、查找和执行
  */
 import { shouldExecuteStepByDesc } from "./commission-desc-utils.js";
+import { shouldExecuteStepByLoc } from "./commission-loc-utils.js";
 
 export class StepProcessorRegistry {
     constructor() {
@@ -22,7 +23,7 @@ export class StepProcessorRegistry {
 
     /**
      * 处理步骤
-     * @param {Object} step - 步骤定义 { type, data?, note?, desc?, retry?, retryOn? }
+     * @param {Object} step - 步骤定义 { type, data?, note?, desc?, loc?, retry?, retryOn? }
      * @param {Object} context - 执行上下文
      */
     async process(step, context) {
@@ -33,6 +34,9 @@ export class StepProcessorRegistry {
         const entry = this.processors[step.type];
         if (entry) {
             if (!(await shouldExecuteStepByDesc(step, context))) {
+                return;
+            }
+            if (!(await shouldExecuteStepByLoc(step, context))) {
                 return;
             }
             await entry.handler(step, context);

@@ -7,12 +7,14 @@
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
  *   (3) 用户分支选择 的 step.data[branchKey] 嵌套 step 递归校验
  *   (4) 执行子流程 / 委托描述检测 引用的子流程文件递归校验
+ *   (5) 通用条件字段 step.loc 是否为 [x, y] 或 [x, y, tolerance]
  *
  * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
  */
 import { PATHS } from "../config/index.js";
 import { validateSchema } from "../processors/define-step.js";
+import { parseStepLoc } from "../processors/commission-loc-utils.js";
 import { loadNpcProcessFile, loadBasicProcess } from "./index.js";
 import { probeRegistry } from "../probes/index.js";
 import { loadAllBranchConfigs } from "./branch-config.js";
@@ -129,6 +131,8 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
             continue;
         }
 
+        errors += validateCommonStepFields(processPath, i + 1, step);
+
         const stepType = step.type;
         if (!registry.has(stepType)) {
             log.error("[{path}] 步骤 #{n} 未知 type: {type}", processPath, i + 1, stepType);
@@ -193,6 +197,18 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
             }
         }
     }
+    return errors;
+}
+
+function validateCommonStepFields(processPath, stepNumber, step) {
+    let errors = 0;
+
+    const locResult = parseStepLoc(step.loc);
+    if (!locResult.ok) {
+        log.error("[{path}] 步骤 #{n} loc 校验失败: {error}", processPath, stepNumber, locResult.error);
+        errors++;
+    }
+
     return errors;
 }
 
