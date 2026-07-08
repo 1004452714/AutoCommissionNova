@@ -1,8 +1,7 @@
 [
     {
         "type": "地图追踪",
-        "data": "_path.json",
-        "note": "执行路径追踪"
+        "data": "_path.json"
     },
     {
         "type": "摧毁哨塔",

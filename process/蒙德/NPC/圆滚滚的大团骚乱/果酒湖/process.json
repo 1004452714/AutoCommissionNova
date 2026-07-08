@@ -10,8 +10,7 @@
             "npcWhiteList": [
                 "阿瑟尔"
             ]
-        },
-        "note": "与NPC对话"
+        }
     },
     {
         "type": "切换队伍",
