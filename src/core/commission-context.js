@@ -103,7 +103,12 @@ export async function runStepsWithContext(context, options = {}) {
             topLevelCounter++;
             stepLabel = String(topLevelCounter);
         }
-        log.info("执行流程步骤 {step}: {type}", stepLabel, step.type);
+        const stepNote = typeof step.note === "string" ? step.note.trim() : "";
+        if (stepNote) {
+            log.info("执行流程步骤 {step}: {type} - {note}", stepLabel, step.type, stepNote);
+        } else {
+            log.info("执行流程步骤 {step}: {type}", stepLabel, step.type);
+        }
         context.currentIndex = i;
         context.currentStepLabel = stepLabel;
 
