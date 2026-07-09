@@ -12,10 +12,13 @@
 
 import { isCancellationError } from "../utils/error-utils.js";
 import { createBranchConfigView, getBranchConfigUids, loadAllBranchConfigs, mergeBranchConfigView, writeAllBranchConfigs } from "../loaders/branch-config.js";
+import { loadGlobalConfig, writeGlobalConfig } from "../loaders/global-config.js";
 import { createPartyConfigView, writePartyConfigView } from "../loaders/party-config.js";
 import { scanCommissionScopes } from "../loaders/process-scope.js";
 import { loadKnownCommissionUids } from "../data/index.js";
 import { getCurrentUid } from "../utils/account-utils.js";
+import { PATHS } from "../config/index.js";
+import { RO } from "../vision/index.js";
 
 const HTML_PATH = "commission-config-mask.html";
 const WINDOW_TAG = "commission-config";
@@ -99,7 +102,9 @@ export async function openCommissionConfigEditor() {
     log.info("委托配置面板已打开,按 ~ 键切换显示,点击关闭按钮继续主流程");
 
     const initialBranchConfig = loadAllBranchConfigs();
+    const initialGlobalConfig = loadGlobalConfig();
     const knownUids = Array.from(new Set([
+        ...(initialGlobalConfig.uids || []),
         ...getBranchConfigUids(initialBranchConfig),
         ...loadKnownCommissionUids(),
     ]));
@@ -168,9 +173,10 @@ export async function openCommissionConfigEditor() {
 
             if (msg.url === "/loadConfig") {
                 try {
+                    const globalView = loadGlobalConfig();
                     const branchView = createBranchConfigView(loadAllBranchConfigs(), accountUid);
                     const partyView = createPartyConfigView(scanCommissionScopes().byName);
-                    sendHtmlMaskResponse(windowId, "/loadConfig", msg.requestId, { branches: branchView, party: partyView });
+                    sendHtmlMaskResponse(windowId, "/loadConfig", msg.requestId, { global: globalView, branches: branchView, party: partyView });
                     log.debug("已发送委托配置到面板（{n} 个分支配置委托）", Object.keys(branchView).length);
                 } catch (err) {
                     if (isCancellationError(err)) {
@@ -178,7 +184,7 @@ export async function openCommissionConfigEditor() {
                         break;
                     }
                     log.warn("读取委托配置失败: {0}", err.message);
-                    sendHtmlMaskResponse(windowId, "/loadConfig", msg.requestId, { branches: {}, party: { global: {}, scopesByCommission: {} } });
+                    sendHtmlMaskResponse(windowId, "/loadConfig", msg.requestId, { global: {}, branches: {}, party: { global: {}, scopesByCommission: {} } });
                 }
             } else if (msg.url === "/saveConfig") {
                 let status = "ok";
@@ -193,14 +199,21 @@ export async function openCommissionConfigEditor() {
                         throw new Error("content 必须解析为对象");
                     }
 
-                    if (viewComposite.branches || viewComposite.party) {
+                    if (viewComposite.global || viewComposite.branches || viewComposite.party) {
+                        if (Object.prototype.hasOwnProperty.call(viewComposite, "global")) {
+                            writeGlobalConfig(viewComposite.global || {});
+                        }
                         const branchComposite = mergeBranchConfigView(
                             viewComposite.branches || {},
                             accountUid,
                             loadAllBranchConfigs()
                         );
-                        writeAllBranchConfigs(branchComposite);
-                        writePartyConfigView(viewComposite.party || {});
+                        if (Object.prototype.hasOwnProperty.call(viewComposite, "branches")) {
+                            writeAllBranchConfigs(branchComposite);
+                        }
+                        if (Object.prototype.hasOwnProperty.call(viewComposite, "party")) {
+                            writePartyConfigView(viewComposite.party || {});
+                        }
                         log.debug("委托配置已保存（{n} 个分支配置委托）", Object.keys(branchComposite).length);
                     } else {
                         const legacyComposite = mergeBranchConfigView(viewComposite, accountUid, loadAllBranchConfigs());
@@ -260,6 +273,89 @@ export async function openCommissionConfigEditor() {
                 }
                 if (msg.requestId) {
                     sendHtmlMaskResponse(windowId, "/loadStrategyChildren", msg.requestId, response);
+                }
+            } else if (msg.url === "/locateScope") {
+                const response = { status: "ok", message: "", target: null };
+                try {
+                    if (htmlMask.exists(windowId)) {
+                        htmlMask.setClickThrough(windowId, true);
+                        htmlMask.send(windowId, "/toggleVisibility", JSON.stringify({ visible: false }));
+                        isVisible = false;
+                    }
+
+                    const scope = msg.data && msg.data.scope;
+                    const requiredFields = ["country", "typeDir", "commissionName", "locationDir"];
+                    for (const field of requiredFields) {
+                        if (!scope || typeof scope[field] !== "string" || !scope[field].trim()) {
+                            throw new Error(`定位缺少 ${field} 字段`);
+                        }
+                    }
+
+                    const country = scope.country.trim();
+                    const processDir = `${PATHS.PROCESS_ROOT}/${country}/${scope.typeDir.trim()}/${scope.commissionName.trim()}/${scope.locationDir.trim()}`;
+                    const processPath = `${processDir}/process.json`;
+                    if (!file.isFile(processPath)) {
+                        throw new Error(`找不到流程文件: ${processPath}`);
+                    }
+
+                    const steps = JSON.parse(file.readTextSync(processPath));
+                    if (!Array.isArray(steps)) {
+                        throw new Error(`流程文件根节点必须是数组: ${processPath}`);
+                    }
+
+                    const mapStep = steps.find((step) => step && step.type === "地图追踪");
+                    if (!mapStep || typeof mapStep.data !== "string" || !mapStep.data.trim()) {
+                        throw new Error(`流程中没有有效地图追踪步骤: ${processPath}`);
+                    }
+
+                    const mapDataPath = String(mapStep.data).replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+/g, "/");
+                    if (!mapDataPath || mapDataPath.startsWith("/") || mapDataPath.includes("../") || /^[A-Za-z]:\//.test(mapDataPath)) {
+                        throw new Error(`地图追踪文件路径必须是当前流程目录下的相对路径: ${mapStep.data}`);
+                    }
+
+                    const mapPath = `${processDir}/${mapDataPath}`;
+                    if (!file.isFile(mapPath)) {
+                        throw new Error(`找不到地图追踪文件: ${mapPath}`);
+                    }
+
+                    const mapData = JSON.parse(file.readTextSync(mapPath));
+                    const positions = Array.isArray(mapData.positions) ? mapData.positions : [];
+                    const target = positions
+                        .filter((pos) => pos && pos.type !== "orientation" && Number.isFinite(Number(pos.id)) && Number.isFinite(Number(pos.x)) && Number.isFinite(Number(pos.y)))
+                        .sort((a, b) => Number(b.id) - Number(a.id))[0];
+                    if (!target) {
+                        throw new Error(`地图追踪文件没有有效目标点: ${mapPath}`);
+                    }
+
+                    const x = Number(target.x);
+                    const y = Number(target.y);
+                    const page = new BvPage();
+                    if (!page.locator(RO.inMap).isExist()) {
+                        await genshin.returnMainUi();
+                        keyPress("M");
+                        await sleep(2000);
+                    }
+
+                    if (country) {
+                        await genshin.moveMapTo(x, y, country);
+                    } else {
+                        await genshin.moveMapTo(x, y);
+                    }
+                    await genshin.setBigMapZoomLevel(1.0);
+                    response.target = { x, y, country, processPath, mapPath };
+                    log.debug("已定位委托流程: {path} -> ({x}, {y})", response.target.mapPath, response.target.x, response.target.y);
+                } catch (err) {
+                    if (isCancellationError(err)) {
+                        htmlMask.close(windowId);
+                        break;
+                    }
+                    response.status = "error";
+                    response.message = err.message;
+                    log.info("定位委托流程失败: {0}", "暂不支持该委托定位");
+                    log.debug("定位委托流程失败: {0}", err.message);
+                }
+                if (msg.requestId) {
+                    sendHtmlMaskResponse(windowId, "/locateScope", msg.requestId, response);
                 }
             } else if (msg.url === "/close") {
                 try {

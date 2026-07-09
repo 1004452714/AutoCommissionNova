@@ -87,7 +87,7 @@ export function getBranchCompletedByUid(config, accountUid) {
 /**
  * 收集分支配置中已经存在的账号 UID
  *
- * 用于 settings.uid 未配置时给 getCurrentUid 提供候选，避免 UID OCR 抖动
+ * 用于全局 UID 未配置时给 getCurrentUid 提供候选，避免 UID OCR 抖动
  * 导致同一个账号的 completedByUid 被写到多个相近 UID 下。
  *
  * @param {Object} composite - { commissionName: config }

@@ -8,8 +8,6 @@
 
 const DEFAULT_SETTING = {
     skipRecognition: false,
-    prepare: true,
-    uid: "",
     runMode: "默认",
     showConfigEditor: true,
 };
@@ -25,8 +23,6 @@ export function getSetting() {
     try {
         cachedSetting = {
             skipRecognition: settings.skipRecognition || false,
-            prepare: settings.prepare || false,
-            uid: settings.uid || "",
             runMode: settings.runMode || "默认",
             // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
             showConfigEditor: settings.showConfigEditor !== false,

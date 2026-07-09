@@ -7,6 +7,7 @@ import { loadSupportedCommissions, saveCommissionsData } from "../data/index.js"
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
 import { executeCommissionTracking } from "./commission-executor.js";
 import { enterCommissionScreen } from "../vision/index.js";
+import { loadGlobalConfig } from "../loaders/global-config.js";
 import { loadGlobalPartyConfig } from "../loaders/party-config.js";
 
 /**
@@ -54,8 +55,8 @@ export async function prepareForCommission() {
     log.info("开始执行委托前准备");
     try {
         await genshin.returnMainUi();
-        const setting = getSetting();
-        if (!setting.prepare) {
+        const globalConfig = loadGlobalConfig();
+        if (!globalConfig.skipSafeTeleport) {
             await genshin.tpToStatueOfTheSeven();
         }
         const partyConfig = loadGlobalPartyConfig();
@@ -80,8 +81,8 @@ export async function executeMainProcess(stepRegistry) {
 
         await executeCommissionTracking(stepRegistry);
 
-        const setting = getSetting();
-        if (!setting.prepare) {
+        const globalConfig = loadGlobalConfig();
+        if (!globalConfig.skipSafeTeleport) {
             log.info("前往安全地点");
             await genshin.tpToStatueOfTheSeven();
         }

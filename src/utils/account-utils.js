@@ -1,6 +1,6 @@
 import { THRESHOLDS } from "../config/index.js";
+import { loadGlobalConfig } from "../loaders/global-config.js";
 import { calculateSimilarity } from "../recognition/text-similarity.js";
-import { getSetting } from "./settings-utils.js";
 
 let cachedCurrentUid = "";
 
@@ -13,8 +13,7 @@ function normalizeUidCandidates(candidates) {
 }
 
 export function getConfiguredUids() {
-    const setting = getSetting();
-    return normalizeUidCandidates(String(setting.uid || "").match(/\d+/g) || []);
+    return normalizeUidCandidates(loadGlobalConfig().uids || []);
 }
 
 export function matchUidCandidate(recognizedUid, candidates) {

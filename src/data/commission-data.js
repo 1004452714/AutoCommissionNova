@@ -11,7 +11,7 @@
  *   }
  * }
  *
- * 未配置 settings.uid 时，当前 UID 会先与 accounts 中已有 UID 做相似度匹配，
+ * 未配置全局 UID 时，当前 UID 会先与 accounts 中已有 UID 做相似度匹配，
  * 避免 genshin.uid() OCR 抖动导致同一账号创建多个账号槽。
  */
 import { PATHS } from "../config/index.js";
@@ -183,7 +183,7 @@ function getKnownAccountUids(data) {
 /**
  * 读取当前委托数据文件中的账号 UID 列表
  *
- * 只暴露 UID 列表，供其它模块在未配置 settings.uid 时复用已有账号槽做 OCR 纠错。
+ * 只暴露 UID 列表，供其它模块在未配置全局 UID 时复用已有账号槽做 OCR 纠错。
  *
  * @returns {string[]}
  */
@@ -226,8 +226,8 @@ function ensureAccountData(data, uid) {
  * 加载当前 UID 的委托数据
  *
  * 当前 UID 解析会接收已有账号槽 UID 作为候选：
- * - settings.uid 有配置时优先匹配配置 UID
- * - settings.uid 未配置时匹配已有账号槽，未命中才使用识别 UID 创建新槽
+ * - 全局 UID 有配置时优先匹配配置 UID
+ * - 全局 UID 未配置时匹配已有账号槽，未命中才使用识别 UID 创建新槽
  *
  * @returns {Promise<{uid: string, data: Object, account: Object}|null>}
  */

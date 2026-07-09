@@ -23,6 +23,8 @@ import { PATHS, UI_REGIONS, DIALOG_REGIONS, COMMISSION_STATUS_REGIONS } from "..
 const _statics = {
     /** 主界面派蒙图标（左上角 500x500 区域内匹配） */
     inMainUI:            staticDef({ path: PATHS.PAIMON_MENU_IMAGE, region: UI_REGIONS.PAIMON_MENU_SEARCH }),
+    /** 大地图界面标识 */
+    inMap:               staticDef({ path: PATHS.IN_MAP_IMAGE, region: [19, 425, 55, 230] }),
     /** 对话气泡图标（左上角对话指示器） */
     inTalk:              staticDef({ path: PATHS.INTALK_IMAGE, region: [254, 19, 80, 52] }),
     /** 大地图 - 选中委托后的"追踪"按钮 */
@@ -50,6 +52,7 @@ const _statics = {
 /**
  * @typedef {Object} RONamespace
  * @property {Object} inMainUI                                                  主界面派蒙图标
+ * @property {Object} inMap                                                     大地图界面标识
  * @property {Object} inTalk                                                    对话气泡图标
  * @property {Object} track                                                     大地图 - 委托追踪按钮
  * @property {Object} inBag                                                     背包已打开标识

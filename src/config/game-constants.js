@@ -100,6 +100,7 @@ export const PATHS = {
     TALK_ICON_IMAGE: "Data/RecognitionObject/TalkIcon.png",
     F_ICON_IMAGE: "Data/RecognitionObject/F.png",
     PAIMON_MENU_IMAGE: "Data/RecognitionObject/paimon_menu.png",
+    IN_MAP_IMAGE: "Data/RecognitionObject/inMap.png",
     INTALK_IMAGE: "Data/RecognitionObject/InTalk.png",
     REPLACE_IMAGE: "Data/RecognitionObject/更换.png",
     JOIN_IMAGE: "Data/RecognitionObject/加入.png",
@@ -116,6 +117,7 @@ export const PATHS = {
     AVATAR_TEMPLATE_DIR: "Data/RecognitionObject/avatar",
     SWITCH_ROLE_SLOT_DIR: "Data/RecognitionObject/switch_role",
     CONFIG_BASE: "process/config",
+    GLOBAL_CONFIG: "process/config/global.json",
     PARTY_CONFIG_DIR: "process/config/party",
     /** 委托分支配置目录。每个委托一个文件：{委托名}.json
      *  内存视图（branchConfigCache / UI 编辑器）是合并后的 { 委托名: config }，
