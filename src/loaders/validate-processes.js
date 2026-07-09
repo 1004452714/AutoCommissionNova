@@ -367,6 +367,10 @@ function validatePartyModeConfig(config, filePath, fieldName, { allowStrategy })
         log.error("[{path}] {field}.teamName 必须是字符串", filePath, fieldName);
         errors++;
     }
+    if (config.customTeamName !== undefined && typeof config.customTeamName !== "string") {
+        log.error("[{path}] {field}.customTeamName 必须是字符串", filePath, fieldName);
+        errors++;
+    }
     if (config.roles !== undefined) {
         if (!config.roles || typeof config.roles !== "object" || Array.isArray(config.roles)) {
             log.error("[{path}] {field}.roles 必须是对象", filePath, fieldName);
@@ -431,6 +435,14 @@ function validatePartyConfig() {
             }
             if (config.elementTeamName !== undefined && typeof config.elementTeamName !== "string") {
                 log.error("[{path}] elementTeamName 必须是字符串", filePath);
+                errors++;
+            }
+            if (config.customBattleTeamName !== undefined && typeof config.customBattleTeamName !== "string") {
+                log.error("[{path}] customBattleTeamName 必须是字符串", filePath);
+                errors++;
+            }
+            if (config.customElementTeamName !== undefined && typeof config.customElementTeamName !== "string") {
+                log.error("[{path}] customElementTeamName 必须是字符串", filePath);
                 errors++;
             }
             if (config.battleStrategy !== undefined && typeof config.battleStrategy !== "string") {

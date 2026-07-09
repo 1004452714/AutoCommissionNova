@@ -934,6 +934,16 @@
                   <input class="text-input" type="text" x-model="partyView.global.elementTeamName" @input="scheduleSave()" placeholder="输入元素采集队伍名">
                 </label>
 
+                <label class="field">
+                  <span class="field-label">自定义战斗队伍名称</span>
+                  <input class="text-input" type="text" x-model="partyView.global.customBattleTeamName" @input="scheduleSave()" placeholder="角色模式承载队伍名">
+                </label>
+
+                <label class="field">
+                  <span class="field-label">自定义元素采集队伍名称</span>
+                  <input class="text-input" type="text" x-model="partyView.global.customElementTeamName" @input="scheduleSave()" placeholder="角色模式承载队伍名">
+                </label>
+
                 <label class="field field-wide">
                   <span class="field-label">战斗策略</span>
                   <div class="input-row">
@@ -993,13 +1003,19 @@
                                   </template>
 
                                   <template x-if="scope.config.battle.teamMode === 'roles'">
-                                    <div class="role-grid">
-                                      <template x-for="slot in roleSlots" :key="scope.key + '-battle-' + slot">
-                                        <label class="field">
-                                          <span class="field-label" x-text="'角色 ' + slot"></span>
-                                          <input class="text-input" type="text" x-model="scope.config.battle.roles[slot]" @input="scheduleSave()" :placeholder="'角色 ' + slot">
-                                        </label>
-                                      </template>
+                                    <div>
+                                      <label class="field">
+                                        <span class="field-label">自定义战斗队伍名称</span>
+                                        <input class="text-input" type="text" x-model="scope.config.battle.customTeamName" @input="scheduleSave()" placeholder="留空使用全局自定义战斗队">
+                                      </label>
+                                      <div class="role-grid">
+                                        <template x-for="slot in roleSlots" :key="scope.key + '-battle-' + slot">
+                                          <label class="field">
+                                            <span class="field-label" x-text="'角色 ' + slot"></span>
+                                            <input class="text-input" type="text" x-model="scope.config.battle.roles[slot]" @input="scheduleSave()" :placeholder="'角色 ' + slot">
+                                          </label>
+                                        </template>
+                                      </div>
                                     </div>
                                   </template>
 
@@ -1044,13 +1060,19 @@
                                   </template>
 
                                   <template x-if="scope.config.collect.teamMode === 'roles'">
-                                    <div class="role-grid">
-                                      <template x-for="slot in roleSlots" :key="scope.key + '-collect-' + slot">
-                                        <label class="field">
-                                          <span class="field-label" x-text="'角色 ' + slot"></span>
-                                          <input class="text-input" type="text" x-model="scope.config.collect.roles[slot]" @input="scheduleSave()" :placeholder="'角色 ' + slot">
-                                        </label>
-                                      </template>
+                                    <div>
+                                      <label class="field">
+                                        <span class="field-label">自定义元素采集队伍名称</span>
+                                        <input class="text-input" type="text" x-model="scope.config.collect.customTeamName" @input="scheduleSave()" placeholder="留空使用全局自定义元素采集队">
+                                      </label>
+                                      <div class="role-grid">
+                                        <template x-for="slot in roleSlots" :key="scope.key + '-collect-' + slot">
+                                          <label class="field">
+                                            <span class="field-label" x-text="'角色 ' + slot"></span>
+                                            <input class="text-input" type="text" x-model="scope.config.collect.roles[slot]" @input="scheduleSave()" :placeholder="'角色 ' + slot">
+                                          </label>
+                                        </template>
+                                      </div>
                                     </div>
                                   </template>
                                 </div>
@@ -1142,6 +1164,8 @@
           global: {
             battleTeamName: "",
             elementTeamName: "",
+            customBattleTeamName: "",
+            customElementTeamName: "",
             battleStrategy: DEFAULT_STRATEGY,
           },
           scopesByCommission: {},
@@ -1290,6 +1314,8 @@
           return {
             battleTeamName: typeof next.battleTeamName === "string" ? next.battleTeamName.trim() : "",
             elementTeamName: typeof next.elementTeamName === "string" ? next.elementTeamName.trim() : "",
+            customBattleTeamName: typeof next.customBattleTeamName === "string" ? next.customBattleTeamName.trim() : "",
+            customElementTeamName: typeof next.customElementTeamName === "string" ? next.customElementTeamName.trim() : "",
             battleStrategy: typeof next.battleStrategy === "string" && next.battleStrategy.trim()
               ? next.battleStrategy.trim()
               : DEFAULT_STRATEGY,
@@ -1347,6 +1373,7 @@
             mode: next.mode === "custom" ? "custom" : "global",
             teamMode: next.teamMode === "roles" ? "roles" : "teamName",
             teamName: typeof next.teamName === "string" ? next.teamName.trim() : "",
+            customTeamName: typeof next.customTeamName === "string" ? next.customTeamName.trim() : "",
             roles: this.normalizeRoles(next.roles),
           };
         },

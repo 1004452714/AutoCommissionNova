@@ -1,15 +1,5 @@
 [
     {
-        "name": "team",
-        "type": "input-text",
-        "label": "战斗的队伍名称（必填）"
-    },
-    {
-        "name": "elementTeam",
-        "type": "input-text",
-        "label": "元素采集的队伍名称（必填）"
-    },
-    {
         "name": "uid",
         "type": "input-text",
         "label": "账号UID（多个UID可用非数字字符分隔）"

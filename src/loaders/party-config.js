@@ -1,6 +1,5 @@
 import { PATHS } from "../config/index.js";
 import { buildCommissionScope, buildCommissionScopeFromContext } from "./process-scope.js";
-import { getSetting } from "../utils/settings-utils.js";
 
 export const DEFAULT_BATTLE_STRATEGY = "根据队伍自动选择";
 
@@ -23,6 +22,7 @@ function normalizeTeamSelectionConfig(config, fallbackMode = "global") {
         mode: next.mode === "custom" ? "custom" : fallbackMode,
         teamMode: next.teamMode === "roles" ? "roles" : "teamName",
         teamName: typeof next.teamName === "string" ? next.teamName.trim() : "",
+        customTeamName: typeof next.customTeamName === "string" ? next.customTeamName.trim() : "",
         roles: normalizeRoles(next.roles),
     };
 }
@@ -39,14 +39,19 @@ function normalizeBattleScopeConfig(config, fallbackMode = "global") {
 
 export function normalizeGlobalPartyConfig(config) {
     const next = isPlainObject(config) ? { ...config } : {};
-    const setting = getSetting();
     return {
         battleTeamName: typeof next.battleTeamName === "string" && next.battleTeamName.trim()
             ? next.battleTeamName.trim()
-            : (setting.team || ""),
+            : "",
         elementTeamName: typeof next.elementTeamName === "string" && next.elementTeamName.trim()
             ? next.elementTeamName.trim()
-            : (setting.elementTeam || ""),
+            : "",
+        customBattleTeamName: typeof next.customBattleTeamName === "string" && next.customBattleTeamName.trim()
+            ? next.customBattleTeamName.trim()
+            : "",
+        customElementTeamName: typeof next.customElementTeamName === "string" && next.customElementTeamName.trim()
+            ? next.customElementTeamName.trim()
+            : "",
         battleStrategy: typeof next.battleStrategy === "string" && next.battleStrategy.trim()
             ? next.battleStrategy.trim()
             : DEFAULT_BATTLE_STRATEGY,
@@ -100,6 +105,7 @@ function hasRoleValue(roles) {
 
 function hasTeamSelectionValue(config) {
     return (typeof config.teamName === "string" && config.teamName.trim())
+        || (typeof config.customTeamName === "string" && config.customTeamName.trim())
         || hasRoleValue(config.roles);
 }
 
@@ -183,6 +189,7 @@ export function resolvePartySelection(configBundle, channel) {
             return {
                 mode: "teamName",
                 teamName: globalConfig.elementTeamName || "",
+                customTeamName: globalConfig.customElementTeamName || "",
                 roles: {},
                 strategy: "",
             };
@@ -190,15 +197,21 @@ export function resolvePartySelection(configBundle, channel) {
         return {
             mode: "teamName",
             teamName: globalConfig.battleTeamName || "",
+            customTeamName: globalConfig.customBattleTeamName || "",
             roles: {},
             strategy: globalConfig.battleStrategy || DEFAULT_BATTLE_STRATEGY,
         };
     }
 
+    const fallbackCustomTeamName = channel === "collect"
+        ? (globalConfig.customElementTeamName || "")
+        : (globalConfig.customBattleTeamName || "");
+
     if (config.teamMode === "roles") {
         return {
             mode: "roles",
             teamName: "",
+            customTeamName: config.customTeamName || fallbackCustomTeamName,
             roles: selectRoles(config.roles),
             strategy: channel === "battle" ? (config.strategy || DEFAULT_BATTLE_STRATEGY) : "",
         };
@@ -207,6 +220,7 @@ export function resolvePartySelection(configBundle, channel) {
     return {
         mode: "teamName",
         teamName: config.teamName || "",
+        customTeamName: config.customTeamName || fallbackCustomTeamName,
         roles: {},
         strategy: channel === "battle" ? (config.strategy || DEFAULT_BATTLE_STRATEGY) : "",
     };
@@ -240,8 +254,7 @@ export function writePartyConfigView(view) {
     }
 
     const scopesByCommission = isPlainObject(view.scopesByCommission) ? view.scopesByCommission : {};
-    const globalPath = getPartyGlobalConfigPath();
-    let shouldWriteGlobal = file.isFile(globalPath) || file.isFolder(PATHS.PARTY_CONFIG_DIR);
+    let shouldWriteGlobal = isPlainObject(view.global);
     const pendingWrites = [];
 
     for (const scopeList of Object.values(scopesByCommission)) {

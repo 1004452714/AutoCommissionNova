@@ -7,6 +7,7 @@ import { loadSupportedCommissions, saveCommissionsData } from "../data/index.js"
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
 import { executeCommissionTracking } from "./commission-executor.js";
 import { enterCommissionScreen } from "../vision/index.js";
+import { loadGlobalPartyConfig } from "../loaders/party-config.js";
 
 /**
  * 委托识别主函数
@@ -57,9 +58,10 @@ export async function prepareForCommission() {
         if (!setting.prepare) {
             await genshin.tpToStatueOfTheSeven();
         }
-        if (setting.team) {
-            log.info("切换至队伍 {team}", setting.team);
-            await genshin.switchParty(setting.team);
+        const partyConfig = loadGlobalPartyConfig();
+        if (partyConfig.battleTeamName) {
+            log.info("切换至全局战斗队伍 {team}", partyConfig.battleTeamName);
+            await genshin.switchParty(partyConfig.battleTeamName);
         }
     } catch (error) {
         log.error("执行委托前准备时出错: {error}", error.message);

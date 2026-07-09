@@ -9,8 +9,6 @@
 const DEFAULT_SETTING = {
     skipRecognition: false,
     prepare: true,
-    team: "",
-    elementTeam: "",
     uid: "",
     runMode: "默认",
     showConfigEditor: true,
@@ -28,8 +26,6 @@ export function getSetting() {
         cachedSetting = {
             skipRecognition: settings.skipRecognition || false,
             prepare: settings.prepare || false,
-            team: settings.team || "",
-            elementTeam: settings.elementTeam || "",
             uid: settings.uid || "",
             runMode: settings.runMode || "默认",
             // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
