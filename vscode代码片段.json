@@ -295,19 +295,18 @@
     "description": "自动任务 — disable 会清空所有实时任务（不分 taskType）"
   },
 
-  "AutoCommission: 定时自动战斗": {
-    "prefix": "ac-定时自动战斗-autofight",
+  "AutoCommission: 自动战斗": {
+    "prefix": "ac-自动战斗-autofight",
     "body": [
       "{",
-      "  \"type\": \"定时自动战斗\",",
+      "  \"type\": \"自动战斗\",",
       "  \"data\": {",
-      "    \"timeout\": ${1:30000},",
-      "    \"intervals\": ${2:5000}",
+      "    \"timeout\": ${1:120}",
       "  },",
-      "  \"note\": \"${3:启动自动战斗并定时检测结束}\"",
+      "  \"note\": \"${2:执行自动战斗}\"",
       "},"
     ],
-    "description": "定时自动战斗 — 启用 AutoFight，按 intervals 检测战斗是否结束，timeout 后强制收兵"
+    "description": "自动战斗 — 调用 BGI RunAutoFightTask，timeout 单位秒"
   },
 
   "AutoCommission: 切换队伍 - 战斗": {
@@ -361,6 +360,25 @@
       "},"
     ],
     "description": "切换角色 — 在队伍配置界面一次切换 1-4 个槽位（键为 \"1\"-\"4\"）"
+  },
+
+  "AutoCommission: 通用字段 loc (单坐标)": {
+    "prefix": "ac-loc-single",
+    "body": [
+      "\"loc\": [${1:0}, ${2:0}, ${3:15}],"
+    ],
+    "description": "loc — 当前委托坐标命中单个目标坐标时才执行本步骤"
+  },
+
+  "AutoCommission: 通用字段 loc (多坐标)": {
+    "prefix": "ac-loc-multi",
+    "body": [
+      "\"loc\": [",
+      "  [${1:0}, ${2:0}],",
+      "  [${3:0}, ${4:0}, ${5:15}]",
+      "],"
+    ],
+    "description": "loc — 当前委托坐标命中任意一个目标坐标时才执行本步骤"
   },
 
   "AutoCommission: 地址检测": {

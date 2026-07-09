@@ -9,7 +9,7 @@
  *   1) 在 _statics 里加一行（无参数）/ 在下方 RO.xxx 赋值（带参数）
  *   2) 同步在 @typedef RONamespace 里加一行字段声明（让 IDE 能 autocomplete + 拼写检查）
  *
- * 命名规范：与现有 PATHS 常量保持语义对齐（inMainUI / inTalk / team / track / inBag / ...），
+ * 命名规范：与现有 PATHS 常量保持语义对齐（inMainUI / inTalk / track / inBag / ...），
  * 避免 "templateXxx" / "imageXxx" 这类多余前缀
  */
 import { staticDef, dynamicDef } from "./define-template.js";
@@ -25,8 +25,6 @@ const _statics = {
     inMainUI:            staticDef({ path: PATHS.PAIMON_MENU_IMAGE, region: UI_REGIONS.PAIMON_MENU_SEARCH }),
     /** 对话气泡图标（左上角对话指示器） */
     inTalk:              staticDef({ path: PATHS.INTALK_IMAGE, region: [254, 19, 80, 52] }),
-    /** 队伍图标（用于战斗结束检测，启用 mask） */
-    team:                staticDef({ path: PATHS.TEAM_IMAGE, useMask: true }),
     /** 大地图 - 选中委托后的"追踪"按钮 */
     track:               staticDef({ path: PATHS.TRACK_IMAGE, region: UI_REGIONS.TRACK_BUTTON }),
     /** 背包左下角的固定图标（用于判定背包已打开） */
@@ -53,7 +51,6 @@ const _statics = {
  * @typedef {Object} RONamespace
  * @property {Object} inMainUI                                                  主界面派蒙图标
  * @property {Object} inTalk                                                    对话气泡图标
- * @property {Object} team                                                      队伍图标（战斗结束检测）
  * @property {Object} track                                                     大地图 - 委托追踪按钮
  * @property {Object} inBag                                                     背包已打开标识
  * @property {Object} iconBigmap                                                大地图委托图标

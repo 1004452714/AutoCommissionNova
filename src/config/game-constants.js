@@ -101,7 +101,6 @@ export const PATHS = {
     F_ICON_IMAGE: "Data/RecognitionObject/F.png",
     PAIMON_MENU_IMAGE: "Data/RecognitionObject/paimon_menu.png",
     INTALK_IMAGE: "Data/RecognitionObject/InTalk.png",
-    TEAM_IMAGE: "Data/RecognitionObject/team.png",
     REPLACE_IMAGE: "Data/RecognitionObject/更换.png",
     JOIN_IMAGE: "Data/RecognitionObject/加入.png",
     TEAM_CONFIG_IMAGE: "Data/RecognitionObject/队伍配置.png",

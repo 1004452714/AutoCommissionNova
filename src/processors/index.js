@@ -11,7 +11,6 @@ import mapTracking from "./map-tracking.js";
 import teleport from "./teleport.js";
 import autoSkip from "./auto-skip.js";
 import autoFight from "./auto-fight.js";
-import battle from "./battle.js";
 import autoTask from "./auto-task.js";
 import switchTeam from "./switch-team.js";
 import switchRole from "./switch-role.js";
@@ -33,7 +32,6 @@ const processors = [
     teleport,
     autoSkip,
     autoFight,
-    battle,
     autoTask,
     switchTeam,
     switchRole,

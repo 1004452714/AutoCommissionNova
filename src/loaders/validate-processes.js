@@ -7,7 +7,7 @@
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
  *   (3) 用户分支选择 的 step.data[branchKey] 嵌套 step 递归校验
  *   (4) 执行子流程 / 委托描述检测 引用的子流程文件递归校验
- *   (5) 通用条件字段 step.loc 是否为 [x, y] 或 [x, y, tolerance]
+ *   (5) 通用条件字段 step.loc 是否为 [x, y]、[x, y, tolerance] 或 [[x, y], ...]
  *
  * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
