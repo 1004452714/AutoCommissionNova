@@ -73,7 +73,8 @@ async function validateNpcProcesses(registry) {
 
             const processPath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/process.json";
             const loadSubProcess = (filename) => loadNpcProcessFile(commissionName, location, filename);
-            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess);
+            const resolveSubProcessPath = (filename) => PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + filename;
+            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
         }
     }
     return errors;
@@ -102,10 +103,17 @@ async function validateBasicProcesses(registry) {
         for (const subDir of subDirs) {
             if (!file.isFolder(subDir)) continue;
             const processPath = subDir + "/process.json";
+            const mapPath = subDir + "/_path.json";
+            if (!file.isFile(mapPath)) {
+                log.error("[{path}] Basic 委托缺少必需地图追踪文件: _path.json", processPath);
+                errors++;
+            }
+
             const steps = await loadBasicProcess(processPath);
             if (!steps || steps.length === 0) continue;
             const loadSubProcess = (filename) => loadBasicProcess(subDir + "/" + filename);
-            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess);
+            const resolveSubProcessPath = (filename) => subDir + "/" + filename;
+            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
         }
     }
     return errors;
@@ -118,9 +126,10 @@ async function validateBasicProcesses(registry) {
  * @param {string} processPath - 用于日志定位
  * @param {Array} steps - loader 返回的 step 数组
  * @param {Function} loadSubProcess - (filename) => Promise<Array|null> 子流程加载器（按委托类型注入）
+ * @param {Function} [resolveSubProcessPath] - (filename) => string 子流程实际文件路径（存在性检查用）
  * @param {Set<string>} visited - 已访问的子流程文件名，避免循环递归
  */
-async function validateProcessSteps(registry, processPath, steps, loadSubProcess, visited = new Set()) {
+async function validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath, visited = new Set()) {
     let errors = 0;
     for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
@@ -164,6 +173,7 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
                     `${processPath} → 用户分支选择`,
                     nestedSteps,
                     loadSubProcess,
+                    resolveSubProcessPath,
                     visited
                 );
             }
@@ -179,6 +189,14 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
         if (subFile && loadSubProcess) {
             if (visited.has(subFile)) continue;
             visited.add(subFile);
+            const subPath = resolveSubProcessPath ? resolveSubProcessPath(subFile) : "";
+            if (subPath && !file.isFile(subPath)) {
+                log.error("[{path}] 步骤 #{n} ({type}) 子流程文件不存在: {file}",
+                    processPath, i + 1, stepType, subFile);
+                errors++;
+                continue;
+            }
+
             try {
                 const subSteps = await loadSubProcess(subFile);
                 if (subSteps && subSteps.length > 0) {
@@ -187,6 +205,7 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
                         `${processPath} → ${subFile}`,
                         subSteps,
                         loadSubProcess,
+                        resolveSubProcessPath,
                         visited
                     );
                 }
