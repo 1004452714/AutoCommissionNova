@@ -28,7 +28,7 @@
         },
         {
             "id": 3,
-            "action": "fight",
+            "action": "",
             "move_mode": "dash",
             "type": "path",
             "x": -95.29,

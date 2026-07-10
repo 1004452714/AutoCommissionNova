@@ -140,7 +140,7 @@
             "y": 2767.250275347207
         },
         {
-            "action": "fight",
+            "action": "",
             "action_params": "",
             "id": 15,
             "move_mode": "dash",

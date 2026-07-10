@@ -100,7 +100,7 @@
             "id": 12,
             "x": -156.95,
             "y": 2329.7,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "action_params": "",
             "type": "path"

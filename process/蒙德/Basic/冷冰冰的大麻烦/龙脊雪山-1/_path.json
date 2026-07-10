@@ -19,7 +19,7 @@
         },
         {
             "id": 2,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "type": "path",
             "x": -637.55,

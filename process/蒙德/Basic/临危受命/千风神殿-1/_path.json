@@ -53,7 +53,7 @@
             "y": 2238.30224609375,
             "type": "path",
             "move_mode": "dash",
-            "action": "fight",
+            "action": "",
             "action_params": ""
         }
     ]

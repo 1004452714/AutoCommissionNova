@@ -91,7 +91,7 @@
             "y": 1289.53515625
         },
         {
-            "action": "fight",
+            "action": "",
             "action_params": "",
             "id": 9,
             "move_mode": "dash",

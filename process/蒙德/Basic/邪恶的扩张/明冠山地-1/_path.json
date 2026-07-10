@@ -69,7 +69,7 @@
             "id": 7,
             "x": -492.5908203125,
             "y": 2738.40234375,
-            "action": "fight",
+            "action": "",
             "move_mode": "dash",
             "action_params": "",
             "type": "path"

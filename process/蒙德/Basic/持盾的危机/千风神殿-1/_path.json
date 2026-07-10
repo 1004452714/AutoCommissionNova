@@ -46,7 +46,7 @@
             "y": 2179,
             "type": "path",
             "move_mode": "dash",
-            "action": "fight",
+            "action": "",
             "action_params": ""
         }
     ]

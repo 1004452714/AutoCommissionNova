@@ -26,7 +26,7 @@
         },
         {
             "id": 3,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "type": "path",
             "x": -499.93,
