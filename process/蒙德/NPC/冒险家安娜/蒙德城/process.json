@@ -29,22 +29,18 @@
         "note": "等待3秒钟"
     },
     {
-        "type": "委托描述检测",
+        "type": "执行子流程",
+        "desc": "护送货运热气球",
         "data": {
-            "description": "护送货运热气球",
-            "executeFile": "执行分支一.json",
-            "runType": "process",
-            "useKeyword": true
+            "path": "执行分支一.json"
         },
         "note": "检测委托描述并执行执行分支一"
     },
     {
-        "type": "委托描述检测",
+        "type": "执行子流程",
+        "desc": "与安娜一同完成",
         "data": {
-            "description": "与安娜一同完成",
-            "executeFile": "执行分支二.json",
-            "runType": "process",
-            "useKeyword": true
+            "path": "执行分支二.json"
         },
         "note": "检测委托描述并执行执行分支二"
     }

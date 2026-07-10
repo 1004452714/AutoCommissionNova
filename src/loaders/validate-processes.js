@@ -6,7 +6,7 @@
  *   (1) step.type 是否已在 registry 注册
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
  *   (3) 用户分支选择 的 step.data[branchKey] 嵌套 step 递归校验
- *   (4) 执行子流程 / 委托描述检测 引用的子流程文件递归校验
+ *   (4) 执行子流程引用的子流程文件递归校验，地图追踪引用的路径文件存在性校验
  *   (5) 通用条件字段 step.loc 是否为 [x, y]、[x, y, tolerance] 或 [[x, y], ...]
  *
  * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
@@ -179,14 +179,19 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
             }
         }
 
-        // 子流程文件校验（执行子流程 / 委托描述检测）
-        let subFile = null;
-        if (stepType === "执行子流程" && step.data && typeof step.data.path === "string") {
-            subFile = step.data.path;
-        } else if (stepType === "委托描述检测" && typeof step.run === "string") {
-            subFile = step.run;
+        // 地图追踪文件只检查存在性，不按 JSON 子流程递归
+        if (stepType === "地图追踪" && typeof step.data === "string") {
+            const mapPath = resolveSubProcessPath ? resolveSubProcessPath(step.data) : "";
+            if (mapPath && !file.isFile(mapPath)) {
+                log.error("[{path}] 步骤 #{n} ({type}) 地图追踪文件不存在: {file}",
+                    processPath, i + 1, stepType, step.data);
+                errors++;
+            }
         }
-        if (subFile && loadSubProcess) {
+
+        // 子流程文件校验（执行子流程）
+        if (stepType === "执行子流程" && step.data && typeof step.data.path === "string") {
+            const subFile = step.data.path;
             if (visited.has(subFile)) continue;
             visited.add(subFile);
             const subPath = resolveSubProcessPath ? resolveSubProcessPath(subFile) : "";

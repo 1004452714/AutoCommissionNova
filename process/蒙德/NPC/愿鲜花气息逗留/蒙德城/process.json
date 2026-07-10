@@ -1,12 +1,8 @@
 [
     {
-        "type": "委托描述检测",
-        "data": {
-            "description": "对话",
-            "executeFile": "愿鲜花气息逗留-1.json",
-            "runType": "path",
-            "useKeyword": true
-        },
+        "type": "地图追踪",
+        "desc": "对话",
+        "data": "愿鲜花气息逗留-1.json",
         "note": ""
     },
     {
@@ -80,12 +76,9 @@
         "note": "等待5秒钟"
     },
     {
-        "type": "委托描述检测",
-        "data": {
-            "description": "循着踪迹寻找包裹",
-            "executeFile": "循着踪迹寻找包裹.json",
-            "runType": "path"
-        },
+        "type": "地图追踪",
+        "desc": "循着踪迹寻找包裹",
+        "data": "循着踪迹寻找包裹.json",
         "note": "检测委托描述并执行后续步骤"
     },
     {

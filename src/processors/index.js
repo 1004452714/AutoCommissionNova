@@ -16,7 +16,6 @@ import switchTeam from "./switch-team.js";
 import switchRole from "./switch-role.js";
 import commissionTracking from "./commission-tracking.js";
 import locationDetection from "./location-detection.js";
-import commissionDescDetect from "./commission-desc-detect.js";
 import userBranchSelect from "./user-branch-select.js";
 import executeSubprocess from "./execute-subprocess.js";
 import achievementDetect from "./achievement-detect.js";
@@ -37,7 +36,6 @@ const processors = [
     switchRole,
     commissionTracking,
     locationDetection,
-    commissionDescDetect,
     userBranchSelect,
     executeSubprocess,
     achievementDetect,

@@ -16,10 +16,12 @@
         }
     },
     {
-        "type": "委托描述检测",
-        "data": "寻找三份蒲公英籽",
-        "note": "",
-        "run": "采集蒲公英籽process.json"
+        "type": "执行子流程",
+        "desc": "寻找三份蒲公英籽",
+        "data": {
+            "path": "采集蒲公英籽process.json"
+        },
+        "note": ""
     },
     {
         "type": "对话",
