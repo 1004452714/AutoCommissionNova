@@ -21,6 +21,7 @@ import executeSubprocess from "./execute-subprocess.js";
 import achievementDetect from "./achievement-detect.js";
 import useItem from "./use-item.js";
 import basicDestroyWatchtower from "./basic-destroy-watchtower.js";
+import destroySlimeBalloon from "./destroy-slime-balloon.js";
 
 const processors = [
     wait,
@@ -41,6 +42,7 @@ const processors = [
     achievementDetect,
     useItem,
     basicDestroyWatchtower,
+    destroySlimeBalloon,
 ];
 
 /**

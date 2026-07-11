@@ -120,6 +120,33 @@
             "type": "path",
             "x": -1592.318359375,
             "y": 2799.15283203125
+        },
+        {
+            "action": "combat_script",
+            "action_params": "attack(3),wait(0.3),keypress(3),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack(3),wait(0.3),keypress(4),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
+            "id": 13,
+            "move_mode": "dash",
+            "type": "path",
+            "x": -1588.2109375,
+            "y": 2784.0009765625
+        },
+        {
+            "action": "combat_script",
+            "action_params": "attack(2),wait(0.3),keypress(1),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(2),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
+            "id": 14,
+            "move_mode": "dash",
+            "type": "path",
+            "x": -1583.7476130658688,
+            "y": 2767.250275347207
+        },
+        {
+            "action": "",
+            "action_params": "",
+            "id": 15,
+            "move_mode": "dash",
+            "type": "path",
+            "x": -1578.349609375,
+            "y": 2739.47216796875
         }
     ]
 }
