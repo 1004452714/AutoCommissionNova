@@ -49,25 +49,7 @@
             "id": 5,
             "x": -1467.96484375,
             "y": 1978.60009765625,
-            "action": "fight",
-            "move_mode": "walk",
-            "action_params": "",
-            "type": "path"
-        },
-        {
-            "id": 6,
-            "x": -1477.75,
-            "y": 1988.5,
             "action": "",
-            "move_mode": "dash",
-            "action_params": "",
-            "type": "path"
-        },
-        {
-            "id": 7,
-            "x": -1490.609375,
-            "y": 1996.587890625,
-            "action": "fight",
             "move_mode": "walk",
             "action_params": "",
             "type": "path"

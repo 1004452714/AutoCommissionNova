@@ -60,69 +60,13 @@
             "y": 940.94677734375
         },
         {
-            "action": "fight",
+            "action": "",
             "action_params": "",
             "id": 6,
             "move_mode": "run",
             "type": "path",
             "x": -661.75,
             "y": 936.978515625
-        },
-        {
-            "action": "",
-            "action_params": "",
-            "id": 7,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -663.625,
-            "y": 943.7578125
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack(3),wait(0.3),keypress(1),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(2),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 8,
-            "locked": false,
-            "move_mode": "dash",
-            "type": "path",
-            "x": -674.693359375,
-            "y": 945.861328125
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack(3),wait(0.3),keypress(3),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(4),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 9,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -674.693359375,
-            "y": 945.861328125
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack(2),wait(0.3),keypress(1),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(2),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 10,
-            "locked": false,
-            "move_mode": "dash",
-            "type": "path",
-            "x": -676.5,
-            "y": 932.35986328125
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack(2),wait(0.3),keypress(3),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(4),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 11,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -676.5,
-            "y": 932.35986328125
-        },
-        {
-            "action": "fight",
-            "action_params": "",
-            "id": 12,
-            "move_mode": "dash",
-            "type": "path",
-            "x": -668.412109375,
-            "y": 935.82177734375
         }
     ]
 }

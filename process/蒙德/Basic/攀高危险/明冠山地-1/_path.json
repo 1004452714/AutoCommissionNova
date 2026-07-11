@@ -100,42 +100,9 @@
             "id": 12,
             "x": -63.1,
             "y": 2038.01,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "action_params": "",
-            "type": "path"
-        },
-        {
-            "id": 13,
-            "x": -70.25,
-            "y": 2044.91,
-            "action": "",
-            "move_mode": "walk",
-            "type": "path"
-        },
-        {
-            "id": 14,
-            "x": -65.8,
-            "y": 2048.8,
-            "action": "",
-            "move_mode": "walk",
-            "type": "path"
-        },
-        {
-            "id": 15,
-            "x": -40.5,
-            "y": 2039.56,
-            "action": "fight",
-            "move_mode": "walk",
-            "action_params": "",
-            "type": "path"
-        },
-        {
-            "id": 16,
-            "x": -30.25,
-            "y": 2053.26,
-            "action": "",
-            "move_mode": "walk",
             "type": "path"
         }
     ]

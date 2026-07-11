@@ -57,19 +57,10 @@
             "id": 6,
             "x": -668,
             "y": 1789,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "action_params": "",
             "type": "path"
-        },
-        {
-            "id": 7,
-            "x": -673.4400000000005,
-            "y": 1782.5599999999995,
-            "type": "path",
-            "move_mode": "walk",
-            "action": "fight",
-            "action_params": ""
         }
     ]
 }

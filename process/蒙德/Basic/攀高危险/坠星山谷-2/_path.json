@@ -76,42 +76,9 @@
             "id": 9,
             "x": -1281.72,
             "y": 2435.36,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "action_params": "",
-            "type": "path"
-        },
-        {
-            "id": 10,
-            "x": -1277.2,
-            "y": 2429.89,
-            "action": "",
-            "move_mode": "walk",
-            "type": "path"
-        },
-        {
-            "id": 11,
-            "x": -1259.95,
-            "y": 2430.37,
-            "action": "fight",
-            "move_mode": "walk",
-            "action_params": "",
-            "type": "path"
-        },
-        {
-            "id": 12,
-            "x": -1254.65,
-            "y": 2432.46,
-            "action": "",
-            "move_mode": "walk",
-            "type": "path"
-        },
-        {
-            "id": 13,
-            "x": -1256.12,
-            "y": 2440.03,
-            "action": "",
-            "move_mode": "walk",
             "type": "path"
         }
     ]

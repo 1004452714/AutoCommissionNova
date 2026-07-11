@@ -154,60 +154,13 @@
             "y": 666.11328125
         },
         {
-            "action": "fight",
+            "action": "",
             "action_params": "",
             "id": 16,
             "move_mode": "jump",
             "type": "path",
             "x": -818.275390625,
             "y": 662.67431640625
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack,wait(0.3),keypress(1),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(2),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 17,
-            "locked": false,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -812.24609375,
-            "y": 657
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack,wait(0.3),keypress(3),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(4),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 18,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -812.24609375,
-            "y": 657
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack,wait(0.3),keypress(1),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(2),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 19,
-            "locked": false,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -814.765625,
-            "y": 672.7841796875
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack,wait(0.3),keypress(3),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(4),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 20,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -814.765625,
-            "y": 672.7841796875
-        },
-        {
-            "action": "fight",
-            "action_params": "",
-            "id": 21,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -821.861328125,
-            "y": 664.9912109375
         }
     ]
 }

@@ -68,22 +68,13 @@
             "y": 2807.054443359375
         },
         {
-            "action": "fight",
+            "action": "",
             "action_params": "",
             "id": 7,
             "move_mode": "jump",
             "type": "path",
             "x": -1487.291015625,
             "y": 2800.09765625
-        },
-        {
-            "action": "fight",
-            "action_params": "",
-            "id": 8,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -1487.66015625,
-            "y": 2807.591064453125
         }
     ]
 }

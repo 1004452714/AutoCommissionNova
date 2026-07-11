@@ -107,56 +107,13 @@
             "y": 2019.24
         },
         {
-            "action": "fight",
+            "action": "",
             "action_params": "",
             "id": 12,
             "move_mode": "walk",
             "type": "path",
             "x": -63.1,
             "y": 2038.01
-        },
-        {
-            "action": "",
-            "id": 13,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -70.25,
-            "y": 2044.91
-        },
-        {
-            "action": "",
-            "id": 14,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -65.8,
-            "y": 2048.8
-        },
-        {
-            "action": "combat_script",
-            "action_params": "attack(3.5),wait(0.3),keypress(1),wait(0.3),keypress(E),wait(0.4),keypress(Q),wait(0.6),attack,wait(0.3),keypress(2),wait(0.3),keypress(E),wait(0.3),keypress(Q)",
-            "id": 15,
-            "locked": false,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -40.5,
-            "y": 2039.56
-        },
-        {
-            "action": "fight",
-            "action_params": "",
-            "id": 16,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -40.5,
-            "y": 2039.56
-        },
-        {
-            "action": "",
-            "id": 17,
-            "move_mode": "walk",
-            "type": "path",
-            "x": -30.25,
-            "y": 2053.26
         }
     ]
 }
