@@ -22,6 +22,7 @@ import achievementDetect from "./achievement-detect.js";
 import useItem from "./use-item.js";
 import basicDestroyWatchtower from "./basic-destroy-watchtower.js";
 import destroySlimeBalloon from "./destroy-slime-balloon.js";
+import startChallenge from "./start-challenge.js";
 
 const processors = [
     wait,
@@ -43,6 +44,7 @@ const processors = [
     useItem,
     basicDestroyWatchtower,
     destroySlimeBalloon,
+    startChallenge,
 ];
 
 /**
