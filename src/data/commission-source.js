@@ -17,10 +17,11 @@ function loadWhitelist() {
         return {
             basic: data.basic || [],
             npc: data.npc || [],
+            ban: data.ban || [],
         };
     } catch (error) {
         log.error("读取白名单文件失败: {error}", error.message);
-        return { basic: [], npc: [] };
+        return { basic: [], npc: [], ban: [] };
     }
 }
 
@@ -46,8 +47,8 @@ export async function loadSupportedCommissions() {
     const availableNpc = scanCommissionNamesByType(COMMISSION_TYPE.NPC);
 
     const supported = {
-        basic: whitelist.basic.filter((name) => availableBasic.includes(name)),
-        npc: whitelist.npc.filter((name) => availableNpc.includes(name)),
+        basic: whitelist.basic.filter((name) => availableBasic.includes(name) && !whitelist.ban.includes(name)),
+        npc: whitelist.npc.filter((name) => availableNpc.includes(name) && !whitelist.ban.includes(name)),
     };
 
     return supported;
