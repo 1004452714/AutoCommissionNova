@@ -41,6 +41,8 @@ const _statics = {
     iconQuestion:        staticDef({ path: PATHS.ICON_QUESTION_COMMISSION }),
     /** 地图上的普通任务委托图标 */
     iconTask:            staticDef({ path: PATHS.ICON_TASK_COMMISSION }),
+    /** 乐流奔引 - 月光交互图标 */
+    moonLightIcon:       staticDef({ path: PATHS.MOON_LIGHT_ICON }),
     /** 成就搜索界面 - "无搜索结果"占位图（用于判定搜索没有任何匹配） */
     achievementNoResult: staticDef({ path: PATHS.HAS_NO_RESULT_IMAGE, region: [1221, 415, 115, 157] }),
     /** 对话选项 - 退出对话气泡（DIALOG_REGIONS.TALK_ICON 内匹配，useMask） */
@@ -61,6 +63,7 @@ const _statics = {
  * @property {Object} iconBaseFull                                              基础委托图标（全屏匹配）
  * @property {Object} iconQuestion                                              问号委托图标
  * @property {Object} iconTask                                                  普通任务委托图标
+ * @property {Object} moonLightIcon                                             乐流奔引月光交互图标
  * @property {Object} achievementNoResult                                       成就搜索无结果占位
  * @property {Object} talkExit                                                  对话退出气泡
  * @property {Object} talkIcon                                                  对话普通气泡

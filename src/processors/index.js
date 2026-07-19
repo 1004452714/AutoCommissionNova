@@ -23,6 +23,7 @@ import useItem from "./use-item.js";
 import basicDestroyWatchtower from "./basic-destroy-watchtower.js";
 import destroySlimeBalloon from "./destroy-slime-balloon.js";
 import startChallenge from "./start-challenge.js";
+import musicFlow from "./music-flow.js";
 
 const processors = [
     wait,
@@ -45,6 +46,7 @@ const processors = [
     basicDestroyWatchtower,
     destroySlimeBalloon,
     startChallenge,
+    musicFlow,
 ];
 
 /**

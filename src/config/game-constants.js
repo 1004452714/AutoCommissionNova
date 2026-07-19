@@ -110,6 +110,7 @@ export const PATHS = {
     ICON_BASE_COMMISSION: "Data/RecognitionObject/IconBaseCommission.png",
     ICON_QUESTION_COMMISSION: "Data/RecognitionObject/IconQuestionCommission.png",
     ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
+    MOON_LIGHT_ICON: "Data/RecognitionObject/MoonLightIcon.png",
     TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",
     CHARACTER_IMAGE_DIR: "Data/characterimage/",
     AVATAR_DATA: "Data/avatar/combat_avatar.json",
@@ -199,6 +200,8 @@ export const OCR_REGIONS = {
     DETAIL_COUNTRY: new rect(1480, 100, 55, 30),
     /** 大地图 - 选中委托后 - 停止追踪按钮 */
     COMMISSION_TRACKING: new rect(1626, 987, 127, 40),
-    /** 主界面 - 追踪任务时 - 委托描述文本 */
+    /** 主界面 - 追踪任务时 - 委托名称/第一行描述文本 */
     COMMISSION_DETAIL: new rect(80, 250, 380, 27),
+    /** 主界面 - 追踪任务时 - 第二行描述文本 */
+    COMMISSION_DETAIL_SECOND_LINE: new rect(80, 280, 380, 30),
 };

@@ -24,6 +24,25 @@ export function matchesDescription(ocrText, expected, useKeyword) {
     return calculateSimilarity(cleanedOcr, cleanedExpected) >= THRESHOLDS.COMMISSION_DESC;
 }
 
+function isCommissionNameText(ocrText, commissionName) {
+    const cleanedOcr = cleanText(ocrText);
+    const cleanedCommissionName = cleanText(commissionName);
+    if (!cleanedOcr || !cleanedCommissionName) return false;
+
+    return cleanText(standardizeCommissionName(cleanedOcr)) === cleanedCommissionName;
+}
+
+function readTrackedDescriptionText(context) {
+    const firstLine = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
+    const secondLine = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL_SECOND_LINE);
+
+    if (isCommissionNameText(firstLine, context.commissionName)) {
+        log.debug("第一行仍为委托名称，使用第二行描述: {result}", secondLine);
+        return secondLine;
+    }
+    return firstLine;
+}
+
 /**
  * 读取当前追踪委托的描述文本。
  * OCR 可能先读到委托名称或空文本，此时等待刷新后重试。
@@ -37,10 +56,10 @@ export async function readCommissionDescription(context) {
     let lastOcrResult = "";
     for (let c = 0; c < 13; c++) {
         try {
-            const ocrResult = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
+            const ocrResult = readTrackedDescriptionText(context);
             // OCR 可能识别出与委托名一致（说明详情还没刷新出来）或空文本 → 继续等
-            // 使用标准化后比较，容忍 OCR 抖动
-            if (ocrResult === "" || standardizeCommissionName(ocrResult) === context.commissionName) {
+            // 使用标准化后等值比较，容忍 OCR 抖动，但不做包含匹配
+            if (ocrResult === "" || isCommissionNameText(ocrResult, context.commissionName)) {
                 keyPress("v"); // 识别到委托名按V追踪
                 await sleep(1000);
                 log.debug("检测到委托名称或空文本，继续等待...");
