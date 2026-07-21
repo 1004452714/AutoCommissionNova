@@ -189,6 +189,17 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
             }
         }
 
+        // 摧毁哨塔的路径追踪模式同样引用流程目录内的路径文件
+        if (stepType === "摧毁哨塔" && step.data && typeof step.data === "object" &&
+            step.data.navigation === "路径追踪" && typeof step.data.path === "string") {
+            const mapPath = resolveSubProcessPath ? resolveSubProcessPath(step.data.path) : "";
+            if (mapPath && !file.isFile(mapPath)) {
+                log.error("[{path}] 步骤 #{n} ({type}) 路径文件不存在: {file}",
+                    processPath, i + 1, stepType, step.data.path);
+                errors++;
+            }
+        }
+
         // 子流程文件校验（执行子流程）
         if (stepType === "执行子流程" && step.data && typeof step.data.path === "string") {
             const subFile = step.data.path;

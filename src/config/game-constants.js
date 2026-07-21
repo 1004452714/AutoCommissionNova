@@ -115,6 +115,13 @@ export const PATHS = {
     CHARACTER_IMAGE_DIR: "Data/characterimage/",
     AVATAR_DATA: "Data/avatar/combat_avatar.json",
     AVATAR_INFO: "Data/avatar/avatar_info.json",
+    WATCHTOWER_STRATEGY_FILES: [
+        "Data/avatar/简易策略_法器.txt",
+        "Data/avatar/简易策略_弓.txt",
+        "Data/avatar/简易策略_单手剑.txt",
+        "Data/avatar/简易策略_双手剑.txt",
+        "Data/avatar/简易策略_长柄武器.txt",
+    ],
     AVATAR_TEMPLATE_DIR: "Data/RecognitionObject/avatar",
     SWITCH_ROLE_SLOT_DIR: "Data/RecognitionObject/switch_role",
     CONFIG_BASE: "process/config",
