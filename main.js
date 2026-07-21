@@ -7,6 +7,7 @@ import { checkVersion } from "./src/version/check-version.js";
 import { runTestCommission } from "./src/core/test-runner.js";
 import { getSetting } from "./src/utils/settings-utils.js";
 import { openCommissionConfigEditor } from "./src/core/commission-config-editor.js";
+import { openDeveloperTestEditor } from "./src/core/developer-test-editor.js";
 import { releaseAllTemplates } from "./src/vision/index.js";
 
 registerAllProcessors(stepRegistry);
@@ -20,19 +21,24 @@ registerAllProbes();
         //静态校验所有流程文件
         await validateAllProcesses(stepRegistry);
 
-        //获取设置判断运行模式
+        // 获取界面设置
         const setting = getSetting();
 
         //根据设置决定是否打开分支配置面板,阻塞至用户关闭
+        let developerTestConfig = null;
         if (setting.showConfigEditor) {
-            await openCommissionConfigEditor();
+            const editorResult = await openCommissionConfigEditor();
+            if (editorResult?.action === "developer-test") {
+                developerTestConfig = await openDeveloperTestEditor();
+            }
         }
 
-        if (setting.runMode === "测试") {
-            //执行测试
+        if (developerTestConfig) {
+            await runTestCommission(developerTestConfig);
+        } else if (setting.runMode === "测试") {
             await runTestCommission();
         } else {
-            //执行主流程
+            // 执行主流程
             await executeMainProcess(stepRegistry);
         }
 

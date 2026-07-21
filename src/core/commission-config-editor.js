@@ -76,7 +76,7 @@ function sendHtmlMaskResponse(windowId, url, requestId, data) {
  * 打开委托配置编辑器并阻塞至关闭
  * @description 显示遮罩窗口,注册 ~ 键钩子,进入消息循环直到用户点击"关闭"
  *              或脚本被取消。阻塞期间用户对分支状态的修改会即时写回文件。
- * @returns {Promise<void>}
+ * @returns {Promise<{action: string}|null>}
  */
 export async function openCommissionConfigEditor() {
     if (typeof htmlMask === "undefined") {
@@ -90,6 +90,7 @@ export async function openCommissionConfigEditor() {
     }
 
     let windowId;
+    let result = null;
     try {
         windowId = htmlMask.show(HTML_PATH, WINDOW_TAG);
     } catch (err) {
@@ -357,6 +358,15 @@ export async function openCommissionConfigEditor() {
                 if (msg.requestId) {
                     sendHtmlMaskResponse(windowId, "/locateScope", msg.requestId, response);
                 }
+            } else if (msg.url === "/openDeveloperTest") {
+                try {
+                    sendHtmlMaskResponse(windowId, "/openDeveloperTest", msg.requestId, { status: "ok" });
+                } catch (err) {
+                    if (isCancellationError(err)) break;
+                }
+                result = { action: "developer-test" };
+                htmlMask.close(windowId);
+                break;
             } else if (msg.url === "/close") {
                 try {
                     if (msg.requestId) {
@@ -390,4 +400,5 @@ export async function openCommissionConfigEditor() {
         } catch (e) {}
         log.info("委托配置面板已关闭");
     }
+    return result;
 }

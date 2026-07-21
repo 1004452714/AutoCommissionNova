@@ -1066,7 +1066,7 @@
                     <input
                       class="text-input"
                       type="text"
-                      inputmode="numeric"
+                      inputmode="text"
                       x-model="globalConfig.uids[index]"
                       @input="updateUid(index, $event.target.value)"
                       placeholder="输入一个 UID"
@@ -1075,8 +1075,8 @@
                   </div>
                 </template>
                 <div class="input-row">
-                  <button class="icon-btn" type="button" title="新增 UID" @click="addUid()">+</button>
-                  <span class="hint-text">每行一个 UID，保存时会自动去除空项和非数字字符。</span>
+                  <button class="icon-btn" type="button" :title="hasDeveloperTestUid() ? '打开开发者测试' : '新增 UID'" @click="addUid()">+</button>
+                  <span class="hint-text" x-text="hasDeveloperTestUid() ? '开发者测试已启用，点击 + 打开测试面板。' : '每行一个 UID，保存时会自动去除空项和非数字字符。'"></span>
                 </div>
               </div>
             </section>
@@ -1529,7 +1529,7 @@
             ? next.uids
             : (typeof next.uid === "string" ? [next.uid] : []);
           const uids = rawUids
-            .map((uid) => String(uid ?? "").replace(/\D/g, ""))
+            .map((uid) => String(uid ?? "").trim().toLowerCase() === "test" ? "test" : String(uid ?? "").replace(/\D/g, ""))
             .filter(Boolean);
 
           return {
@@ -2054,11 +2054,31 @@
         },
 
         addUid() {
+          if (this.hasDeveloperTestUid()) {
+            this.openDeveloperTest();
+            return;
+          }
           if (!Array.isArray(this.globalConfig.uids)) {
             this.globalConfig.uids = [""];
           }
           this.globalConfig.uids.push("");
           this.scheduleSave();
+        },
+
+        hasDeveloperTestUid() {
+          return Array.isArray(this.globalConfig.uids)
+            && this.globalConfig.uids.some((uid) => String(uid).trim().toLowerCase() === "test");
+        },
+
+        async openDeveloperTest() {
+          if (this.closing || !window.htmlMask) return;
+          this.closing = true;
+          try {
+            await this.requestHtmlMask("/openDeveloperTest", {}, SAVE_TIMEOUT_MS, "打开开发者测试超时");
+          } catch (err) {
+            console.error("打开开发者测试失败:", err);
+            this.closing = false;
+          }
         },
 
         removeUid(index) {
@@ -2076,7 +2096,8 @@
           if (!Array.isArray(this.globalConfig.uids)) {
             this.globalConfig.uids = [""];
           }
-          this.globalConfig.uids[index] = String(value || "").replace(/\D/g, "");
+          const raw = String(value || "").trim();
+          this.globalConfig.uids[index] = /^[a-z]+$/i.test(raw) ? raw.toLowerCase() : raw.replace(/\D/g, "");
           this.scheduleSave();
         },
 
@@ -2088,7 +2109,10 @@
         globalConfigForSave() {
           const rawUids = Array.isArray(this.globalConfig.uids) ? this.globalConfig.uids : [];
           return {
-            uids: Array.from(new Set(rawUids.map((uid) => String(uid || "").replace(/\D/g, "")).filter(Boolean))),
+            uids: Array.from(new Set(rawUids.map((uid) => {
+              const raw = String(uid || "").trim();
+              return raw.toLowerCase() === "test" ? "test" : raw.replace(/\D/g, "");
+            }).filter(Boolean))),
             skipSafeTeleport: this.globalConfig.skipSafeTeleport === true,
           };
         },

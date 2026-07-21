@@ -11,7 +11,8 @@ function ensureParentDir(path) {
 }
 
 function normalizeUid(value) {
-    return String(value ?? "").replace(/\D/g, "");
+    const text = String(value ?? "").trim();
+    return text.toLowerCase() === "test" ? "test" : text.replace(/\D/g, "");
 }
 
 export function normalizeGlobalConfig(config) {
