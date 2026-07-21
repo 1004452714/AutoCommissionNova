@@ -311,7 +311,7 @@ export async function saveCommissionsData(commissions) {
  * 更新当前 UID 下单个委托的状态并回写 commissions_data.json
  *
  * 用于委托执行完成后把 status 标记为「已完成」，
- * 避免 skipRecognition 复用当前 UID 旧数据时重跑。
+ * 避免复用当前 UID 已有数据时重复执行。
  *
  * @param {Object|string} commissionRef - 委托对象或委托名称
  * @param {string} status - 目标状态（取 COMMISSION_STATUS 中的值）

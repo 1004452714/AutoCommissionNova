@@ -35,8 +35,6 @@ registerAllProbes();
 
         if (developerTestConfig) {
             await runTestCommission(developerTestConfig);
-        } else if (setting.runMode === "测试") {
-            await runTestCommission();
         } else {
             // 执行主流程
             await executeMainProcess(stepRegistry);

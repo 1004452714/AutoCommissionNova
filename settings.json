@@ -1,19 +1,5 @@
 [
     {
-        "name": "skipRecognition",
-        "type": "checkbox",
-        "label": "跳过委托识别（开发者选项,普通用户不用开）"
-    },
-    {
-        "name": "runMode",
-        "type": "select",
-        "label": "选择运行模式",
-        "options": [
-            "默认",
-            "测试"
-        ]
-    },
-    {
         "name": "showConfigEditor",
         "type": "checkbox",
         "label": "启动时显示分支配置面板",

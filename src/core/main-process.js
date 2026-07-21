@@ -2,7 +2,6 @@
  * 主流程模块
  * 脚本的主入口逻辑
  */
-import { getSetting } from "../utils/settings-utils.js";
 import { loadSupportedCommissions, saveCommissionsData } from "../data/index.js";
 import { recognizeCommissions, initCommissionReferenceData } from "../recognition/index.js";
 import { executeCommissionTracking } from "./commission-executor.js";
@@ -12,15 +11,10 @@ import { loadGlobalPartyConfig } from "../loaders/party-config.js";
 
 /**
  * 委托识别主函数
- * @returns {Promise<Array|undefined>} 识别到的委托列表；skipRecognition 时返回 undefined，失败时返回 []
+ * @returns {Promise<Array>} 识别到的委托列表；失败时返回 []
  */
 export async function identification() {
     try {
-        const setting = getSetting();
-        if (setting.skipRecognition) {
-            log.info("跳过识别，直接加载数据");
-            return;
-        }
         log.info("开始执行委托识别");
 
         await genshin.returnMainUi();

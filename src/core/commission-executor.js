@@ -153,7 +153,7 @@ export async function executeCommissionTracking(stepRegistry) {
                         success = true;
                         successCount++;
                         log.info("委托 {name} 执行完成", comm.name);
-                        // 持久化已完成状态到当前 UID 的 commissions_data.json 账号槽，避免 skipRecognition 复用数据时重跑
+                        // 持久化已完成状态到当前 UID 的 commissions_data.json 账号槽，避免复用已有数据时重跑
                         await updateCommissionStatus(comm, COMMISSION_STATUS.COMPLETED, uid);
                         if (result.context) {
                             // 给完成型探针（type: "completion" 等）一个写 branchConditionMet 的机会
