@@ -1,0 +1,14 @@
+[
+    {
+        "type": "地图追踪",
+        "data": "_path.json"
+    },
+    {
+        "type": "固若金汤",
+        "data": {
+            "wave3": {
+                "-1": "wave3.json"
+            }
+        }
+    }
+]
