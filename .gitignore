@@ -3,15 +3,13 @@
 .idea/*
 .trae/*
 .claude/
-SKILL/*
-CLAUDE.md
-skills-lock.json
 
-bettergi.d.ts
+AGENTS.md
+CLAUDE.md
 WebView2Data/*
-AutoCommission - 副本/
 Data/commissions_data.json
 TODO
-review-1.md
 
 vscode代码片段.json
+process/需要预处理/
+process/旧格式assets/
