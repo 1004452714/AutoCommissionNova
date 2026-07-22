@@ -24,6 +24,7 @@ import basicDestroyWatchtower from "./basic-destroy-watchtower.js";
 import destroySlimeBalloon from "./destroy-slime-balloon.js";
 import startChallenge from "./start-challenge.js";
 import musicFlow from "./music-flow.js";
+import impregnableDefense from "./impregnable-defense.js";
 
 const processors = [
     wait,
@@ -47,6 +48,7 @@ const processors = [
     destroySlimeBalloon,
     startChallenge,
     musicFlow,
+    impregnableDefense,
 ];
 
 /**

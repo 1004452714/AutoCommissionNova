@@ -14,6 +14,7 @@
  */
 import { PATHS } from "../config/index.js";
 import { validateSchema } from "../processors/define-step.js";
+import { collectImpregnableDefensePaths } from "../processors/impregnable-defense-config.js";
 import { parseStepLoc } from "../processors/commission-loc-utils.js";
 import { loadNpcProcessFile, loadBasicProcess } from "./index.js";
 import { probeRegistry } from "../probes/index.js";
@@ -197,6 +198,29 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
                 log.error("[{path}] 步骤 #{n} ({type}) 路径文件不存在: {file}",
                     processPath, i + 1, stepType, step.data.path);
                 errors++;
+            }
+        }
+
+        // 固若金汤的每个 wave 可以包含多个路径引用。
+        if (stepType === "固若金汤") {
+            const defenseConfig = collectImpregnableDefensePaths(step.data);
+            for (const warning of defenseConfig.warnings || []) {
+                log.warn("[{path}] 步骤 #{n} ({type}) {warning}",
+                    processPath, i + 1, stepType, warning);
+            }
+            if (!defenseConfig.ok) {
+                log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}",
+                    processPath, i + 1, stepType, defenseConfig.error);
+                errors++;
+            } else {
+                for (const pathRef of defenseConfig.paths) {
+                    const mapPath = resolveSubProcessPath ? resolveSubProcessPath(pathRef) : "";
+                    if (mapPath && !file.isFile(mapPath)) {
+                        log.error("[{path}] 步骤 #{n} ({type}) 路径文件不存在: {file}",
+                            processPath, i + 1, stepType, pathRef);
+                        errors++;
+                    }
+                }
             }
         }
 
