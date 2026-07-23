@@ -69,7 +69,7 @@
             "y": 2349.982177734375,
             "type": "path",
             "move_mode": "walk",
-            "action": "fight",
+            "action": "",
             "action_params": ""
         }
     ]

@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "authors": [
       {
@@ -100,7 +100,7 @@
       "y": 1252.74560546875
     },
     {
-      "action": "fight",
+      "action": "",
       "action_params": "",
       "id": 10,
       "locked": false,

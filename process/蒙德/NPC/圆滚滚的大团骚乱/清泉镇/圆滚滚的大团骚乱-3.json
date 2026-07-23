@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "authors": [],
     "bgi_version": "0.45.0",
@@ -32,7 +32,7 @@
       "y": 1698.830078125
     },
     {
-      "action": "fight",
+      "action": "",
       "action_params": "",
       "id": 3,
       "move_mode": "walk",

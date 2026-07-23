@@ -123,7 +123,7 @@
             "id": 13,
             "x": -1361.001953125,
             "y": 2315.987060546875,
-            "action": "fight",
+            "action": "",
             "move_mode": "walk",
             "action_params": "",
             "type": "target"
