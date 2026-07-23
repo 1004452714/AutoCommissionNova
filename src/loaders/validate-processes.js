@@ -17,6 +17,7 @@ import { validateSchema } from "../processors/define-step.js";
 import { collectImpregnableDefensePaths } from "../processors/impregnable-defense-config.js";
 import { parseStepLoc } from "../processors/commission-loc-utils.js";
 import { loadNpcProcessFile, loadBasicProcess } from "./index.js";
+import { validateCompleteRoles } from "./party-config.js";
 import { probeRegistry } from "../probes/index.js";
 import { loadAllBranchConfigs } from "./branch-config.js";
 
@@ -157,6 +158,12 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
                 log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, result.error);
                 errors++;
             }
+        }
+
+        if (stepType === "切换委托队伍" && step.data !== "战斗" && step.data !== "元素采集") {
+            log.error("[{path}] 步骤 #{n} ({type}) data 只能是 \"战斗\" 或 \"元素采集\"",
+                processPath, i + 1, stepType);
+            errors++;
         }
 
         // 嵌套校验：用户分支选择 的 step.data[branchKey] 是嵌套 step 对象
@@ -430,22 +437,24 @@ function validatePartyModeConfig(config, filePath, fieldName, { allowStrategy })
         log.error("[{path}] {field}.customTeamName 必须是字符串", filePath, fieldName);
         errors++;
     }
-    if (config.roles !== undefined) {
-        if (!config.roles || typeof config.roles !== "object" || Array.isArray(config.roles)) {
-            log.error("[{path}] {field}.roles 必须是对象", filePath, fieldName);
+    if (config.mode === "custom" && config.teamMode === undefined) {
+        log.error("[{path}] {field}.teamMode 在 custom 模式下必填", filePath, fieldName);
+        errors++;
+    }
+    if (config.mode === "custom" && config.teamMode === "teamName" &&
+        (typeof config.teamName !== "string" || !config.teamName.trim())) {
+        log.error("[{path}] {field}.teamName 在 custom/teamName 模式下必须是非空字符串", filePath, fieldName);
+        errors++;
+    }
+    if (config.mode === "custom" && config.teamMode === "roles") {
+        if (typeof config.customTeamName !== "string" || !config.customTeamName.trim()) {
+            log.error("[{path}] {field}.customTeamName 在 custom/roles 模式下必须是非空字符串", filePath, fieldName);
             errors++;
-        } else {
-            for (const key of Object.keys(config.roles)) {
-                if (!["1", "2", "3", "4"].includes(key)) {
-                    log.error("[{path}] {field}.roles 只能包含 1-4 键", filePath, fieldName);
-                    errors++;
-                    continue;
-                }
-                if (typeof config.roles[key] !== "string") {
-                    log.error("[{path}] {field}.roles.{key} 必须是字符串", filePath, fieldName, key);
-                    errors++;
-                }
-            }
+        }
+        const roleResult = validateCompleteRoles(config.roles);
+        if (!roleResult.ok) {
+            log.error("[{path}] {field} 角色配置无效: {error}", filePath, fieldName, roleResult.error);
+            errors++;
         }
     }
     if (allowStrategy) {
@@ -488,12 +497,12 @@ function validatePartyConfig() {
                 errors++;
                 continue;
             }
-            if (config.battleTeamName !== undefined && typeof config.battleTeamName !== "string") {
-                log.error("[{path}] battleTeamName 必须是字符串", filePath);
+            if (typeof config.battleTeamName !== "string" || !config.battleTeamName.trim()) {
+                log.error("[{path}] battleTeamName 必须是非空字符串", filePath);
                 errors++;
             }
-            if (config.elementTeamName !== undefined && typeof config.elementTeamName !== "string") {
-                log.error("[{path}] elementTeamName 必须是字符串", filePath);
+            if (typeof config.elementTeamName !== "string" || !config.elementTeamName.trim()) {
+                log.error("[{path}] elementTeamName 必须是非空字符串", filePath);
                 errors++;
             }
             if (config.customBattleTeamName !== undefined && typeof config.customBattleTeamName !== "string") {

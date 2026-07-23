@@ -12,7 +12,7 @@ import teleport from "./teleport.js";
 import autoSkip from "./auto-skip.js";
 import autoFight from "./auto-fight.js";
 import autoTask from "./auto-task.js";
-import switchTeam from "./switch-team.js";
+import switchCommissionParty from "./switch-commission-party.js";
 import switchRole from "./switch-role.js";
 import commissionTracking from "./commission-tracking.js";
 import locationDetection from "./location-detection.js";
@@ -36,7 +36,7 @@ const processors = [
     autoSkip,
     autoFight,
     autoTask,
-    switchTeam,
+    switchCommissionParty,
     switchRole,
     commissionTracking,
     locationDetection,

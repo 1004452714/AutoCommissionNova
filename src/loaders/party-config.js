@@ -16,6 +16,32 @@ function normalizeRoles(roles) {
     return next;
 }
 
+/**
+ * 严格校验角色模式的四人配置。
+ * @param {Object} roles - 以 1-4 为键的角色配置。
+ * @returns {{ok: boolean, error?: string, roles?: Object}}
+ */
+export function validateCompleteRoles(roles) {
+    if (!isPlainObject(roles)) return { ok: false, error: "roles 必须是对象" };
+    const expectedKeys = ["1", "2", "3", "4"];
+    const actualKeys = Object.keys(roles);
+    if (actualKeys.length !== expectedKeys.length || actualKeys.some(key => !expectedKeys.includes(key))) {
+        return { ok: false, error: "roles 必须且只能包含 1、2、3、4 四个槽位" };
+    }
+
+    const normalized = {};
+    for (const key of expectedKeys) {
+        if (typeof roles[key] !== "string" || !roles[key].trim()) {
+            return { ok: false, error: `roles.${key} 必须是非空角色名` };
+        }
+        normalized[key] = roles[key].trim();
+    }
+    if (new Set(Object.values(normalized)).size !== expectedKeys.length) {
+        return { ok: false, error: "四个槽位的角色名不能重复" };
+    }
+    return { ok: true, roles: normalized };
+}
+
 function normalizeTeamSelectionConfig(config, fallbackMode = "global") {
     const next = isPlainObject(config) ? { ...config } : {};
     return {
@@ -169,16 +195,6 @@ export function loadPartyConfigForContext(context) {
     };
 }
 
-function selectRoles(roles) {
-    const selected = {};
-    for (const key of ["1", "2", "3", "4"]) {
-        if (roles[key]) {
-            selected[key] = roles[key];
-        }
-    }
-    return selected;
-}
-
 export function resolvePartySelection(configBundle, channel) {
     const globalConfig = configBundle?.global || normalizeGlobalPartyConfig({});
     const localConfig = configBundle?.local || normalizeScopePartyConfig({});
@@ -203,16 +219,12 @@ export function resolvePartySelection(configBundle, channel) {
         };
     }
 
-    const fallbackCustomTeamName = channel === "collect"
-        ? (globalConfig.customElementTeamName || "")
-        : (globalConfig.customBattleTeamName || "");
-
     if (config.teamMode === "roles") {
         return {
             mode: "roles",
             teamName: "",
-            customTeamName: config.customTeamName || fallbackCustomTeamName,
-            roles: selectRoles(config.roles),
+            customTeamName: config.customTeamName || "",
+            roles: config.roles,
             strategy: channel === "battle" ? (config.strategy || DEFAULT_BATTLE_STRATEGY) : "",
         };
     }
@@ -220,7 +232,7 @@ export function resolvePartySelection(configBundle, channel) {
     return {
         mode: "teamName",
         teamName: config.teamName || "",
-        customTeamName: config.customTeamName || fallbackCustomTeamName,
+        customTeamName: config.customTeamName || "",
         roles: {},
         strategy: channel === "battle" ? (config.strategy || DEFAULT_BATTLE_STRATEGY) : "",
     };

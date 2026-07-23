@@ -1265,7 +1265,7 @@
                                   <div>
                                     <label class="field">
                                       <span class="field-label">自定义战斗队伍名称</span>
-                                      <input class="text-input" type="text" x-model="scope.config.battle.customTeamName" @input="scheduleSave()" placeholder="留空使用全局自定义战斗队">
+                                      <input class="text-input" type="text" x-model="scope.config.battle.customTeamName" @input="scheduleSave()" placeholder="角色模式必填">
                                     </label>
                                     <div class="role-grid">
                                       <template x-for="slot in roleSlots" :key="scope.key + '-battle-' + slot">
@@ -1322,7 +1322,7 @@
                                   <div>
                                     <label class="field">
                                       <span class="field-label">自定义元素采集队伍名称</span>
-                                      <input class="text-input" type="text" x-model="scope.config.collect.customTeamName" @input="scheduleSave()" placeholder="留空使用全局自定义元素采集队">
+                                      <input class="text-input" type="text" x-model="scope.config.collect.customTeamName" @input="scheduleSave()" placeholder="角色模式必填">
                                     </label>
                                     <div class="role-grid">
                                       <template x-for="slot in roleSlots" :key="scope.key + '-collect-' + slot">
