@@ -3,13 +3,10 @@
 .idea/*
 .trae/*
 .claude/
-
 AGENTS.md
 CLAUDE.md
+
 WebView2Data/*
 Data/commissions_data.json
+process/待处理/
 TODO
-
-vscode代码片段.json
-process/需要预处理/
-process/旧格式assets/
