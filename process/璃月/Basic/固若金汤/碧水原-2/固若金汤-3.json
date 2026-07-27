@@ -12,7 +12,7 @@
         "last_modified_time": 1784023874788,
         "map_match_method": "",
         "map_name": "Teyvat",
-        "name": "璃月-碧水原2-1-固若金汤-4",
+        "name": "璃月-碧水原-2-固若金汤-3",
         "tags": [],
         "type": "collect",
         "version": "1.0"
@@ -21,11 +21,11 @@
         {
             "action": "",
             "action_params": "",
-            "id": 5,
+            "id": 4,
             "move_mode": "walk",
             "type": "path",
-            "x": 1262.4121,
-            "y": 1613.5166
+            "x": 1248.5498,
+            "y": 1585.6348
         }
     ]
 }

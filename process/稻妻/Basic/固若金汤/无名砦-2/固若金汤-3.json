@@ -9,10 +9,10 @@
         "bgi_version": "0.45.0",
         "description": "",
         "enable_monster_loot_split": false,
-        "last_modified_time": 1784023874788,
+        "last_modified_time": 1784028848581,
         "map_match_method": "",
         "map_name": "Teyvat",
-        "name": "璃月-碧水原2-1-固若金汤-2",
+        "name": "稻妻-无名砦-2-固若金汤-3",
         "tags": [],
         "type": "collect",
         "version": "1.0"
@@ -21,12 +21,11 @@
         {
             "action": "",
             "action_params": "",
-            "id": 3,
-            "locked": false,
+            "id": 10,
             "move_mode": "walk",
             "type": "path",
-            "x": 1248.5498,
-            "y": 1585.6348
+            "x": -1771.5801,
+            "y": -3807.0078
         }
     ]
 }
