@@ -8,6 +8,7 @@ import { runTestCommission } from "./src/core/test-runner.js";
 import { getSetting } from "./src/utils/settings-utils.js";
 import { openCommissionConfigEditor } from "./src/core/commission-config-editor.js";
 import { openDeveloperTestEditor } from "./src/core/developer-test-editor.js";
+import { openProcessEditor } from "./src/core/process-editor.js";
 import { releaseAllTemplates } from "./src/vision/index.js";
 
 registerAllProcessors(stepRegistry);
@@ -23,6 +24,12 @@ registerAllProbes();
 
         // 获取界面设置
         const setting = getSetting();
+
+        if (setting.runMode === "编辑委托流程") {
+            await openProcessEditor(stepRegistry);
+            log.info("委托流程编辑器已关闭");
+            return;
+        }
 
         //根据设置决定是否打开分支配置面板,阻塞至用户关闭
         let developerTestConfig = null;

@@ -1,5 +1,15 @@
 [
     {
+        "name": "runMode",
+        "type": "select",
+        "label": "运行模式",
+        "options": [
+            "运行自动每日委托",
+            "编辑委托流程"
+        ],
+        "default": "运行自动每日委托"
+    },
+    {
         "name": "showConfigEditor",
         "type": "checkbox",
         "label": "启动时显示分支配置面板",

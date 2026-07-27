@@ -7,6 +7,7 @@
  */
 
 const DEFAULT_SETTING = {
+    runMode: "运行自动每日委托",
     showConfigEditor: true,
 };
 
@@ -20,6 +21,7 @@ export function getSetting() {
     if (cachedSetting) return cachedSetting;
     try {
         cachedSetting = {
+            runMode: settings.runMode === "编辑委托流程" ? "编辑委托流程" : "运行自动每日委托",
             // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
             showConfigEditor: settings.showConfigEditor !== false,
         };
