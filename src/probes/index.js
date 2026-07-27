@@ -48,7 +48,7 @@ export function registerAllProbes() {
     for (const probe of probes) {
         probeRegistry.register(probe);
     }
-    log.info("已注册探针类型: {list}", probeRegistry.types().join(", "));
+    log.debug("已注册探针类型: {list}", probeRegistry.types().join(", "));
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
  * 流程文件静态校验
  *
- * 启动期遍历 process/蒙德/NPC/** 与 process/蒙德/Basic/** 下所有 process.json，
+ * 启动期遍历 process/<国家>/{NPC,Basic}/** 下所有 process.json，
  * 对每个 step 检查：
  *   (1) step.type 是否已在 registry 注册
  *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
@@ -12,7 +12,7 @@
  * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
  */
-import { PATHS } from "../config/index.js";
+import { COMMISSION_TYPE, PATHS } from "../config/index.js";
 import { validateSchema } from "../processors/define-step.js";
 import { collectImpregnableDefensePaths } from "../processors/impregnable-defense-config.js";
 import { parseStepLoc } from "../processors/commission-loc-utils.js";
@@ -20,6 +20,7 @@ import { loadNpcProcessFile, loadBasicProcess } from "./index.js";
 import { validateCompleteRoles } from "./party-config.js";
 import { probeRegistry } from "../probes/index.js";
 import { loadAllBranchConfigs } from "./branch-config.js";
+import { buildProcessBasePath, scanCommissionScopes } from "./process-scope.js";
 
 /**
  * 启动期遍历所有 process.json 做静态校验
@@ -48,75 +49,51 @@ function baseName(path) {
 
 async function validateNpcProcesses(registry) {
     let errors = 0;
-    let commissionDirs;
-    try {
-        commissionDirs = Array.from(file.readPathSync(PATHS.NPC_PROCESS_BASE));
-    } catch (error) {
-        log.warn("无法读取 NPC 流程目录 {dir}: {error}", PATHS.NPC_PROCESS_BASE, error.message);
-        return 0;
-    }
+    const scopes = scanCommissionScopes().list.filter((scope) => scope.type === COMMISSION_TYPE.NPC);
 
-    for (const commissionDir of commissionDirs) {
-        if (!file.isFolder(commissionDir)) continue;
-        const commissionName = baseName(commissionDir);
+    for (const scope of scopes) {
+        const baseDir = buildProcessBasePath(scope.country, COMMISSION_TYPE.NPC);
+        const processDir = baseDir + "/" + scope.commissionName + "/" + scope.locationDir;
+        const processPath = processDir + "/process.json";
+        const steps = await loadNpcProcessFile(
+            scope.commissionName,
+            scope.locationDir,
+            "process.json",
+            scope.country
+        );
+        if (!steps || steps.length === 0) continue;
 
-        let locationDirs;
-        try {
-            locationDirs = Array.from(file.readPathSync(commissionDir));
-        } catch {
-            continue;
-        }
-
-        for (const locationDir of locationDirs) {
-            if (!file.isFolder(locationDir)) continue;
-            const location = baseName(locationDir);
-            const steps = await loadNpcProcessFile(commissionName, location, "process.json");
-            if (!steps || steps.length === 0) continue;
-
-            const processPath = PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/process.json";
-            const loadSubProcess = (filename) => loadNpcProcessFile(commissionName, location, filename);
-            const resolveSubProcessPath = (filename) => PATHS.NPC_PROCESS_BASE + "/" + commissionName + "/" + location + "/" + filename;
-            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
-        }
+        const loadSubProcess = (filename) => loadNpcProcessFile(
+            scope.commissionName,
+            scope.locationDir,
+            filename,
+            scope.country
+        );
+        const resolveSubProcessPath = (filename) => processDir + "/" + filename;
+        errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
     }
     return errors;
 }
 
 async function validateBasicProcesses(registry) {
     let errors = 0;
-    let commissionDirs;
-    try {
-        commissionDirs = Array.from(file.readPathSync(PATHS.BASIC_SCRIPT_BASE));
-    } catch (error) {
-        log.warn("无法读取 Basic 流程目录 {dir}: {error}", PATHS.BASIC_SCRIPT_BASE, error.message);
-        return 0;
-    }
+    const scopes = scanCommissionScopes().list.filter((scope) => scope.type === COMMISSION_TYPE.BASIC);
 
-    for (const commissionDir of commissionDirs) {
-        if (!file.isFolder(commissionDir)) continue;
-
-        let subDirs;
-        try {
-            subDirs = Array.from(file.readPathSync(commissionDir));
-        } catch {
-            continue;
+    for (const scope of scopes) {
+        const baseDir = buildProcessBasePath(scope.country, COMMISSION_TYPE.BASIC);
+        const processDir = baseDir + "/" + scope.commissionName + "/" + scope.locationDir;
+        const processPath = processDir + "/process.json";
+        const mapPath = processDir + "/_path.json";
+        if (!file.isFile(mapPath)) {
+            log.error("[{path}] Basic 委托缺少必需地图追踪文件: _path.json", processPath);
+            errors++;
         }
 
-        for (const subDir of subDirs) {
-            if (!file.isFolder(subDir)) continue;
-            const processPath = subDir + "/process.json";
-            const mapPath = subDir + "/_path.json";
-            if (!file.isFile(mapPath)) {
-                log.error("[{path}] Basic 委托缺少必需地图追踪文件: _path.json", processPath);
-                errors++;
-            }
-
-            const steps = await loadBasicProcess(processPath);
-            if (!steps || steps.length === 0) continue;
-            const loadSubProcess = (filename) => loadBasicProcess(subDir + "/" + filename);
-            const resolveSubProcessPath = (filename) => subDir + "/" + filename;
-            errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
-        }
+        const steps = await loadBasicProcess(processPath);
+        if (!steps || steps.length === 0) continue;
+        const loadSubProcess = (filename) => loadBasicProcess(processDir + "/" + filename);
+        const resolveSubProcessPath = (filename) => processDir + "/" + filename;
+        errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
     }
     return errors;
 }

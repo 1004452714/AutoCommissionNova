@@ -2,7 +2,6 @@
     {
         "type": "对话",
         "data": {
-            "skipCount": 5,
             "priorityOptions": [
                 "已经找好了"
             ],
@@ -19,7 +18,6 @@
     {
         "type": "对话",
         "data": {
-            "skipCount": 5,
             "priorityOptions": [
                 "这是你点的餐"
             ],

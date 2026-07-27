@@ -25,6 +25,7 @@ import destroySlimeBalloon from "./destroy-slime-balloon.js";
 import startChallenge from "./start-challenge.js";
 import musicFlow from "./music-flow.js";
 import impregnableDefense from "./impregnable-defense.js";
+import interactAround from "./interact-around.js";
 
 const processors = [
     wait,
@@ -49,6 +50,7 @@ const processors = [
     startChallenge,
     musicFlow,
     impregnableDefense,
+    interactAround,
 ];
 
 /**

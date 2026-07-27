@@ -108,6 +108,14 @@ export default [
 
                     let foundPriorityOption = false;
                     const ocrResults = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_OPTIONS_OCR);
+                    if (ocrResults.count > 0) {
+                        const optionList = Array.from(ocrResults)
+                            .map((result, index) => `#${index + 1} "${result.text}" (${result.x}, ${result.y})`)
+                            .join("; ");
+                        log.debug("对话选项OCR结果（{count}项）: {options}", ocrResults.count, optionList);
+                    } else {
+                        log.debug("对话选项OCR结果为空");
+                    }
 
                     // 选项区也兼带扫一次：有些场景关键词出现在选项条目而非台词里（如 "偷吃看看"）
                     if (probeEnabled && !context.branchConditionMet) {
