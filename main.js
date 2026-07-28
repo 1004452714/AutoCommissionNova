@@ -9,6 +9,7 @@ import { getSetting } from "./src/utils/settings-utils.js";
 import { openCommissionConfigEditor } from "./src/core/commission-config-editor.js";
 import { openDeveloperTestEditor } from "./src/core/developer-test-editor.js";
 import { openProcessEditor } from "./src/core/process-editor.js";
+import { openPathRecorder } from "./src/core/path-recorder.js";
 import { releaseAllTemplates } from "./src/vision/index.js";
 
 registerAllProcessors(stepRegistry);
@@ -28,6 +29,12 @@ registerAllProbes();
         if (setting.runMode === "编辑委托流程") {
             await openProcessEditor(stepRegistry);
             log.info("委托流程编辑器已关闭");
+            return;
+        }
+
+        if (setting.runMode === "录制地图路径") {
+            await openPathRecorder();
+            log.info("地图路径录制器已关闭");
             return;
         }
 

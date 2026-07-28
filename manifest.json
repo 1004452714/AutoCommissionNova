@@ -24,7 +24,9 @@
     "main": "main.js",
     "library": [],
     "saved_files": [
-        "Data/commissions_data.json"
+        "Data/commissions_data.json",
+        "Data/path-recorder-settings.json",
+        "pathing/"
     ],
     "http_allowed_urls": [
         "https://cnb.cool/bettergi/bettergi-scripts-list/*",

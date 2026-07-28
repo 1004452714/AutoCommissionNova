@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>地图路径录制器</title>
+  <style>
+    :root { color-scheme:dark; --bg:#101318; --panel:#181d24; --line:#303844; --muted:#99a5b5; --text:#edf2f7; --accent:#69a7ff; --danger:#ff7070; --ok:#66d29b; --warn:#f0c36a; --action-menu-width:142px; --point-cols:30px 28px 38px 92px max-content max-content minmax(440px,1fr) 114px; --mask-select-height:34px; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; width:100%; height:100%; font:14px/1.5 "Microsoft YaHei"; color:var(--text); background:transparent; }
+    body { display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    button,input,select,textarea { font:inherit; color:inherit; }
+    button { letter-spacing:0; }
+    .app { width:min(1220px,94vw); height:min(800px,88vh); overflow:hidden; border:1px solid #3a4553; border-radius:8px; background:var(--bg); box-shadow:0 18px 70px #000; transition:width .16s ease,background-color .16s ease; }
+    .full-view { width:100%; height:100%; display:grid; grid-template-rows:auto auto 1fr auto; }
+    .compact-view { display:none; width:100%; height:100%; grid-template-rows:auto auto 1fr; background:rgba(0,0,0,.58); }
+    .app.mode-compact,.app.mode-compact-edit { position:absolute; left:0; top:22.222222vh; height:58.333333vh; border-radius:0 8px 8px 0; }
+    .app.mode-compact { width:15.625vw; min-width:0; border-color:rgba(255,255,255,.16); background:rgba(0,0,0,.58); box-shadow:none; }
+    .app.mode-compact-edit { width:52.083333vw; min-width:0; background:var(--bg); }
+    .app.mode-compact .full-view { display:none; }
+    .app.mode-compact .compact-view { display:grid; }
+    .compact-head { display:flex; align-items:center; gap:8px; min-width:0; padding:10px 12px 6px; }
+    .compact-title { min-width:0; margin-right:auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700; }
+    .compact-count { flex:0 0 auto; color:var(--accent); font-size:12px; }
+    .compact-shortcuts { display:flex; gap:12px; min-width:0; overflow:hidden; padding:0 12px 8px; color:#c3ccd8; font-size:11px; }
+    .compact-shortcuts span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .compact-list { min-width:0; min-height:0; overflow:auto; padding:0 8px 10px; scrollbar-width:thin; }
+    .compact-row { display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:7px; align-items:center; min-height:34px; padding:6px 5px; border-top:1px solid rgba(255,255,255,.1); }
+    .compact-index { color:var(--muted); text-align:right; }
+    .compact-coords { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:12px Consolas; }
+    .compact-meta { display:flex; align-items:center; justify-content:flex-end; gap:5px; min-width:0; }
+    .compact-tag { max-width:88px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:1px 5px; border-radius:3px; background:rgba(105,167,255,.18); color:#bcd7ff; font-size:11px; }
+    .compact-action { background:rgba(102,210,155,.16); color:#a8e8c7; }
+    .compact-empty { padding:42px 12px; text-align:center; color:var(--muted); font-size:12px; }
+    .top,.toolbar,.footer { display:flex; align-items:center; gap:10px; padding:11px 16px; background:var(--panel); }
+    .top,.toolbar { border-bottom:1px solid var(--line); }
+    .toolbar { align-items:end; overflow-x:auto; scrollbar-width:thin; }
+    .footer { border-top:1px solid var(--line); }
+    .title { margin-right:auto; font-size:18px; font-weight:700; }
+    .hint,.label,.muted { color:var(--muted); font-size:12px; }
+    .status { min-width:180px; max-width:620px; margin-right:auto; white-space:pre-wrap; color:var(--muted); }
+    .status.ok { color:var(--ok); } .status.error { color:var(--danger); } .status.warning { color:var(--warn); }
+    .btn { min-height:36px; padding:7px 13px; border:1px solid var(--line); border-radius:6px; background:#252c36; cursor:pointer; white-space:nowrap; }
+    .btn:hover:not(:disabled),.menu-button:hover:not(:disabled) { border-color:var(--accent); }
+    .btn:disabled,.menu-button:disabled { opacity:.45; cursor:not-allowed; }
+    .primary { border-color:#4d91ee; background:#286bc6; }
+    .danger { color:var(--danger); }
+    .input { width:100%; min-height:38px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; outline:none; background:#0f141a; }
+    .input:focus { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+    .key-field { min-width:176px; }
+    .key-button { width:100%; text-align:left; }
+    .key-button.binding { border-color:var(--warn); color:var(--warn); }
+    .file-field { min-width:260px; flex:1 1 360px; }
+    .route-field { position:relative; min-width:210px; }
+    .toolbar-command { display:flex; align-items:flex-end; min-height:58px; }
+    .toolbar-actions { margin-left:auto; display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+    .content { min-height:0; overflow:auto; padding:12px 16px 16px; }
+    .points-table { min-width:1080px; }
+    .point-grid { display:grid; grid-template-columns:var(--point-cols); align-items:center; gap:8px; }
+    .point-header { position:sticky; z-index:3; top:-12px; min-height:38px; padding:7px 9px; border:1px solid var(--line); background:#141920; color:var(--muted); font-size:12px; }
+    .point-header span { min-width:0; text-align:left; }
+    .points { display:flex; flex-direction:column; gap:7px; padding-top:7px; }
+    .point { min-height:66px; padding:8px 9px; border:1px solid var(--line); border-radius:7px; background:var(--panel); }
+    .point.drag-before { border-top:3px solid var(--accent); }
+    .point.drag-after { border-bottom:3px solid var(--accent); }
+    .drag-handle { width:28px; height:34px; display:grid; grid-template-columns:repeat(2,4px); grid-template-rows:repeat(3,4px); gap:4px; align-content:center; justify-content:center; border:0; background:transparent; cursor:grab; }
+    .drag-handle i { width:4px; height:4px; border-radius:50%; background:var(--muted); }
+    .play-button { width:28px; height:30px; display:grid; place-items:center; padding:0; border:0; border-radius:4px; background:transparent; cursor:pointer; }
+    .play-button:hover:not(:disabled) { background:rgba(105,167,255,.15); }
+    .play-triangle { width:0; height:0; margin-left:2px; border-top:7px solid transparent; border-bottom:7px solid transparent; border-left:11px solid #a9caff; }
+    .coordinate-cell { min-width:0; }
+    .coords { width:100%; display:grid; gap:1px; min-width:0; padding:3px 4px; border:1px solid transparent; border-radius:4px; color:#dce7f5; background:transparent; font:14px/1.25 Consolas,"Microsoft YaHei"; text-align:left; cursor:pointer; }
+    .coords:hover:not(:disabled),.coords:focus-visible { border-color:var(--accent); background:rgba(105,167,255,.08); outline:none; }
+    .coords:disabled { cursor:default; }
+    .coord-line { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .coord-label { display:inline-block; width:14px; color:var(--muted); }
+    .point .input { min-height:34px; padding:6px 8px; }
+    .action-cell { min-width:0; display:flex; align-items:center; gap:6px; flex-wrap:nowrap; }
+    .action-button { width:var(--action-menu-width); min-width:var(--action-menu-width); flex:0 0 var(--action-menu-width); }
+    .menu-button { width:100%; min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 9px; border:1px solid var(--line); border-radius:6px; background:#0f141a; cursor:pointer; }
+    .menu-button>span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .menu-arrow { color:var(--muted); font-size:10px; }
+    .action-param { min-width:130px; flex:1 1 auto; margin:0; }
+    textarea.action-param { height:34px; min-height:34px; overflow:auto; resize:none; white-space:pre; }
+    .combat-script { scrollbar-width:none; -ms-overflow-style:none; }
+    .combat-script::-webkit-scrollbar { width:0; height:0; display:none; }
+    .strategy-picker { width:34px; min-width:34px; flex:0 0 34px; display:flex; align-items:center; overflow:hidden; transition:width .14s ease; }
+    .strategy-picker.expanded { width:150px; min-width:120px; flex:0 1 150px; overflow:visible; }
+    .strategy-trigger { width:34px; min-width:34px; height:34px; display:grid; place-items:center; padding:0; border:1px solid var(--line); border-radius:6px; background:#0f141a; color:var(--muted); cursor:pointer; }
+    .strategy-trigger:hover,.strategy-trigger:focus-visible { border-color:var(--accent); color:var(--text); outline:none; }
+    .strategy-trigger svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; }
+    .strategy-search { width:0; min-width:0; height:34px; padding:0; border:0; opacity:0; pointer-events:none; margin:0; transition:opacity .12s ease; }
+    .strategy-picker.expanded .strategy-trigger { display:none; }
+    .strategy-picker.expanded .strategy-search { width:100%; min-width:120px; padding:6px 8px; border:1px solid var(--line); opacity:1; pointer-events:auto; }
+    .icon { width:34px; min-width:34px; padding:5px; }
+    .point-actions { display:flex; gap:6px; }
+    .copy-icon { position:relative; width:15px; height:15px; display:block; margin:auto; }
+    .copy-icon::before,.copy-icon::after { content:""; position:absolute; width:9px; height:10px; border:1.5px solid currentColor; border-radius:2px; }
+    .copy-icon::before { left:1px; top:1px; opacity:.65; }
+    .copy-icon::after { right:1px; bottom:1px; background:#252c36; }
+    .empty { padding:70px 20px; text-align:center; color:var(--muted); }
+    .phase { padding:3px 8px; border:1px solid var(--line); border-radius:4px; color:var(--muted); }
+    .phase.recording { border-color:var(--danger); color:var(--danger); }
+    .phase.running { border-color:var(--warn); color:var(--warn); }
+    .popup { position:fixed; z-index:80; min-width:180px; max-width:360px; max-height:300px; overflow:auto; padding:5px; border:1px solid #465365; border-radius:6px; background:#171c23; box-shadow:0 12px 36px #000; }
+    .popup.in-modal { z-index:120; }
+    .popup-item { width:100%; min-height:32px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 9px; border:0; border-radius:4px; color:var(--text); background:transparent; text-align:left; cursor:pointer; }
+    .popup-item:hover,.popup-item.focused,.popup-item.selected { background:#2b405a; color:#e8f2ff; }
+    .popup-item small { color:var(--muted); }
+    .action-popup { max-height:none; overflow:visible; }
+    .action-group { position:relative; }
+    .action-submenu { position:absolute; top:-5px; left:100%; min-width:180px; padding:5px; border:1px solid #465365; border-radius:6px; background:#171c23; box-shadow:0 12px 36px #000; visibility:hidden; }
+    .action-group:hover>.action-submenu,.action-group.open>.action-submenu { visibility:visible; }
+    .action-popup.flip .action-submenu { right:100%; left:auto; }
+    .author-menu { overflow-x:hidden; }
+    .author-menu label { display:flex; align-items:center; gap:8px; min-width:0; padding:6px 8px; cursor:pointer; }
+    .author-menu label span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .author-menu label:hover { background:#26364a; }
+    .syntax-item { display:block; }
+    .syntax-item strong,.syntax-item small { display:block; }
+    .modal-backdrop { position:fixed; z-index:100; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.68); }
+    .modal { width:min(760px,calc(100vw - 40px)); max-height:min(760px,calc(100vh - 40px)); overflow:auto; padding:20px; border:1px solid #465365; border-radius:8px; background:var(--panel); box-shadow:0 18px 60px #000; }
+    .modal.small { width:min(420px,calc(100vw - 40px)); }
+    .modal h2 { margin:0 0 8px; font-size:17px; }
+    .modal h3 { margin:20px 0 8px; font-size:14px; }
+    .modal p { margin:0 0 18px; color:var(--muted); }
+    .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+    .preset-row { display:grid; grid-template-columns:minmax(130px,.8fr) minmax(190px,1.2fr) auto 38px; gap:8px; align-items:center; margin-bottom:8px; }
+    .script-row { grid-template-columns:160px minmax(260px,1fr) auto 38px; }
+    .script-row textarea { min-height:64px; resize:vertical; }
+    .check-label { display:flex; align-items:center; gap:5px; white-space:nowrap; color:var(--muted); font-size:12px; }
+    .settings-head { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .settings-head h2 { margin:0; }
+    .settings-status { min-width:0; margin-left:auto; color:var(--muted); font-size:12px; text-align:right; }
+    .settings-status.ok { color:var(--ok); } .settings-status.error { color:var(--danger); }
+    .settings-tabs { display:flex; gap:4px; margin-bottom:16px; padding:4px; border:1px solid var(--line); border-radius:6px; background:#11161c; }
+    .settings-tab { flex:1; min-height:34px; border:0; border-radius:4px; color:var(--muted); background:transparent; cursor:pointer; }
+    .settings-tab.active { color:var(--text); background:#293443; }
+    .settings-panel { min-height:330px; }
+    .settings-key-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .settings-route-grid { display:grid; grid-template-columns:220px minmax(0,1fr); gap:18px; align-items:start; }
+    .coordinate-popup { width:330px; max-width:calc(100vw - 16px); overflow:visible; }
+    .coordinate-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .coordinate-actions { display:flex; justify-content:flex-end; gap:6px; margin-top:8px; }
+    .coordinate-error { min-height:18px; margin-top:5px; color:var(--danger); font-size:12px; }
+    .hidden { display:none !important; }
+    .app.mode-compact-edit .toolbar { flex-wrap:nowrap; }
+    .app.mode-compact-edit .points-table { min-width:0; }
+    @media (max-width:900px) {
+      .app { width:96vw; height:92vh; }
+      .toolbar { overflow-x:auto; }
+      .file-field { min-width:240px; }
+      .settings-key-grid,.settings-route-grid { grid-template-columns:1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="./mask-select.css">
+</head>
+<body>
+  <div id="app" class="app mode-normal">
+    <section class="compact-view" aria-hidden="true">
+      <header class="compact-head"><div id="compactPhase" class="compact-title">地图路径录制器</div><span id="compactCount" class="compact-count">0 点</span></header>
+      <div class="compact-shortcuts"><span id="compactAddKey"></span><span id="compactFinishKey"></span><span id="compactToggleKey"></span><span>Alt 编辑</span></div>
+      <div id="compactPoints" class="compact-list"></div>
+    </section>
+    <section class="full-view">
+      <header class="top">
+        <div class="title">地图路径录制器</div>
+        <span id="toggleHint" class="hint"></span>
+        <span id="phase" class="phase">待开始</span>
+        <button id="close" class="btn">关闭</button>
+      </header>
+      <section class="toolbar">
+        <div class="toolbar-command"><button id="settingsButton" class="btn" type="button">设置</button></div>
+        <div class="route-field"><label class="label">当前路线作者</label><button id="routeAuthors" class="menu-button" type="button"><span>未选择</span><span class="menu-arrow">▼</span></button></div>
+        <div class="file-field"><label class="label">保存文件名</label><input id="fileName" class="input"></div>
+        <div class="toolbar-actions"><button id="clearPoints" class="btn danger" type="button" disabled>清除</button><button id="recordToggle" class="btn primary" type="button">开始录制</button><button id="sample" class="btn" disabled>添加当前点位</button><button id="addCoordinate" class="btn" type="button">添加坐标</button></div>
+      </section>
+      <main class="content">
+        <div class="points-table">
+          <div class="point-header point-grid"><span>拖动</span><span>运行</span><span>#</span><span>坐标</span><span>类型</span><span>移动方式</span><span>动作与参数</span><span>操作</span></div>
+          <div id="points" class="points"></div>
+        </div>
+      </main>
+      <footer class="footer"><div id="status" class="status">正在加载...</div><button id="save" class="btn primary" disabled>保存路径</button></footer>
+    </section>
+  </div>
+
+  <div id="routeAuthorsMenu" class="popup author-menu hidden"></div>
+  <div id="actionMenu" class="popup action-popup hidden"></div>
+  <div id="strategyMenu" class="popup hidden"></div>
+  <div id="syntaxMenu" class="popup hidden"></div>
+  <div id="coordinatePopup" class="popup coordinate-popup hidden">
+    <div id="coordinateTitle" style="margin-bottom:8px;font-weight:700">编辑坐标</div>
+    <div class="coordinate-fields">
+      <label><span class="label">X</span><input id="coordinateX" class="input" type="number" step="0.0001"></label>
+      <label><span class="label">Y</span><input id="coordinateY" class="input" type="number" step="0.0001"></label>
+    </div>
+    <div id="coordinateError" class="coordinate-error"></div>
+    <div class="coordinate-actions"><button id="coordinateCancel" class="btn" type="button">取消</button><button id="coordinateApply" class="btn primary" type="button">确认</button></div>
+  </div>
+
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="settings-head"><h2>设置</h2><div id="settingsStatus" class="settings-status">修改后自动保存</div></div>
+      <div class="settings-tabs" role="tablist">
+        <button class="settings-tab active" data-settings-tab="keys" type="button">快捷键</button>
+        <button class="settings-tab" data-settings-tab="scripts" type="button">简易策略</button>
+        <button class="settings-tab" data-settings-tab="route" type="button">路线预设</button>
+      </div>
+      <section class="settings-panel" data-settings-panel="keys">
+        <div class="settings-key-grid">
+          <div class="key-field"><label class="label">添加当前点位</label><button id="addKey" class="btn key-button" type="button"></button></div>
+          <div class="key-field"><label class="label">结束录制</label><button id="finishKey" class="btn key-button" type="button"></button></div>
+          <div class="key-field"><label class="label">切换侧边模式</label><button id="toggleKey" class="btn key-button" type="button"></button></div>
+        </div>
+      </section>
+      <section class="settings-panel hidden" data-settings-panel="scripts">
+        <div id="presetScripts"></div>
+        <button id="addScript" class="btn" type="button">添加策略</button>
+      </section>
+      <section class="settings-panel hidden" data-settings-panel="route">
+        <div class="settings-route-grid">
+          <div><label class="label">默认地图匹配</label><select id="presetMapMatch"><option value="TemplateMatch">模板匹配（支持分层地图）</option><option value="SIFT">特征匹配</option></select></div>
+          <div><h3 style="margin-top:0">作者预设</h3><div id="presetAuthors"></div><button id="addAuthor" class="btn" type="button">添加作者</button></div>
+        </div>
+      </section>
+      <div class="modal-actions"><button id="settingsClose" class="btn primary" type="button">关闭</button></div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal small">
+      <h2 id="confirmTitle">请确认</h2>
+      <p id="confirmText"></p>
+      <div class="modal-actions"><button id="confirmCancel" class="btn">取消</button><button id="confirmAccept" class="btn primary">确认</button></div>
+    </div>
+  </div>
+  <script src="./mask-select.js"></script>
+  <script src="./path-recorder-mask.js"></script>
+</body>
+</html>

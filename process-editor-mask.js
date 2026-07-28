@@ -16,6 +16,7 @@
         dirty: false,
         loading: false,
         saving: false,
+        recording: false,
         loadedPath: null,
         targetRequest: 0,
         confirmResolve: null,
@@ -91,6 +92,7 @@
     function setOptions(element, values, selected) {
         element.innerHTML = values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
         if (selected && values.includes(selected)) element.value = selected;
+        window.MaskSelect?.refresh(element);
     }
 
     function createEditableSelect(root, onValueChange) {
@@ -305,7 +307,7 @@
     function resetShownFields(step) {
         state.shownCommon = new Set(COMMON_FIELDS.filter(name => step && step[name] !== undefined));
         const fields = processor(step?.type)?.editor?.fields || {};
-        state.shownData = new Set(Object.keys(fields).filter(name => fields[name].required || step?.data?.[name] !== undefined));
+        state.shownData = new Set(Object.keys(fields).filter(name => fields[name].required || fields[name].alwaysVisible || step?.data?.[name] !== undefined));
     }
 
     function renderSteps() {
@@ -418,18 +420,22 @@
         if (field.type === "array") return renderArrayField(name, field, value);
         if (value === undefined && field.default !== undefined) value = field.default;
         const required = field.required ? " required" : "";
-        const remove = field.required ? "" : `<button class="mini danger" data-remove-data="${escapeHtml(name)}">移除</button>`;
+        const remove = field.required || field.alwaysVisible ? "" : `<button class="mini danger" data-remove-data="${escapeHtml(name)}">移除</button>`;
         let control;
         if (field.type === "boolean") {
-            control = `<select class="input" data-data-value><option value="">未设置</option><option value="true" ${value === true ? "selected" : ""}>true</option><option value="false" ${value === false ? "selected" : ""}>false</option></select>`;
+            control = `<select class="input" data-data-value><option value="">未设置（默认否）</option><option value="true" ${value === true ? "selected" : ""}>是</option><option value="false" ${value === false ? "selected" : ""}>否</option></select>`;
         } else if (field.type === "object") {
             control = `<div data-data-structured>${renderStructuredNode(value && typeof value === "object" && !Array.isArray(value) ? value : {})}</div>`;
         } else if (field.options) {
-            control = `<select class="input" data-data-value>${field.options.map(option => `<option value="${escapeHtml(option)}" ${value === option ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
+            control = `<select class="input" data-data-value>${field.options.map(option => {
+                const optionValue = typeof option === "object" ? option.value : option;
+                const optionLabel = typeof option === "object" ? option.label : option;
+                return `<option value="${escapeHtml(optionValue)}" ${value === optionValue ? "selected" : ""}>${escapeHtml(optionLabel)}</option>`;
+            }).join("")}</select>`;
         } else {
             control = `<input class="input" data-data-value type="${field.type === "number" ? "number" : "text"}" value="${escapeHtml(value ?? "")}">`;
         }
-        return `<section class="data-field" data-field-name="${escapeHtml(name)}" data-field-type="${escapeHtml(field.type || "string")}"><div class="field-head"><label class="label${required}">${escapeHtml(field.label || name)}</label>${remove}</div>${control}<div class="field-note">${field.required ? "必填" : "可选"}</div></section>`;
+        return `<section class="data-field" data-field-name="${escapeHtml(name)}" data-field-type="${escapeHtml(field.type || "string")}"><div class="field-head"><label class="label${required}">${escapeHtml(field.label || name)}</label>${remove}</div>${control}<div class="field-note">${escapeHtml(field.hint || (field.required ? "必填" : "可选"))}</div></section>`;
     }
 
     function renderLoc(step) {
@@ -467,17 +473,23 @@
         const meta = processor(step.type)?.editor || { kind: "structured", label: "data" };
         if (meta.kind === "object") {
             const data = step.data && typeof step.data === "object" && !Array.isArray(step.data) ? step.data : {};
-            const fields = Object.entries(meta.fields || {}).filter(([name, field]) => field.required || state.shownData.has(name))
+            const fields = Object.entries(meta.fields || {}).filter(([name, field]) => field.required || field.alwaysVisible || state.shownData.has(name))
                 .map(([name, field]) => renderDataField(name, field, data[name])).join("");
             const extras = Object.fromEntries(Object.entries(data).filter(([name]) => !(name in (meta.fields || {}))));
-            return `<div id="dataFields">${fields}</div><label class="label">附加 data 字段</label><div id="extraData">${renderStructuredNode(extras)}</div>`;
+            const extraEditor = meta.allowExtras === false
+                ? ""
+                : `<label class="label">附加 data 字段</label><div id="extraData">${renderStructuredNode(extras)}</div>`;
+            return `<div id="dataFields">${fields}</div>${extraEditor}`;
         }
         if (meta.kind === "none") return '<div class="field-note" style="margin-top:12px">此步骤不需要 data</div>';
         if (meta.kind === "structured") return `<label class="label">${escapeHtml(meta.label || "data")}</label><div id="structuredData">${renderStructuredNode(step.data === undefined ? {} : step.data)}</div>`;
         if (meta.kind === "select") return `<label class="label${meta.required ? " required" : ""}">${escapeHtml(meta.label || "data")}</label><select id="singleData" class="input">${(meta.options || []).map(option => `<option ${option === step.data ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}</select>`;
         if (meta.kind === "string" || meta.kind === "number") {
             const input = meta.multiline ? `<textarea id="singleData" class="json">${escapeHtml(step.data ?? "")}</textarea>` : `<input id="singleData" class="input" type="${meta.kind === "number" ? "number" : "text"}" value="${escapeHtml(step.data ?? "")}">`;
-            return `<label class="label${meta.required ? " required" : ""}">${escapeHtml(meta.label || "data")}</label>${input}`;
+            const control = step.type === "地图追踪"
+                ? `<div class="data-record-row">${input}<button id="recordPath" class="btn primary" type="button">打开录制</button></div>`
+                : input;
+            return `<label class="label${meta.required ? " required" : ""}">${escapeHtml(meta.label || "data")}</label>${control}`;
         }
         return '<div class="field-note">此步骤不需要 data</div>';
     }
@@ -502,6 +514,41 @@
     }
 
     function bindEditorEvents(step) {
+        const recordButton = $("recordPath");
+        if (recordButton) recordButton.onclick = async () => {
+            if (state.recording || !applyEditor()) return;
+            state.recording = true;
+            recordButton.disabled = true;
+            recordButton.textContent = "打开中";
+            setStatus("正在打开路径录制器...");
+            try {
+                const result = await request("/recordPath", {
+                    scope: currentScope(),
+                    fileName: currentFileName(),
+                    create: state.create && !state.savedScope,
+                });
+                if (result.status === "error") throw new Error(result.message);
+                if (result.status === "saved") {
+                    if (state.create && result.scope) state.savedScope = result.scope;
+                    step.data = result.fileName;
+                    const input = $("singleData");
+                    if (input) input.value = result.fileName;
+                    markDirty();
+                    setStatus("路径已录制并回填：" + result.fileName, "ok");
+                    refreshTarget();
+                } else {
+                    setStatus("已取消路径录制");
+                }
+            } catch (error) {
+                setStatus(error.message, "error");
+            } finally {
+                state.recording = false;
+                if ($("recordPath")) {
+                    $("recordPath").disabled = false;
+                    $("recordPath").textContent = "打开录制";
+                }
+            }
+        };
         $("editType").onchange = () => {
             const oldData = step.data && typeof step.data === "object" && !Array.isArray(step.data) ? step.data : {};
             const nextType = $("editType").value;
@@ -620,7 +667,8 @@
     function readData(step) {
         const meta = processor(step.type)?.editor || { kind: "structured" };
         if (meta.kind === "object") {
-            const data = readStructuredNode($("extraData").querySelector("[data-structured-node]"));
+            const extraData = $("extraData");
+            const data = extraData ? readStructuredNode(extraData.querySelector("[data-structured-node]")) : {};
             if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("附加 data 必须是对象");
             $("dataFields").querySelectorAll(".data-field").forEach(section => {
                 const name = section.dataset.fieldName;
@@ -640,6 +688,9 @@
                     data[name] = type === "number" ? Number(value) : type === "boolean" ? value === "true" : value;
                 }
             });
+            if (step.type === "追踪委托" && data.autoTalk === true && !data.npc?.trim()) {
+                throw new Error("追踪委托启用自动点击交互项时必须填写交互名称");
+            }
             return data;
         }
         if (meta.kind === "none") return undefined;

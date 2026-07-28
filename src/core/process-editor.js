@@ -2,9 +2,9 @@
 import { isCancellationError } from "../utils/error-utils.js";
 import { scanCommissionScopes } from "../loaders/process-scope.js";
 import { parseStepLoc } from "../processors/commission-loc-utils.js";
-import { validateSchema } from "../processors/define-step.js";
 import { collectImpregnableDefensePaths } from "../processors/impregnable-defense-config.js";
 import { parseLocationDir } from "../utils/location-dir.js";
+import { openPathRecorder } from "./path-recorder.js";
 
 const HTML_PATH = "process-editor-mask.html";
 const WINDOW_TAG = "process-editor";
@@ -41,14 +41,44 @@ const DATA_EDITORS = {
             path: { type: "string", label: "路径文件", required: false },
         },
     },
-    "追踪委托": { kind: "structured", label: "追踪参数" },
-    "委托追踪": { kind: "structured", label: "追踪参数" },
+    "追踪委托": {
+        kind: "object",
+        allowExtras: false,
+        fields: {
+            npc: {
+                type: "string",
+                label: "交互名称",
+                required: false,
+                alwaysVisible: true,
+                hint: "填写要匹配的 NPC 名称或交互项文字，例如“采摘”。",
+            },
+            iconType: {
+                type: "string",
+                label: "追踪图标",
+                required: false,
+                alwaysVisible: true,
+                hint: "仅支持基础委托、问号任务和任务三种图标。",
+                options: [
+                    { value: "", label: "默认（基础委托）" },
+                    { value: "Base", label: "基础委托（Base）" },
+                    { value: "Question", label: "问号任务（Question）" },
+                    { value: "Task", label: "任务（Task）" },
+                ],
+            },
+            autoTalk: {
+                type: "boolean",
+                label: "自动点击交互项",
+                required: false,
+                alwaysVisible: true,
+                hint: "选择“是”后，将自动点击包含交互名称的选项。",
+            },
+        },
+    },
     "切换角色": { kind: "structured", label: "角色槽位" },
     "用户分支选择": { kind: "structured", label: "分支步骤" },
     "固若金汤": { kind: "structured", label: "波次配置" },
     "成就检测": { kind: "structured", label: "成就参数" },
     "等待返回主界面": { kind: "none" },
-    "等待主界面": { kind: "none" },
     "自动战斗": { kind: "none" },
     "摧毁史莱姆气球": { kind: "none" },
     "开启挑战": { kind: "none" },
@@ -132,10 +162,13 @@ function metadata(registry) {
                 for (const field of Object.keys(schema)) {
                     const spec = schema[field];
                     const objectSpec = spec && typeof spec === "object";
+                    const existingField = editor.fields[field] || {};
                     editor.fields[field] = Object.assign({}, editor.fields[field] || {}, {
                         type: objectSpec ? spec.type : String(spec).replace(/\?$/, ""),
                         required: objectSpec ? !Object.prototype.hasOwnProperty.call(spec, "default") : !String(spec).endsWith("?"),
-                        default: objectSpec && Object.prototype.hasOwnProperty.call(spec, "default") ? spec.default : undefined,
+                        default: objectSpec && Object.prototype.hasOwnProperty.call(spec, "default") && !existingField.alwaysVisible
+                            ? spec.default
+                            : undefined,
                     });
                 }
             }
@@ -291,7 +324,7 @@ function validateProcess(steps, registry, processPath, resourceDir, diagnostics,
         }
         const schema = registry.getSchema(step.type);
         if (schema) {
-            const result = validateSchema(step.data, schema, step.type);
+            const result = registry.validateData(step.type, step.data);
             if (!result.ok) errors.push(prefix + result.error);
             else {
                 for (const [fieldName, spec] of Object.entries(schema)) {
@@ -405,8 +438,9 @@ export async function openProcessEditor(registry) {
     htmlMask.setClickThrough(windowId, false);
     const hook = new KeyMouseHook();
     let isVisible = true;
+    let recorderActive = false;
     hook.onKeyDown(function (keyCode) {
-        if (keyCode !== "Oem3" || !htmlMask.exists(windowId)) return;
+        if (recorderActive || keyCode !== "Oem3" || !htmlMask.exists(windowId)) return;
         isVisible = !isVisible;
         htmlMask.setClickThrough(windowId, !isVisible);
         htmlMask.send(windowId, "/toggleVisibility", JSON.stringify({ visible: isVisible }));
@@ -437,6 +471,28 @@ export async function openProcessEditor(registry) {
                     const path = buildPath(message.data?.scope, message.data?.fileName);
                     if (!file.isFile(path)) throw new Error("文件不存在：" + path);
                     respond(windowId, message.requestId, { status: "ok", path, content: file.readTextSync(path) });
+                } else if (message.url === "/recordPath") {
+                    const scope = message.data?.create ? resolveNewScope(message.data?.scope) : message.data?.scope;
+                    const path = buildPath(scope, message.data?.fileName);
+                    recorderActive = true;
+                    isVisible = false;
+                    htmlMask.setClickThrough(windowId, true);
+                    htmlMask.send(windowId, "/toggleVisibility", JSON.stringify({ visible: false }));
+                    let result;
+                    try {
+                        result = await openPathRecorder({
+                            targetDir: processDir(path),
+                            commissionName: scope.commissionName,
+                        });
+                    } finally {
+                        recorderActive = false;
+                        isVisible = true;
+                        if (htmlMask.exists(windowId)) {
+                            htmlMask.setClickThrough(windowId, false);
+                            htmlMask.send(windowId, "/toggleVisibility", JSON.stringify({ visible: true }));
+                        }
+                    }
+                    respond(windowId, message.requestId, Object.assign({}, result, { scope }));
                 } else if (message.url === "/validate" || message.url === "/save") {
                     let parsed;
                     try { parsed = JSON.parse(String(message.data?.content || "")); }
