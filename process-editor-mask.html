@@ -13,18 +13,25 @@
     .app { width:min(1440px,92vw); height:min(850px,88vh); display:grid; grid-template-rows:auto 1fr; background:#101318; border:1px solid #3a4553; box-shadow:0 18px 70px #000; border-radius:8px; overflow:hidden; }
     .top { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel); }
     .title { font-size:18px; font-weight:700; margin-right:auto; }
-    .hint,.label { color:var(--muted); font-size:12px; }
+    .hint { color:var(--muted); font-size:12px; }
+    .label { color:var(--muted); font-size:13px; }
     .btn { border:1px solid var(--line); background:#252c36; padding:7px 13px; border-radius:7px; cursor:pointer; }
     .btn:hover,.mode .active { border-color:var(--accent); }
     .primary { background:#286bc6; border-color:#4d91ee; }
     .danger,.required:after { color:var(--danger); }
     .required:after { content:" *"; }
-    .layout { min-height:0; display:grid; grid-template-columns:300px 1fr 390px; }
+    .layout { min-height:0; display:grid; grid-template-columns:320px 1fr 390px; }
     .side,.inspect { overflow:auto; padding:14px; background:var(--panel); }
     .side { display:flex; flex-direction:column; border-right:1px solid var(--line); }
     .inspect { border-left:1px solid var(--line); }
     .main { min-width:0; overflow:auto; padding:16px; }
     .label { display:block; margin:12px 0 5px; }
+    .form-line { display:grid; grid-template-columns:64px minmax(0,1fr); align-items:center; gap:8px; margin-top:9px; }
+    .form-label { color:var(--muted); font-size:13px; line-height:1.2; white-space:nowrap; }
+    .form-line>.input,.form-line>.editable-select,.form-line>.mask-select { width:100%; min-width:0; }
+    .form-line>.mask-select .mask-select-button { width:100%; }
+    .form-actions { display:flex; gap:8px; margin-top:9px; }
+    .form-actions>.btn { flex:1; white-space:nowrap; }
     .input { width:100%; min-height:38px; border:1px solid var(--line); border-radius:6px; background:#0f141a; padding:8px 10px; outline:none; }
     .input:hover { border-color:#485667; }
     .input:focus { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
@@ -44,6 +51,15 @@
     .row,.mode { display:flex; gap:8px; }
     .row>* ,.mode>* { min-width:0; flex:1; }
     .path { color:var(--muted); font-size:12px; word-break:break-all; margin:10px 0; }
+    .recent-section { min-height:120px; flex:1 1 auto; overflow:auto; margin-top:4px; padding-top:10px; border-top:1px solid var(--line); }
+    .recent-title { margin-bottom:7px; color:var(--muted); font-size:12px; }
+    .recent-files { display:flex; flex-direction:column; gap:6px; }
+    .recent-file { width:100%; min-width:0; display:block; padding:8px 9px; border:1px solid transparent; border-radius:6px; color:var(--text); background:#11161c; text-align:left; cursor:pointer; }
+    .recent-file:hover,.recent-file:focus-visible { border-color:var(--accent); outline:none; }
+    .recent-file strong,.recent-file small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .recent-file strong { font-size:12px; }
+    .recent-file small { margin-top:2px; color:var(--muted); font-size:10px; }
+    .recent-empty { padding:14px 4px; color:var(--muted); font-size:11px; text-align:center; }
     .steps { display:flex; flex-direction:column; gap:10px; }
     .step { display:grid; grid-template-columns:38px 1fr auto; align-items:center; gap:10px; border:1px solid var(--line); background:var(--panel); border-radius:8px; padding:10px; cursor:pointer; }
     .step.active { border-color:var(--accent); }
@@ -65,6 +81,8 @@
     .field-note { color:var(--muted); font-size:11px; margin-top:3px; }
     .field-head { display:flex; align-items:end; gap:8px; }
     .field-head .label { flex:1; }
+    .field-label-content { display:inline-flex; align-items:baseline; gap:6px; }
+    .field-key { color:var(--muted); font:11px/1.2 Consolas,monospace; font-weight:400; opacity:.7; }
     .array-row,.loc-row { display:grid; grid-template-columns:1fr auto auto auto; gap:6px; margin-bottom:6px; }
     .loc-row { grid-template-columns:1fr 1fr 1fr auto; }
     .icon { width:32px; padding:6px; }
@@ -72,15 +90,26 @@
     .optional-bar .input { min-width:0; flex:1; }
     .optional-bar .btn { min-width:58px; flex:0 0 auto; white-space:nowrap; }
     .data-record-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+    .step-picker { display:flex; align-items:center; gap:8px; }
+    .step-picker>.form-label { flex:0 0 64px; }
+    .step-picker>.mask-select,.step-picker>.input { width:auto; min-width:0; }
+    .step-picker>.btn { flex:0 0 auto; }
     .side-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:auto; padding-top:16px; }
     .side-actions .btn { min-width:0; white-space:nowrap; }
-    .structured-node { min-width:0; }
-    .structured-head { display:flex; gap:6px; margin-bottom:6px; }
-    .structured-head .input { width:auto; flex:1; }
-    .structured-body { display:flex; flex-direction:column; gap:6px; padding-left:10px; border-left:1px solid var(--line); }
-    .structured-entry { display:grid; grid-template-columns:minmax(82px,120px) minmax(0,1fr) auto; gap:6px; align-items:start; }
-    .structured-entry.array-entry { grid-template-columns:minmax(0,1fr) auto auto auto; }
-    .structured-add { align-self:flex-start; margin-top:6px; }
+    .key-data-grid { display:grid; grid-template-columns:64px minmax(0,1fr); align-items:center; gap:8px; }
+    .key-data-grid .label { margin:0; }
+    .role-editor { display:flex; flex-direction:column; gap:2px; }
+    .role-editable { width:100%; min-width:0; }
+    .role-editable .editable-options { z-index:30; }
+    .wave-card,.branch-card { margin-top:10px; padding:10px; border:1px solid var(--line); border-radius:7px; background:#11161c; }
+    .wave-number { width:86px; margin-left:auto; }
+    .wave-route { display:grid; grid-template-columns:76px minmax(0,1fr) auto; gap:6px; margin:7px 0; }
+    .branch-title { margin-bottom:8px; font-weight:700; }
+    .branch-title span { margin-left:5px; color:var(--muted); font-size:11px; font-weight:400; }
+    .branch-card>[data-branch-data] { margin-top:8px; }
+    .nested-field { margin-top:8px; }
+    .nested-field .label { margin-top:0; }
+    .branch-empty { max-width:none; margin-top:10px; }
     .modal-backdrop { position:fixed; z-index:100; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.62); }
     .modal { width:min(420px,calc(100vw - 40px)); padding:20px; border:1px solid #465365; border-radius:8px; background:var(--panel); box-shadow:0 18px 60px rgba(0,0,0,.65); }
     .modal-title { margin:0 0 8px; font-size:17px; }
@@ -103,26 +132,25 @@
       <aside class="side">
         <div class="mode"><button id="existingMode" class="btn active">现有委托</button><button id="newMode" class="btn">新增委托</button></div>
         <div id="existingFields">
-          <label class="label">国家</label><select id="countrySelect" class="input"></select>
-          <label class="label">类型</label><select id="typeSelect" class="input"></select>
-          <label class="label">委托</label><select id="commissionSelect" class="input"></select>
-          <label class="label">地点</label><select id="locationSelect" class="input"></select>
+          <div class="form-line"><label class="form-label">国家</label><select id="countrySelect" class="input"></select></div>
+          <div class="form-line"><label class="form-label">类型</label><select id="typeSelect" class="input"></select></div>
+          <div class="form-line"><label class="form-label">委托</label><select id="commissionSelect" class="input"></select></div>
+          <div class="form-line"><label class="form-label">地点</label><select id="locationSelect" class="input"></select></div>
         </div>
         <div id="newFields" class="hidden">
-          <div class="row">
-            <div><label class="label required">国家</label><div id="countryCombo" class="editable-select"><input id="country" class="input" autocomplete="off" placeholder="蒙德" role="combobox" aria-autocomplete="list" aria-expanded="false"><button class="editable-toggle" type="button" tabindex="-1" aria-label="展开国家选项"></button><ul class="editable-options hidden" role="listbox"></ul></div></div>
-            <div><label class="label required">类型</label><select id="type" class="input"><option>NPC</option><option>Basic</option></select></div>
-          </div>
-          <label class="label required">地点目录</label><div id="locationCombo" class="editable-select"><input id="location" class="input" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"><button class="editable-toggle" type="button" tabindex="-1" aria-label="展开地点选项"></button><ul class="editable-options hidden" role="listbox"></ul></div>
-          <label class="label required">委托名</label><input id="commission" class="input">
+          <div class="form-line"><label class="form-label required">国家</label><div id="countryCombo" class="editable-select"><input id="country" class="input" autocomplete="off" placeholder="蒙德" role="combobox" aria-autocomplete="list" aria-expanded="false"><button class="editable-toggle" type="button" tabindex="-1" aria-label="展开国家选项"></button><ul class="editable-options hidden" role="listbox"></ul></div></div>
+          <div class="form-line"><label class="form-label required">类型</label><select id="type" class="input"><option>NPC</option><option>Basic</option></select></div>
+          <div class="form-line"><label class="form-label required">地点目录</label><div id="locationCombo" class="editable-select"><input id="location" class="input" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"><button class="editable-toggle" type="button" tabindex="-1" aria-label="展开地点选项"></button><ul class="editable-options hidden" role="listbox"></ul></div></div>
+          <div class="form-line"><label class="form-label required">委托名</label><input id="commission" class="input"></div>
         </div>
-        <label class="label required">流程文件</label>
-        <div class="row"><input id="existingFile" class="input" value="process.json" readonly><input id="fileName" class="input hidden" value="process.json"><button id="load" class="btn">打开</button></div>
+        <div class="form-line"><label class="form-label required">流程文件</label><input id="existingFile" class="input" value="process.json" readonly><input id="fileName" class="input hidden" value="process.json"></div>
+        <div id="loadActions" class="form-actions"><button id="load" class="btn">打开</button></div>
         <div id="path" class="path"></div>
+        <section class="recent-section"><div class="recent-title">最近打开</div><div id="recentFiles" class="recent-files"></div></section>
         <div class="side-actions"><button class="btn" id="validate">校验</button><button class="btn primary" id="save" disabled>保存</button></div>
       </aside>
       <main class="main">
-        <div class="row"><select id="newType" class="input"></select><button id="add" class="btn primary">添加步骤</button><button id="clearSteps" class="btn danger">清除</button></div>
+        <div class="step-picker"><label class="form-label">步骤类型</label><select id="newType" class="input"></select><button id="add" class="btn primary">添加步骤</button><button id="clearSteps" class="btn danger">清除</button></div>
         <div style="height:12px"></div><div id="steps" class="steps"></div>
       </main>
       <aside class="inspect"><div id="editor" class="empty">选择一个步骤进行编辑</div></aside>

@@ -9,6 +9,7 @@ CLAUDE.md
 WebView2Data/*
 Data/commissions_data.json
 Data/path-recorder-settings.json
+Data/process-editor-recents.json
 pathing/
 process/待处理/
 TODO

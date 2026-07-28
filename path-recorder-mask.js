@@ -208,7 +208,7 @@
         $("points").innerHTML = state.points.length ? state.points.map((point, index) => `
           <div class="point point-grid" data-index="${index}">
             <button class="drag-handle" draggable="${state.running ? "false" : "true"}" type="button" title="拖动排序" ${disabled}>${"<i></i>".repeat(6)}</button>
-            <button class="play-button" data-run type="button" title="从此处运行" ${state.phase === "recording" || state.running ? "disabled" : ""}><span class="play-triangle"></span></button>
+            <button class="play-button" data-run type="button" title="从此处运行" ${state.running ? "disabled" : ""}><span class="play-triangle"></span></button>
             <strong>${index + 1}</strong>
             <div class="coordinate-cell"><button class="coords" data-coordinate type="button" title="编辑 X / Y 坐标" ${disabled}><span class="coord-line"><span class="coord-label">X</span>${coordinateDisplay(point.x)}</span><span class="coord-line"><span class="coord-label">Y</span>${coordinateDisplay(point.y)}</span></button><input type="hidden" data-field="x" value="${coordinate(point.x)}"><input type="hidden" data-field="y" value="${coordinate(point.y)}"></div>
             ${renderSelectControl("type", point.type, disabled)}

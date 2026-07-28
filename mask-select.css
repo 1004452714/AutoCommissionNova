@@ -60,6 +60,9 @@
 }
 
 .mask-select-value {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -91,6 +94,7 @@
     min-height: 32px;
     display: flex;
     align-items: center;
+    gap: 7px;
     padding: 6px 9px;
     overflow: hidden;
     border: 0;
@@ -103,11 +107,83 @@
     cursor: pointer;
 }
 
+.mask-select-option-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mask-select-option-meta {
+    flex: 0 0 auto;
+    color: var(--mask-select-muted);
+    font: 11px/1.2 Consolas, monospace;
+    opacity: .75;
+}
+
 .mask-select-option:hover,
 .mask-select-option.focused,
 .mask-select-option.selected {
     color: #e8f2ff;
     background: var(--mask-select-hover);
+}
+
+.mask-select-grouped-popup {
+    overflow: visible;
+    max-height: none;
+}
+
+.mask-select-group-item {
+    position: relative;
+}
+
+.mask-select-group {
+    width: 100%;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 9px;
+    border: 0;
+    border-radius: 4px;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.mask-select-group:hover,
+.mask-select-group:focus-visible,
+.mask-select-group-item.open > .mask-select-group {
+    outline: none;
+    color: #e8f2ff;
+    background: var(--mask-select-hover);
+}
+
+.mask-select-group-arrow {
+    color: var(--mask-select-muted);
+    font-size: 9px;
+}
+
+.mask-select-submenu {
+    position: absolute;
+    left: calc(100% + 5px);
+    top: -5px;
+    width: var(--mask-select-width, 180px);
+    max-height: min(300px, calc(100vh - 16px));
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid var(--mask-select-line);
+    border-radius: 6px;
+    background: var(--mask-select-popup-bg);
+    box-shadow: 0 12px 36px #000;
+}
+
+.mask-select-submenu.open-left {
+    right: calc(100% + 5px);
+    left: auto;
 }
 
 .mask-select-measure {
@@ -135,13 +211,11 @@
     background: var(--mask-select-hover) !important;
 }
 
-.optional-bar .mask-select,
-.structured-head .mask-select {
+.optional-bar .mask-select {
     min-width: 0;
     flex: 1;
 }
 
-.optional-bar .mask-select-button,
-.structured-head .mask-select-button {
+.optional-bar .mask-select-button {
     max-width: 100%;
 }

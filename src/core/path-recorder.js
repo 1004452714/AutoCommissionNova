@@ -684,7 +684,6 @@ export async function openPathRecorder(options = {}) {
                     respond(windowId, message.requestId, { status: "ok", phase: session.phase });
                 } else if (message.url === "/runFromPoint") {
                     if (session.running) throw new Error("路线已经在执行");
-                    if (session.phase === "recording") throw new Error("请先结束录制再运行路线");
                     if (!Array.isArray(message.data?.points)) throw new Error("点位数据格式错误");
                     const index = Number(message.data?.index);
                     if (!Number.isInteger(index) || index < 0 || index >= message.data.points.length) throw new Error("起始点位无效");
