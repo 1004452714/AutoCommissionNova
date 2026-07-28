@@ -16,9 +16,10 @@ export class StepProcessorRegistry {
      * @param {string} stepType - 步骤类型名称
      * @param {Function} handler - 异步处理函数 (step, context) => Promise<void>
      * @param {Object} [schema] - 可选 data 字段 schema（启动期静态校验用）
+     * @param {Function} [validateData] - 与运行时共用的 data 校验器
      */
-    register(stepType, handler, schema) {
-        this.processors[stepType] = { handler, schema };
+    register(stepType, handler, schema, validateData) {
+        this.processors[stepType] = { handler, schema, validateData };
     }
 
     /**
@@ -62,6 +63,14 @@ export class StepProcessorRegistry {
     getSchema(stepType) {
         const entry = this.processors[stepType];
         return entry ? entry.schema : undefined;
+    }
+
+    /**
+     * 使用处理器声明的完整规则校验并规范化 data。
+     */
+    validateData(stepType, data) {
+        const entry = this.processors[stepType];
+        return entry?.validateData ? entry.validateData(data) : { ok: true, value: data };
     }
 
     /**

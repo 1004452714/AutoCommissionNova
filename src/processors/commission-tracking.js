@@ -5,23 +5,24 @@ import { DIALOG_REGIONS } from "../config/index.js";
 import { isInTalkUI, bvPageOcrRegion, RO } from "../vision/index.js";
 import { defineStep } from "./define-step.js";
 
+const ICON_TYPES = ["Base", "Question", "Task"];
+const DATA_FIELDS = new Set(["npc", "iconType", "autoTalk"]);
+
 /**
- * 根据 iconType 取对应的 RO 模板；未知类型回退到基础委托图标
+ * 根据 iconType 取对应的 RO 模板。
  */
 function pickIconRo(iconType) {
-    const type = (iconType || "").toLowerCase();
-    if (type === "base" || type === "bigmap") {
+    if (iconType === "Base") {
         log.info("使用基础委托图标");
         return RO.iconBaseFull;
-    } else if (type === "question") {
+    } else if (iconType === "Question") {
         log.info("使用问号任务图标");
         return RO.iconQuestion;
-    } else if (type === "task") {
+    } else if (iconType === "Task") {
         log.info("使用任务图标");
         return RO.iconTask;
     }
-    log.info("未知图标类型 {type}，使用基础委托图标", iconType || "");
-    return RO.iconBaseFull;
+    throw new Error("不支持的追踪图标类型: " + iconType);
 }
 
 function parseDistance(text) {
@@ -280,16 +281,9 @@ async function autoNavigateToTalk(options = {}) {
 }
 
 const run = async (step, context) => {
-    let targetNpc = "";
-    let iconType = "base";
-    let autoTalk = false;
-
-    if (typeof step.data === "string") { targetNpc = step.data; }
-    else if (typeof step.data === "object") {
-        if (step.data.npc) targetNpc = step.data.npc;
-        if (step.data.iconType) iconType = step.data.iconType;
-        if (step.data.autoTalk) autoTalk = step.data.autoTalk;
-    }
+    const targetNpc = step.data.npc || "";
+    const iconType = step.data.iconType;
+    const autoTalk = step.data.autoTalk;
 
     log.info("执行追踪委托，目标NPC: {target}，图标类型: {type}", targetNpc, iconType);
     await autoNavigateToTalk({ npcName: targetNpc, iconType: iconType, autoTalk: autoTalk });
@@ -297,6 +291,18 @@ const run = async (step, context) => {
 };
 
 export default defineStep({
-    types: ["追踪委托", "委托追踪"],
+    type: "追踪委托",
+    schema: {
+        npc: "string?",
+        iconType: { type: "string", default: "Base", options: ICON_TYPES },
+        autoTalk: { type: "boolean", default: false },
+    },
+    validate: data => {
+        const unknown = Object.keys(data).filter(name => !DATA_FIELDS.has(name));
+        if (unknown.length) return "追踪委托 data 包含不支持的字段: " + unknown.join("、");
+        if (data.npc !== undefined && !data.npc.trim()) return "追踪委托 data.npc 不能为空字符串";
+        if (data.autoTalk && !data.npc?.trim()) return "追踪委托启用 autoTalk 时必须填写 data.npc";
+        return "";
+    },
     run,
 });

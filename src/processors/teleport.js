@@ -5,7 +5,7 @@
 import { defineStep } from "./define-step.js";
 
 export default defineStep({
-    types: ["tp", "传送"],
+    type: "传送",
     schema: {
         x: "number",
         y: "number",

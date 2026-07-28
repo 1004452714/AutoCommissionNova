@@ -17,7 +17,7 @@
         "desc": "与里瑟对话",
         "data": {
             "npc": "里瑟",
-            "iconType": "task",
+            "iconType": "Task",
             "autoTalk": true
         }
     },

@@ -13,7 +13,6 @@
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
  */
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
-import { validateSchema } from "../processors/define-step.js";
 import { collectImpregnableDefensePaths } from "../processors/impregnable-defense-config.js";
 import { parseStepLoc } from "../processors/commission-loc-utils.js";
 import { loadNpcProcessFile, loadBasicProcess } from "./index.js";
@@ -130,7 +129,7 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
 
         const schema = registry.getSchema(stepType);
         if (schema) {
-            const result = validateSchema(step.data, schema, stepType);
+            const result = registry.validateData(stepType, step.data);
             if (!result.ok) {
                 log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, result.error);
                 errors++;

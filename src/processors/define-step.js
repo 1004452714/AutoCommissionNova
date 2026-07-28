@@ -10,7 +10,6 @@
  *     避免瞬时 OCR / 网络 / 模板匹配抖动直接拖累整个委托
  *   - swallow 选项：默认抛出错误让上层 executor 计数重试；某些处理器（auto-fight、user-branch-select）
  *     现行就是吞错继续，传 swallow: true 即可保留行为
- *   - 多 type 别名：types: ["tp", "传送"] 一次返回数组，避免手写两次 defineStep
  *
  * Schema 格式：
  *   schema: {
@@ -70,6 +69,8 @@ function validateSchema(data, schema, stepType) {
             }
         } else if (!checker(result[field])) {
             return { ok: false, error: "字段 " + field + " 应为 " + expectedType };
+        } else if (isObjSpec && Array.isArray(spec.options) && !spec.options.includes(result[field])) {
+            return { ok: false, error: "字段 " + field + " 只能是 " + spec.options.join("、") };
         }
     }
     return { ok: true, value: result };
@@ -109,19 +110,16 @@ async function callWithRetry({ type, run, step, context, maxRetry, retryMode }) 
     return { ok: true, value: false };
 }
 
-function buildHandler({ type, schema, run, swallow, retry, retryOn }) {
+function buildHandler({ type, validateData, run, swallow, retry, retryOn }) {
     return async function(step, context) {
         // 1. schema 校验
-        let processedStep = step;
-        if (schema) {
-            const validated = validateSchema(step.data, schema, type);
-            if (!validated.ok) {
-                // 配置错误，非运行时异常 —— 无 stack 可言，直接 log.error 即可
-                log.error("[processor:{type}] step.data 校验失败: {error}", type, validated.error);
-                return;
-            }
-            processedStep = Object.assign({}, step, { data: validated.value });
+        const validated = validateData(step.data);
+        if (!validated.ok) {
+            // 配置错误，非运行时异常 —— 无 stack 可言，直接 log.error 即可
+            log.error("[processor:{type}] step.data 校验失败: {error}", type, validated.error);
+            return;
         }
+        const processedStep = Object.assign({}, step, { data: validated.value });
 
         // 2. 解析重试配置：step 级覆盖 defineStep 默认
         const maxRetry = typeof step.retry === "number" && step.retry >= 0 ? step.retry : (retry || 0);
@@ -146,20 +144,26 @@ function buildHandler({ type, schema, run, swallow, retry, retryOn }) {
 /**
  * 定义步骤处理器
  * @param {Object} options
- * @param {string} [options.type] - 单个 step 类型名（与 types 二选一）
- * @param {string[]} [options.types] - 多个共享 handler 的类型名
+ * @param {string} options.type - 唯一步骤类型名
  * @param {Object} [options.schema] - data 字段 schema（可选）
+ * @param {(data: Object) => string|void} [options.validate] - schema 通过后的附加校验（可选）
  * @param {Function} options.run - 业务逻辑 (step, context) => any
  * @param {boolean} [options.swallow=false] - 是否吞掉异常（默认 throw 由上层 executor 处理）
  * @param {number} [options.retry=0] - 失败时的默认重试次数（step.retry 可覆盖）
  * @param {"throw"|"return-false"|"all"} [options.retryOn="throw"] - 触发重试的条件（step.retryOn 可覆盖）
- * @returns {{type, handler}|Array<{type, handler}>} 注册条目
+ * @returns {{type, handler, schema, validateData}} 注册条目
  */
-export function defineStep({ type, types, schema, run, swallow = false, retry = 0, retryOn = "throw" }) {
-    if (Array.isArray(types)) {
-        const handler = buildHandler({ type: types[0], schema, run, swallow, retry, retryOn });
-        return types.map(t => ({ type: t, handler, schema }));
-    }
-    return { type, handler: buildHandler({ type, schema, run, swallow, retry, retryOn }), schema };
+export function defineStep({ type, schema, validate, run, swallow = false, retry = 0, retryOn = "throw" }) {
+    const validateData = data => {
+        const schemaResult = schema ? validateSchema(data, schema, type) : { ok: true, value: data };
+        if (!schemaResult.ok || !validate) return schemaResult;
+        const error = validate(schemaResult.value);
+        return error ? { ok: false, error: String(error) } : schemaResult;
+    };
+    return {
+        type,
+        handler: buildHandler({ type, validateData, run, swallow, retry, retryOn }),
+        schema,
+        validateData,
+    };
 }
-

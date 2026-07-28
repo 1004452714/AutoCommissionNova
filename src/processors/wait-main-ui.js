@@ -29,6 +29,6 @@ const run = async (step, context) => {
 };
 
 export default defineStep({
-    types: ["等待返回主界面", "等待主界面"],
+    type: "等待返回主界面",
     run,
 });
