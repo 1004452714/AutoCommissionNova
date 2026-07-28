@@ -153,6 +153,8 @@ async function destroySlimeBalloon() {
 
 export default defineStep({
     type: "摧毁史莱姆气球",
+    category: "特定委托对策",
+    dataSpec: { kind: "none" },
     run: async () => {
         try {
             log.info("开始执行摧毁史莱姆气球步骤");

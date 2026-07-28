@@ -16,6 +16,14 @@ function resolveTimeout(stepData) {
 
 export default defineStep({
     type: "自动战斗",
+    category: "战斗与队伍",
+    dataSpec: {
+        kind: "object",
+        optional: true,
+        fields: {
+            timeout: { type: "number", label: "超时时间（秒）", integer: true, exclusiveMin: 0 },
+        },
+    },
     swallow: true,
     run: async (step, context) => {
         const configBundle = loadPartyConfigForContext(context);

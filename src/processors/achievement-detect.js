@@ -15,8 +15,15 @@ import { dispatchExplicit } from "../probes/index.js";
 
 export default defineStep({
     type: "成就检测",
+    category: "成就分支",
+    dataSpec: {
+        kind: "object",
+        optional: true,
+        fields: {
+            name: { type: "string", label: "成就名称", nonEmpty: true },
+        },
+    },
     swallow: true,
-    // 不声明 schema：data 是可选的（{ name?: string }），探针内部自行兼容 undefined
     run: async (step, context) => {
         await dispatchExplicit(context, "achievement", step.data);
     },

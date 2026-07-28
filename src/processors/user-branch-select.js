@@ -31,6 +31,21 @@ import { defineStep } from "./define-step.js";
 import { getBranchCompletedByUid, getBranchConfigUids, loadAllBranchConfigs } from "../loaders/branch-config.js";
 import { getCurrentUid } from "../utils/account-utils.js";
 
+function validateBranchData(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return { ok: false, error: "用户分支选择 data 必须是分支对象" };
+    }
+    const entries = Object.entries(data);
+    if (!entries.length) return { ok: false, error: "用户分支选择至少需要一个分支步骤" };
+    for (const [key, step] of entries) {
+        if (!key.trim()) return { ok: false, error: "用户分支选择的分支键不能为空" };
+        if (!step || typeof step !== "object" || Array.isArray(step) || typeof step.type !== "string" || !step.type.trim()) {
+            return { ok: false, error: "用户分支选择分支 " + key + " 必须是有效步骤对象" };
+        }
+    }
+    return { ok: true, value: data };
+}
+
 function getBranchName(descriptions, branchKey) {
     if (descriptions && descriptions[branchKey]) {
         return descriptions[branchKey];
@@ -83,6 +98,13 @@ function decideBranch(commissionConfig, step, descriptions, accountUid) {
 
 export default defineStep({
     type: "用户分支选择",
+    category: "成就分支",
+    dataSpec: {
+        kind: "custom",
+        editor: "branches",
+        label: "分支步骤",
+        validate: validateBranchData,
+    },
     swallow: true,
     run: async (step, context) => {
         const config = loadBranchConfig(context);
@@ -95,6 +117,17 @@ export default defineStep({
 
         const commissionConfig = config[context.commissionName];
         const descriptions = (commissionConfig && commissionConfig.descriptions) || {};
+        if (commissionConfig) {
+            const configured = Object.keys(descriptions);
+            const actual = Object.keys(step.data || {});
+            const unknown = actual.filter(key => !configured.includes(key));
+            const missing = configured.filter(key => !actual.includes(key));
+            if (unknown.length || missing.length) {
+                throw new Error("用户分支选择与分支配置不一致" +
+                    (unknown.length ? "，未知分支: " + unknown.join("、") : "") +
+                    (missing.length ? "，缺少分支: " + missing.join("、") : ""));
+            }
+        }
 
         // 一次委托内的后续 用户分支选择 step 直接复用首次锁定的分支
         if (context.activeBranch) {

@@ -8,14 +8,12 @@ import waitMainUi from "./wait-main-ui.js";
 import keyPress from "./key-press.js";
 import keyMouseScript from "./key-mouse-script.js";
 import mapTracking from "./map-tracking.js";
-import teleport from "./teleport.js";
 import autoSkip from "./auto-skip.js";
 import autoFight from "./auto-fight.js";
 import autoTask from "./auto-task.js";
 import switchCommissionParty from "./switch-commission-party.js";
 import switchRole from "./switch-role.js";
 import commissionTracking from "./commission-tracking.js";
-import locationDetection from "./location-detection.js";
 import userBranchSelect from "./user-branch-select.js";
 import executeSubprocess from "./execute-subprocess.js";
 import achievementDetect from "./achievement-detect.js";
@@ -33,14 +31,12 @@ const processors = [
     keyPress,
     keyMouseScript,
     mapTracking,
-    teleport,
     autoSkip,
     autoFight,
     autoTask,
     switchCommissionParty,
     switchRole,
     commissionTracking,
-    locationDetection,
     userBranchSelect,
     executeSubprocess,
     achievementDetect,
@@ -60,8 +56,8 @@ const processors = [
 export function registerAllProcessors(registry) {
     for (const proc of processors) {
         const items = Array.isArray(proc) ? proc : [proc];
-        for (const { type, handler, schema, validateData } of items) {
-            registry.register(type, handler, schema, validateData);
+        for (const { type, handler, validateData, category, dataSpec } of items) {
+            registry.register(type, handler, validateData, category, dataSpec);
         }
     }
 }

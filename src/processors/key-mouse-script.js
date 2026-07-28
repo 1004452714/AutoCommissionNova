@@ -6,6 +6,8 @@ import { defineStep } from "./define-step.js";
 
 export default defineStep({
     type: "键鼠脚本",
+    category: "流程控制",
+    dataSpec: { kind: "string", label: "键鼠脚本文件", nonEmpty: true, resource: "macro" },
     run: async (step, context) => {
         log.info("执行键鼠脚本: {path}", step.data);
         const fullPath = context.resolveResource(step.data);

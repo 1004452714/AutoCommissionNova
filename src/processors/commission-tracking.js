@@ -5,9 +5,6 @@ import { DIALOG_REGIONS } from "../config/index.js";
 import { isInTalkUI, bvPageOcrRegion, RO } from "../vision/index.js";
 import { defineStep } from "./define-step.js";
 
-const ICON_TYPES = ["Base", "Question", "Task"];
-const DATA_FIELDS = new Set(["npc", "iconType", "autoTalk"]);
-
 /**
  * 根据 iconType 取对应的 RO 模板。
  */
@@ -292,17 +289,36 @@ const run = async (step, context) => {
 
 export default defineStep({
     type: "追踪委托",
-    schema: {
-        npc: "string?",
-        iconType: { type: "string", default: "Base", options: ICON_TYPES },
-        autoTalk: { type: "boolean", default: false },
-    },
-    validate: data => {
-        const unknown = Object.keys(data).filter(name => !DATA_FIELDS.has(name));
-        if (unknown.length) return "追踪委托 data 包含不支持的字段: " + unknown.join("、");
-        if (data.npc !== undefined && !data.npc.trim()) return "追踪委托 data.npc 不能为空字符串";
-        if (data.autoTalk && !data.npc?.trim()) return "追踪委托启用 autoTalk 时必须填写 data.npc";
-        return "";
+    category: "交互方法",
+    dataSpec: {
+        kind: "object",
+        fields: {
+            npc: {
+                type: "string",
+                label: "交互名称",
+                nonEmpty: true,
+                alwaysVisible: true,
+                hint: "填写要匹配的 NPC 名称或交互项文字，例如“采摘”。",
+            },
+            iconType: {
+                type: "string",
+                label: "追踪图标",
+                default: "Base",
+                alwaysVisible: true,
+                options: [
+                    { value: "Base", label: "基础委托（Base）" },
+                    { value: "Question", label: "问号任务（Question）" },
+                    { value: "Task", label: "任务（Task）" },
+                ],
+            },
+            autoTalk: {
+                type: "boolean",
+                label: "自动点击交互项",
+                default: false,
+                alwaysVisible: true,
+            },
+        },
+        validate: data => data.autoTalk && !data.npc?.trim() ? "追踪委托启用 autoTalk 时必须填写 data.npc" : "",
     },
     run,
 });

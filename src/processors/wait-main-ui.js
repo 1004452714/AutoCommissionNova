@@ -30,5 +30,17 @@ const run = async (step, context) => {
 
 export default defineStep({
     type: "等待返回主界面",
+    category: "流程控制",
+    dataSpec: {
+        kind: "object",
+        optional: true,
+        fields: {
+            maxWaitTime: { type: "number", label: "最大等待时间（毫秒）", integer: true, exclusiveMin: 0 },
+            checkInterval: { type: "number", label: "检查间隔（毫秒）", integer: true, exclusiveMin: 0 },
+        },
+        validate: data => data.maxWaitTime !== undefined && data.checkInterval !== undefined && data.maxWaitTime < data.checkInterval
+            ? "maxWaitTime 不能小于 checkInterval"
+            : "",
+    },
     run,
 });

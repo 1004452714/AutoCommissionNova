@@ -6,8 +6,10 @@ import { defineStep } from "./define-step.js";
 
 export default defineStep({
     type: "地图追踪",
+    category: "路径与定位",
+    dataSpec: { kind: "string", label: "路径文件", nonEmpty: true, resource: "path" },
     run: async (step, context) => {
-        const scriptName = step.data || step;
+        const scriptName = step.data;
         const fullPath = context.resolveResource(scriptName);
 
         log.info("执行地图追踪: {path}", fullPath);

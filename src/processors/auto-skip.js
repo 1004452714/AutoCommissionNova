@@ -13,6 +13,27 @@ const page = new BvPage();
 export default [
     defineStep({
         type: "对话",
+        category: "交互方法",
+        dataSpec: {
+            kind: "object",
+            optional: true,
+            fields: {
+                priorityOptions: {
+                    type: "array",
+                    label: "优先对话选项",
+                    minItems: 1,
+                    items: { type: "string", nonEmpty: true },
+                    hint: "每行一个对话选项。",
+                },
+                npcWhiteList: {
+                    type: "array",
+                    label: "NPC 白名单",
+                    minItems: 1,
+                    items: { type: "string", nonEmpty: true },
+                    hint: "每行一个 NPC 名称。",
+                },
+            },
+        },
         run: async (step, context) => {
             try {
                 log.info("执行对话步骤");

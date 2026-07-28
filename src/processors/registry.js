@@ -7,7 +7,7 @@ import { shouldExecuteStepByLoc } from "./commission-loc-utils.js";
 
 export class StepProcessorRegistry {
     constructor() {
-        // type → { handler, schema? }
+        // type → { handler, category, dataSpec, validateData }
         this.processors = {};
     }
 
@@ -15,11 +15,18 @@ export class StepProcessorRegistry {
      * 注册步骤处理器
      * @param {string} stepType - 步骤类型名称
      * @param {Function} handler - 异步处理函数 (step, context) => Promise<void>
-     * @param {Object} [schema] - 可选 data 字段 schema（启动期静态校验用）
-     * @param {Function} [validateData] - 与运行时共用的 data 校验器
+     * @param {Function} validateData - 与运行时共用的 data 校验器
+     * @param {string} category - 编辑器中的步骤分类
+     * @param {Object} dataSpec - 严格 data 声明
      */
-    register(stepType, handler, schema, validateData) {
-        this.processors[stepType] = { handler, schema, validateData };
+    register(stepType, handler, validateData, category, dataSpec) {
+        if (typeof stepType !== "string" || !stepType.trim()) throw new Error("步骤类型名不能为空");
+        if (typeof handler !== "function") throw new Error(stepType + " 步骤缺少 handler");
+        if (typeof validateData !== "function") throw new Error(stepType + " 步骤缺少 validateData");
+        if (typeof category !== "string" || !category.trim()) throw new Error(stepType + " 步骤缺少 category");
+        if (!dataSpec || typeof dataSpec !== "object") throw new Error(stepType + " 步骤缺少 dataSpec");
+        if (this.has(stepType)) throw new Error("步骤类型重复注册: " + stepType);
+        this.processors[stepType] = { handler, validateData, category, dataSpec };
     }
 
     /**
@@ -55,14 +62,18 @@ export class StepProcessorRegistry {
         return Object.prototype.hasOwnProperty.call(this.processors, stepType);
     }
 
-    /**
-     * 获取指定 type 的 schema（如未声明则返回 undefined）
-     * @param {string} stepType
-     * @returns {Object|undefined}
-     */
-    getSchema(stepType) {
+    getDefinition(stepType) {
         const entry = this.processors[stepType];
-        return entry ? entry.schema : undefined;
+        if (!entry) return undefined;
+        return {
+            type: stepType,
+            category: entry.category,
+            dataSpec: entry.dataSpec,
+        };
+    }
+
+    getDefinitions() {
+        return Object.keys(this.processors).map(type => this.getDefinition(type));
     }
 
     /**
@@ -70,7 +81,9 @@ export class StepProcessorRegistry {
      */
     validateData(stepType, data) {
         const entry = this.processors[stepType];
-        return entry?.validateData ? entry.validateData(data) : { ok: true, value: data };
+        if (!entry) return { ok: false, error: "未知步骤类型: " + stepType };
+        if (typeof entry.validateData !== "function") return { ok: false, error: stepType + " 步骤缺少 data 校验器" };
+        return entry.validateData(data);
     }
 
     /**

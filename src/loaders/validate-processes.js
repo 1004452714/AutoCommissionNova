@@ -4,7 +4,7 @@
  * 启动期遍历 process/<国家>/{NPC,Basic}/** 下所有 process.json，
  * 对每个 step 检查：
  *   (1) step.type 是否已在 registry 注册
- *   (2) step.data 是否通过该 type 声明的 schema（schema 可选）
+ *   (2) step.data 是否通过该 type 声明的严格 dataSpec
  *   (3) 用户分支选择 的 step.data[branchKey] 嵌套 step 递归校验
  *   (4) 执行子流程引用的子流程文件递归校验，地图追踪引用的路径文件存在性校验
  *   (5) 通用条件字段 step.loc 是否为 [x, y]、[x, y, tolerance] 或 [[x, y], ...]
@@ -15,11 +15,12 @@
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
 import { collectImpregnableDefensePaths } from "../processors/impregnable-defense-config.js";
 import { parseStepLoc } from "../processors/commission-loc-utils.js";
-import { loadNpcProcessFile, loadBasicProcess } from "./index.js";
 import { validateCompleteRoles } from "./party-config.js";
 import { probeRegistry } from "../probes/index.js";
 import { loadAllBranchConfigs } from "./branch-config.js";
 import { buildProcessBasePath, scanCommissionScopes } from "./process-scope.js";
+
+const RETRY_MODES = new Set(["throw", "return-false", "all"]);
 
 /**
  * 启动期遍历所有 process.json 做静态校验
@@ -46,6 +47,115 @@ function baseName(path) {
     return path.split("/").pop().split("\\").pop();
 }
 
+function normalizePath(path) {
+    return String(path || "").replace(/\\/g, "/").replace(/\/+$/g, "");
+}
+
+function referenceKey(path) {
+    return normalizePath(path).toLowerCase();
+}
+
+function readJsonFile(path, description) {
+    if (!file.isFile(path)) {
+        log.error("[{path}] {description}不存在", path, description);
+        return { ok: false };
+    }
+    try {
+        return { ok: true, value: JSON.parse(file.readTextSync(path)) };
+    } catch (error) {
+        log.error("[{path}] {description} JSON 解析失败: {error}", path, description, error.message);
+        return { ok: false };
+    }
+}
+
+function resolveSafeReference(resourceDir, reference, processPath, stepNumber, stepType, fieldName) {
+    if (typeof reference !== "string" || !reference.trim()) {
+        log.error("[{path}] 步骤 #{n} ({type}) {field} 必须是非空路径字符串",
+            processPath, stepNumber, stepType, fieldName);
+        return null;
+    }
+    const normalized = reference.trim().replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+/g, "/");
+    const parts = normalized.split("/");
+    if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized) ||
+        /[:*?"<>|]/.test(normalized) || parts.includes(".") || parts.includes("..")) {
+        log.error("[{path}] 步骤 #{n} ({type}) {field} 必须是当前流程目录内的安全相对路径: {file}",
+            processPath, stepNumber, stepType, fieldName, reference);
+        return null;
+    }
+    if (!normalized.toLowerCase().endsWith(".json")) {
+        log.error("[{path}] 步骤 #{n} ({type}) {field} 必须指向 .json 文件: {file}",
+            processPath, stepNumber, stepType, fieldName, reference);
+        return null;
+    }
+    return normalizePath(resourceDir) + "/" + normalized;
+}
+
+function validatePathFile(path, description) {
+    const loaded = readJsonFile(path, description);
+    if (!loaded.ok) return 1;
+    const data = loaded.value;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+        log.error("[{path}] {description}根节点必须是对象", path, description);
+        return 1;
+    }
+    if (!Array.isArray(data.positions)) {
+        log.error("[{path}] {description}缺少 positions 数组", path, description);
+        return 1;
+    }
+    const hasValidPoint = data.positions.some(position => position && position.type !== "orientation" &&
+        Number.isFinite(position.id) && Number.isFinite(position.x) && Number.isFinite(position.y));
+    if (!hasValidPoint) {
+        log.error("[{path}] {description}没有有效坐标点", path, description);
+        return 1;
+    }
+    return 0;
+}
+
+function validateMacroFile(path, description) {
+    const loaded = readJsonFile(path, description);
+    if (!loaded.ok) return 1;
+    const data = loaded.value;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+        log.error("[{path}] {description}根节点必须是对象", path, description);
+        return 1;
+    }
+    if (!Array.isArray(data.macroEvents) || data.macroEvents.length === 0) {
+        log.error("[{path}] {description}必须包含非空 macroEvents 数组", path, description);
+        return 1;
+    }
+    for (let index = 0; index < data.macroEvents.length; index++) {
+        const event = data.macroEvents[index];
+        if (!event || typeof event !== "object" || Array.isArray(event)) {
+            log.error("[{path}] {description} macroEvents[{index}] 必须是对象", path, description, index);
+            return 1;
+        }
+        if (!Number.isInteger(event.type) || event.type < 0 || event.type > 6) {
+            log.error("[{path}] {description} macroEvents[{index}].type 必须是 0 至 6", path, description, index);
+            return 1;
+        }
+        if (!Number.isFinite(event.time) || event.time < 0) {
+            log.error("[{path}] {description} macroEvents[{index}].time 必须是非负有限数字", path, description, index);
+            return 1;
+        }
+        if ((event.type === 0 || event.type === 1) &&
+            (!Number.isInteger(event.keyCode) || event.keyCode < 1 || event.keyCode > 255)) {
+            log.error("[{path}] {description} macroEvents[{index}].keyCode 必须是 1 至 255 的整数", path, description, index);
+            return 1;
+        }
+        if (event.type >= 2 && event.type <= 6 &&
+            (!Number.isFinite(event.mouseX) || !Number.isFinite(event.mouseY))) {
+            log.error("[{path}] {description} macroEvents[{index}] 缺少合法 mouseX/mouseY", path, description, index);
+            return 1;
+        }
+        if ((event.type === 4 || event.type === 5) && !["Left", "Right", "Middle"].includes(event.mouseButton)) {
+            log.error("[{path}] {description} macroEvents[{index}].mouseButton 只能是 Left、Right 或 Middle",
+                path, description, index);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 async function validateNpcProcesses(registry) {
     let errors = 0;
     const scopes = scanCommissionScopes().list.filter((scope) => scope.type === COMMISSION_TYPE.NPC);
@@ -54,22 +164,25 @@ async function validateNpcProcesses(registry) {
         const baseDir = buildProcessBasePath(scope.country, COMMISSION_TYPE.NPC);
         const processDir = baseDir + "/" + scope.commissionName + "/" + scope.locationDir;
         const processPath = processDir + "/process.json";
-        const steps = await loadNpcProcessFile(
+        const loaded = readJsonFile(processPath, "流程文件");
+        if (!loaded.ok) {
+            errors++;
+            continue;
+        }
+        if (!Array.isArray(loaded.value)) {
+            log.error("[{path}] 流程文件根节点必须是步骤数组", processPath);
+            errors++;
+            continue;
+        }
+        if (loaded.value.length === 0) log.warn("[{path}] 流程为空，没有可执行步骤", processPath);
+        errors += await validateProcessSteps(
+            registry,
+            processPath,
+            loaded.value,
+            processDir,
             scope.commissionName,
-            scope.locationDir,
-            "process.json",
-            scope.country
+            new Set([referenceKey(processPath)])
         );
-        if (!steps || steps.length === 0) continue;
-
-        const loadSubProcess = (filename) => loadNpcProcessFile(
-            scope.commissionName,
-            scope.locationDir,
-            filename,
-            scope.country
-        );
-        const resolveSubProcessPath = (filename) => processDir + "/" + filename;
-        errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
     }
     return errors;
 }
@@ -83,16 +196,27 @@ async function validateBasicProcesses(registry) {
         const processDir = baseDir + "/" + scope.commissionName + "/" + scope.locationDir;
         const processPath = processDir + "/process.json";
         const mapPath = processDir + "/_path.json";
-        if (!file.isFile(mapPath)) {
-            log.error("[{path}] Basic 委托缺少必需地图追踪文件: _path.json", processPath);
-            errors++;
-        }
+        errors += validatePathFile(mapPath, "Basic 必需路径文件");
 
-        const steps = await loadBasicProcess(processPath);
-        if (!steps || steps.length === 0) continue;
-        const loadSubProcess = (filename) => loadBasicProcess(processDir + "/" + filename);
-        const resolveSubProcessPath = (filename) => processDir + "/" + filename;
-        errors += await validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath);
+        const loaded = readJsonFile(processPath, "流程文件");
+        if (!loaded.ok) {
+            errors++;
+            continue;
+        }
+        if (!Array.isArray(loaded.value)) {
+            log.error("[{path}] 流程文件根节点必须是步骤数组", processPath);
+            errors++;
+            continue;
+        }
+        if (loaded.value.length === 0) log.warn("[{path}] 流程为空，没有可执行步骤", processPath);
+        errors += await validateProcessSteps(
+            registry,
+            processPath,
+            loaded.value,
+            processDir,
+            scope.commissionName,
+            new Set([referenceKey(processPath)])
+        );
     }
     return errors;
 }
@@ -103,12 +227,60 @@ async function validateBasicProcesses(registry) {
  * @param {Object} registry
  * @param {string} processPath - 用于日志定位
  * @param {Array} steps - loader 返回的 step 数组
- * @param {Function} loadSubProcess - (filename) => Promise<Array|null> 子流程加载器（按委托类型注入）
- * @param {Function} [resolveSubProcessPath] - (filename) => string 子流程实际文件路径（存在性检查用）
- * @param {Set<string>} visited - 已访问的子流程文件名，避免循环递归
+ * @param {string} resourceDir - 当前委托地点目录，所有资源引用均相对此目录解析
+ * @param {string} commissionName - 当前委托名，用于分支配置校验
+ * @param {Set<string>} stack - 当前递归栈中的流程路径，用于检测循环引用
  */
-async function validateProcessSteps(registry, processPath, steps, loadSubProcess, resolveSubProcessPath, visited = new Set()) {
+async function validateProcessSteps(registry, processPath, steps, resourceDir, commissionName, stack = new Set()) {
     let errors = 0;
+
+    async function validateReferencedProcess(reference, stepNumber, stepType, fieldName, guarded) {
+        const subPath = resolveSafeReference(resourceDir, reference, processPath, stepNumber, stepType, fieldName);
+        if (!subPath) {
+            errors++;
+            return;
+        }
+        const stackKey = referenceKey(subPath);
+        if (stack.has(stackKey)) {
+            if (guarded) {
+                log.warn("[{path}] 步骤 #{n} ({type}) 检测到由 desc 条件保护的循环引用: {file}",
+                    processPath, stepNumber, stepType, reference);
+            } else {
+                log.error("[{path}] 步骤 #{n} ({type}) 检测到无条件循环引用: {file}",
+                    processPath, stepNumber, stepType, reference);
+                errors++;
+            }
+            return;
+        }
+        const loaded = readJsonFile(subPath, "子流程文件");
+        if (!loaded.ok) {
+            errors++;
+            return;
+        }
+        if (!Array.isArray(loaded.value)) {
+            log.error("[{path}] 步骤 #{n} ({type}) 子流程根节点必须是步骤数组: {file}",
+                processPath, stepNumber, stepType, reference);
+            errors++;
+            return;
+        }
+        if (loaded.value.length === 0) {
+            log.warn("[{path}] 步骤 #{n} ({type}) 子流程为空: {file}",
+                processPath, stepNumber, stepType, reference);
+        }
+        stack.add(stackKey);
+        try {
+            errors += await validateProcessSteps(
+                registry,
+                `${processPath} → ${reference}`,
+                loaded.value,
+                resourceDir,
+                commissionName,
+                stack
+            );
+        } finally {
+            stack.delete(stackKey);
+        }
+    }
     for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
 
@@ -127,123 +299,101 @@ async function validateProcessSteps(registry, processPath, steps, loadSubProcess
             continue;
         }
 
-        const schema = registry.getSchema(stepType);
-        if (schema) {
-            const result = registry.validateData(stepType, step.data);
-            if (!result.ok) {
-                log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, result.error);
-                errors++;
-            }
-        }
-
-        if (stepType === "切换委托队伍" && step.data !== "战斗" && step.data !== "元素采集") {
-            log.error("[{path}] 步骤 #{n} ({type}) data 只能是 \"战斗\" 或 \"元素采集\"",
-                processPath, i + 1, stepType);
+        const dataResult = registry.validateData(stepType, step.data);
+        if (!dataResult.ok) {
+            log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, dataResult.error);
             errors++;
         }
 
         // 嵌套校验：用户分支选择 的 step.data[branchKey] 是嵌套 step 对象
         if (stepType === "用户分支选择" && step.data && typeof step.data === "object" && !Array.isArray(step.data)) {
-            const nestedSteps = [];
-            for (const branchKey of Object.keys(step.data)) {
-                const branchStep = step.data[branchKey];
-                if (branchStep && typeof branchStep === "object" && !Array.isArray(branchStep)) {
-                    nestedSteps.push(branchStep);
+            const branchConfig = loadAllBranchConfigs()[commissionName];
+            if (!branchConfig || !branchConfig.descriptions || typeof branchConfig.descriptions !== "object" ||
+                Array.isArray(branchConfig.descriptions)) {
+                log.error("[{path}] 步骤 #{n} ({type}) 当前委托没有有效分支配置",
+                    processPath, i + 1, stepType);
+                errors++;
+            } else {
+                const configured = Object.keys(branchConfig.descriptions);
+                const actual = Object.keys(step.data);
+                const unknown = actual.filter(key => !configured.includes(key));
+                const missing = configured.filter(key => !actual.includes(key));
+                if (unknown.length || missing.length) {
+                    log.error("[{path}] 步骤 #{n} ({type}) 与分支配置不一致，未知: {unknown}，缺少: {missing}",
+                        processPath, i + 1, stepType, unknown.join("、") || "无", missing.join("、") || "无");
+                    errors++;
                 }
             }
-            if (nestedSteps.length > 0) {
+            for (const [branchKey, branchStep] of Object.entries(step.data)) {
+                if (!branchStep || typeof branchStep !== "object" || Array.isArray(branchStep)) continue;
                 errors += await validateProcessSteps(
                     registry,
-                    `${processPath} → 用户分支选择`,
-                    nestedSteps,
-                    loadSubProcess,
-                    resolveSubProcessPath,
-                    visited
+                    `${processPath} → 用户分支 ${branchKey}`,
+                    [branchStep],
+                    resourceDir,
+                    commissionName,
+                    stack
                 );
             }
         }
 
-        // 地图追踪文件只检查存在性，不按 JSON 子流程递归
+        // 路径、宏和子流程引用都必须是当前委托目录内的安全 JSON 相对路径。
         if (stepType === "地图追踪" && typeof step.data === "string") {
-            const mapPath = resolveSubProcessPath ? resolveSubProcessPath(step.data) : "";
-            if (mapPath && !file.isFile(mapPath)) {
-                log.error("[{path}] 步骤 #{n} ({type}) 地图追踪文件不存在: {file}",
-                    processPath, i + 1, stepType, step.data);
-                errors++;
-            }
+            const mapPath = resolveSafeReference(resourceDir, step.data, processPath, i + 1, stepType, "data");
+            if (!mapPath) errors++;
+            else errors += validatePathFile(mapPath, "地图追踪文件");
         }
 
-        // 摧毁哨塔的路径追踪模式同样引用流程目录内的路径文件
+        if (stepType === "键鼠脚本" && typeof step.data === "string") {
+            const macroPath = resolveSafeReference(resourceDir, step.data, processPath, i + 1, stepType, "data");
+            if (!macroPath) errors++;
+            else errors += validateMacroFile(macroPath, "键鼠脚本文件");
+        }
+
         if (stepType === "摧毁哨塔" && step.data && typeof step.data === "object" &&
             step.data.navigation === "路径追踪" && typeof step.data.path === "string") {
-            const mapPath = resolveSubProcessPath ? resolveSubProcessPath(step.data.path) : "";
-            if (mapPath && !file.isFile(mapPath)) {
-                log.error("[{path}] 步骤 #{n} ({type}) 路径文件不存在: {file}",
-                    processPath, i + 1, stepType, step.data.path);
-                errors++;
-            }
+            const mapPath = resolveSafeReference(resourceDir, step.data.path, processPath, i + 1, stepType, "data.path");
+            if (!mapPath) errors++;
+            else errors += validatePathFile(mapPath, "摧毁哨塔路径文件");
         }
 
-        // 固若金汤的每个 wave 可以包含多个路径引用。
         if (stepType === "固若金汤") {
             const defenseConfig = collectImpregnableDefensePaths(step.data);
-            for (const warning of defenseConfig.warnings || []) {
-                log.warn("[{path}] 步骤 #{n} ({type}) {warning}",
-                    processPath, i + 1, stepType, warning);
-            }
-            if (!defenseConfig.ok) {
-                log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}",
-                    processPath, i + 1, stepType, defenseConfig.error);
-                errors++;
-            } else {
+            if (defenseConfig.ok) {
                 for (const pathRef of defenseConfig.paths) {
-                    const mapPath = resolveSubProcessPath ? resolveSubProcessPath(pathRef) : "";
-                    if (mapPath && !file.isFile(mapPath)) {
-                        log.error("[{path}] 步骤 #{n} ({type}) 路径文件不存在: {file}",
-                            processPath, i + 1, stepType, pathRef);
-                        errors++;
-                    }
+                    const mapPath = resolveSafeReference(resourceDir, pathRef, processPath, i + 1, stepType, "波次路径");
+                    if (!mapPath) errors++;
+                    else errors += validatePathFile(mapPath, "固若金汤波次路径文件");
                 }
             }
         }
 
-        // 子流程文件校验（执行子流程）
         if (stepType === "执行子流程" && step.data && typeof step.data.path === "string") {
-            const subFile = step.data.path;
-            if (visited.has(subFile)) continue;
-            visited.add(subFile);
-            const subPath = resolveSubProcessPath ? resolveSubProcessPath(subFile) : "";
-            if (subPath && !file.isFile(subPath)) {
-                log.error("[{path}] 步骤 #{n} ({type}) 子流程文件不存在: {file}",
-                    processPath, i + 1, stepType, subFile);
-                errors++;
-                continue;
-            }
-
-            try {
-                const subSteps = await loadSubProcess(subFile);
-                if (subSteps && subSteps.length > 0) {
-                    errors += await validateProcessSteps(
-                        registry,
-                        `${processPath} → ${subFile}`,
-                        subSteps,
-                        loadSubProcess,
-                        resolveSubProcessPath,
-                        visited
-                    );
-                }
-            } catch (err) {
-                log.error("[{path}] 步骤 #{n} ({type}) 子流程加载失败: {file} - {error}",
-                    processPath, i + 1, stepType, subFile, err.message);
-                errors++;
-            }
+            await validateReferencedProcess(step.data.path, i + 1, stepType, "data.path",
+                typeof step.desc === "string" && Boolean(step.desc.trim()));
         }
+
     }
     return errors;
 }
 
 function validateCommonStepFields(processPath, stepNumber, step) {
     let errors = 0;
+
+    for (const fieldName of ["note", "desc"]) {
+        if (step[fieldName] !== undefined && typeof step[fieldName] !== "string") {
+            log.error("[{path}] 步骤 #{n} {field} 必须是字符串", processPath, stepNumber, fieldName);
+            errors++;
+        }
+    }
+    if (step.retry !== undefined && (!Number.isInteger(step.retry) || step.retry < 0)) {
+        log.error("[{path}] 步骤 #{n} retry 必须是非负整数", processPath, stepNumber);
+        errors++;
+    }
+    if (step.retryOn !== undefined && !RETRY_MODES.has(step.retryOn)) {
+        log.error("[{path}] 步骤 #{n} retryOn 只能是 throw、return-false 或 all", processPath, stepNumber);
+        errors++;
+    }
 
     const locResult = parseStepLoc(step.loc);
     if (!locResult.ok) {

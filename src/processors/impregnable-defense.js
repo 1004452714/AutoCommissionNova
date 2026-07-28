@@ -273,6 +273,17 @@ async function runImpregnableDefense(step, context) {
 
 export default defineStep({
     type: "固若金汤",
-    schema: {},
+    category: "特定委托对策",
+    dataSpec: {
+        kind: "custom",
+        editor: "waves",
+        label: "波次配置",
+        validate: data => {
+            const result = parseImpregnableDefenseConfig(data);
+            return result.ok
+                ? { ok: true, value: data }
+                : { ok: false, error: result.error };
+        },
+    },
     run: runImpregnableDefense,
 });

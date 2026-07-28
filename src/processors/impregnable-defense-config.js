@@ -61,22 +61,22 @@ export function parseImpregnableDefenseConfig(data) {
 
     for (const key of Object.keys(data)) {
         if (key === "timeout") {
-            if (typeof data.timeout !== "number" || !Number.isFinite(data.timeout) || data.timeout <= 0) {
-                return { ok: false, error: "字段 timeout 必须是正数", warnings };
+            if (typeof data.timeout !== "number" || !Number.isInteger(data.timeout) || data.timeout <= 0) {
+                return { ok: false, error: "字段 timeout 必须是正整数", warnings };
             }
             timeout = data.timeout;
             continue;
         }
 
         const waveMatch = key.match(WAVE_KEY_PATTERN);
-        if (!waveMatch) {
-            warnings.push(`忽略未知顶层字段 ${key}`);
-            continue;
-        }
+        if (!waveMatch) return { ok: false, error: `未知顶层字段 ${key}`, warnings };
 
         const waveData = data[key];
         if (!waveData || typeof waveData !== "object" || Array.isArray(waveData)) {
             return { ok: false, error: `字段 ${key} 必须是对象`, warnings };
+        }
+        if (Object.keys(waveData).length === 0) {
+            return { ok: false, error: `字段 ${key} 至少需要一条路径条件`, warnings };
         }
 
         const paths = new Map();

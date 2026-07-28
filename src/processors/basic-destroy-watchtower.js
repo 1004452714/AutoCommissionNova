@@ -412,6 +412,26 @@ async function destroyAllWatchtowers(options, context) {
 
 export default defineStep({
     type: "摧毁哨塔",
+    category: "特定委托对策",
+    dataSpec: {
+        kind: "object",
+        optional: true,
+        fields: {
+            navigation: {
+                type: "string",
+                label: "寻路方式",
+                default: NAVIGATION_ICON,
+                alwaysVisible: true,
+                options: [NAVIGATION_ICON, NAVIGATION_PATH],
+            },
+            path: { type: "string", label: "路径文件", nonEmpty: true, resource: "path" },
+        },
+        validate: data => data.navigation === NAVIGATION_PATH && !data.path
+            ? "摧毁哨塔使用路径追踪时必须配置 data.path"
+            : data.navigation === NAVIGATION_ICON && data.path !== undefined
+                ? "摧毁哨塔使用图标寻路时不能配置 data.path"
+                : "",
+    },
     run: async (step, context) => {
         try {
             const options = resolveStepOptions(step);

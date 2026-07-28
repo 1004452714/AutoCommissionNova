@@ -16,9 +16,25 @@ import { pageScroll, RO } from "../vision/index.js";
 
 export default defineStep({
     type: "使用道具",
-    schema: {
-        tab: "string",
-        items: "array",   // string[]；元素是否非空字符串在 run 里自查
+    category: "自动化与道具",
+    dataSpec: {
+        kind: "object",
+        fields: {
+            tab: {
+                type: "string",
+                label: "背包分类",
+                required: true,
+                options: ["武器", "圣遗物", "养成道具", "食物", "材料", "小道具", "任务", "贵重道具", "摆设"],
+            },
+            items: {
+                type: "array",
+                label: "道具名称",
+                required: true,
+                minItems: 1,
+                items: { type: "string", nonEmpty: true },
+                hint: "每行一个道具名称，按顺序尝试。",
+            },
+        },
     },
     swallow: true,
     run: async (step, context) => {

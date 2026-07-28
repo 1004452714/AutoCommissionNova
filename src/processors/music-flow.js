@@ -25,6 +25,8 @@ function isCommissionCompleted() {
 
 export default defineStep({
     type: "乐流奔引",
+    category: "特定委托对策",
+    dataSpec: { kind: "none" },
     run: async () => {
         const page = new BvPage();
 

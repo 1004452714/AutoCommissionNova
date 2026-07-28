@@ -262,6 +262,8 @@ async function startChallenge() {
 
 export default defineStep({
     type: "开启挑战",
+    category: "交互方法",
+    dataSpec: { kind: "none" },
     retryOn: "return-false",
     /**
      * 开启挑战步骤入口，负责日志、取消异常透传与最终释放 W。

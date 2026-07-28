@@ -235,8 +235,54 @@ export async function switchRolesByMap(roleMap) {
     return true;
 }
 
+function validateRoleData(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return { ok: false, error: "切换角色步骤需要对象格式的 data" };
+    }
+    const entries = Object.entries(data);
+    if (entries.length < 1 || entries.length > 4) {
+        return { ok: false, error: "切换角色必须配置 1 至 4 个角色" };
+    }
+    let avatarInfo;
+    try {
+        avatarInfo = JSON.parse(file.readTextSync(PATHS.AVATAR_INFO));
+    } catch (error) {
+        return { ok: false, error: "角色信息读取失败: " + error.message };
+    }
+    const names = new Set();
+    const normalized = {};
+    for (const [slot, rawName] of entries) {
+        const name = typeof rawName === "string" ? rawName.trim() : "";
+        if (!/^[1-4]$/.test(slot)) return { ok: false, error: "角色槽位只能是 1 至 4: " + slot };
+        if (!name) return { ok: false, error: "角色 " + slot + " 的名称不能为空" };
+        if (names.has(name)) return { ok: false, error: "角色不能重复: " + name };
+        if (!avatarInfo[name]) return { ok: false, error: "角色不在 avatar_info.json 中: " + name };
+        const templateDir = PATHS.AVATAR_TEMPLATE_DIR + "/" + name;
+        let hasTemplate = false;
+        try {
+            hasTemplate = file.isFolder(templateDir) &&
+                Array.from(file.readPathSync(templateDir) || []).some(entry => file.isFile(entry));
+        } catch (error) {
+            return { ok: false, error: "角色头像模板读取失败: " + name + " - " + error.message };
+        }
+        if (!hasTemplate) {
+            return { ok: false, error: "角色缺少头像模板: " + name };
+        }
+        names.add(name);
+        normalized[slot] = name;
+    }
+    return { ok: true, value: normalized };
+}
+
 export default defineStep({
     type: "切换角色",
+    category: "战斗与队伍",
+    dataSpec: {
+        kind: "custom",
+        editor: "roles",
+        label: "角色槽位",
+        validate: validateRoleData,
+    },
     run: async (step, context) => {
         try {
             return await switchRolesByMap(step.data);

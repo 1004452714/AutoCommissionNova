@@ -14,8 +14,12 @@ import { defineStep } from "./define-step.js";
 
 export default defineStep({
     type: "执行子流程",
-    schema: {
-        path: "string",
+    category: "流程控制",
+    dataSpec: {
+        kind: "object",
+        fields: {
+            path: { type: "string", label: "子流程文件", required: true, nonEmpty: true, resource: "process" },
+        },
     },
     run: async (step, context) => {
         const fullPath = context.resolveResource(step.data.path);

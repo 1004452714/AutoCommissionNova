@@ -10,6 +10,8 @@ import { defineStep } from "./define-step.js";
 
 export default defineStep({
     type: "切换委托队伍",
+    category: "战斗与队伍",
+    dataSpec: { kind: "string", label: "队伍用途", options: ["战斗", "元素采集"] },
     run: async (step, context) => {
         log.info("执行切换委托队伍操作");
         if (step.data !== "战斗" && step.data !== "元素采集") {

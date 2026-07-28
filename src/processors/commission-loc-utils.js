@@ -24,6 +24,9 @@ function parseLocTarget(target, indexLabel = "") {
     if (!isFiniteNumber(tolerance)) {
         return { ok: false, error: `loc${indexLabel} 第三个元素 tolerance 必须是数字` };
     }
+    if (tolerance <= 0) {
+        return { ok: false, error: `loc${indexLabel} 第三个元素 tolerance 必须大于 0` };
+    }
 
     return {
         ok: true,
@@ -66,17 +69,6 @@ export function parseStepLoc(loc) {
         return { present: true, ok: false, error: parsed.error };
     }
     return { present: true, ok: true, value: { targets: [parsed.value] } };
-}
-
-/**
- * 检测当前委托目标位置是否命中指定坐标。
- * @param {{x: number, y: number, tolerance: number}} target
- * @param {Object} context
- * @param {string} label - 日志标签
- * @returns {Promise<boolean>}
- */
-export async function detectCommissionLocation(target, context, label = "地址检测") {
-    return detectCommissionLocations([target], context, label);
 }
 
 /**

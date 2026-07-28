@@ -162,9 +162,13 @@ class InteractionSearch {
 
 export default defineStep({
     type: "在附近交互",
-    schema: {
-        text: "string",
-        turns: { type: "number", default: 3 },
+    category: "交互方法",
+    dataSpec: {
+        kind: "object",
+        fields: {
+            text: { type: "string", label: "交互文字", required: true, nonEmpty: true },
+            turns: { type: "number", label: "搜索圈数", default: 3, integer: true, exclusiveMin: 0 },
+        },
     },
     run: async (step) => {
         const { text, turns } = step.data;
