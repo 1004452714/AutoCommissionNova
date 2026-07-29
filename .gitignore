@@ -7,6 +7,9 @@ AGENTS.md
 CLAUDE.md
 
 WebView2Data/*
+frontend/node_modules/
+frontend/.env.local
+frontend/.env.*.local
 Data/commissions_data.json
 Data/path-recorder-settings.json
 Data/process-editor-recents.json

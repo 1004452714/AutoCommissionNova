@@ -29,3 +29,12 @@ end_of_line = crlf
 charset = utf-8
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+# Vue 前端与构建工具文件
+[*.{ts,vue,css,html,mjs,md}]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true

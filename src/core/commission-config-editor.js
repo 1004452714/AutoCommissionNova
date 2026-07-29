@@ -20,7 +20,8 @@ import { getCurrentUid } from "../utils/account-utils.js";
 import { PATHS } from "../config/index.js";
 import { RO } from "../vision/index.js";
 
-const HTML_PATH = "commission-config-mask.html";
+// Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
+const HTML_PATH = "web/commission-config/index.html";
 const WINDOW_TAG = "commission-config";
 
 function normalizeStrategyPath(path) {

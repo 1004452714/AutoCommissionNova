@@ -1,4 +1,6 @@
 {
-    "uids": [],
-    "skipSafeTeleport": false
+    "uids": [
+        "test"
+    ],
+    "skipSafeTeleport": true
 }

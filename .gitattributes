@@ -1,2 +1,8 @@
 *.js text eol=CRLF
 *.json text eol=CRLF
+*.ts text eol=CRLF
+*.vue text eol=CRLF
+*.css text eol=CRLF
+*.html text eol=CRLF
+*.mjs text eol=CRLF
+*.md text eol=CRLF

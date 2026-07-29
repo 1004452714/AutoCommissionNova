@@ -1,0 +1,175 @@
+:root {
+    color-scheme: dark;
+    --color-page: transparent;
+    --color-workspace: #141920;
+    --color-surface: #181d24;
+    --color-surface-raised: #202630;
+    --color-navigation: #141920;
+    --color-border: #313a47;
+    --color-border-strong: #4a5768;
+    --color-text: #edf2f7;
+    --color-text-muted: #9aa7b7;
+    --color-primary: #4d8dff;
+    --color-primary-hover: #66a0ff;
+    --color-success: #66d29b;
+    --color-warning: #f0c36a;
+    --color-error: #ff7474;
+    --radius-control: 6px;
+    --radius-panel: 8px;
+    --control-height: 36px;
+    --font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    --workspace-width: 67.708333vw;
+    --workspace-height: 74.074074vh;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow: hidden;
+    background: var(--color-page);
+    color: var(--color-text);
+    font: 14px/1.5 var(--font-family);
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button,
+.control {
+    min-height: var(--control-height);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+}
+
+select.control {
+    appearance: none;
+    padding-right: 34px;
+    background-color: var(--color-surface-raised);
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+        linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+    background-position:
+        calc(100% - 17px) 15px,
+        calc(100% - 12px) 15px;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
+    cursor: pointer;
+}
+
+select.control:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+}
+
+select.control option,
+select.control optgroup {
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+}
+
+.workspace-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--workspace-width);
+    height: var(--workspace-height);
+    transform: translate(-50%, -50%);
+    background: var(--color-workspace);
+}
+
+button {
+    padding: 0 12px;
+    cursor: pointer;
+    transition: border-color 180ms, background-color 180ms, color 180ms, transform 120ms;
+}
+
+button:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+    background: #29313d;
+}
+
+button:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+button:disabled,
+.control:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+button.primary {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: #fff;
+}
+
+button.primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+button.danger {
+    color: var(--color-error);
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    outline: none;
+}
+
+textarea {
+    resize: vertical;
+}
+
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.status-error {
+    color: var(--color-error);
+}
+
+.status-success {
+    color: var(--color-success);
+}
+
+.status-warning {
+    color: var(--color-warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+@media (max-width: 959px) {
+    .workspace-frame {
+        width: 96vw;
+        height: 94vh;
+    }
+}

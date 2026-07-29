@@ -1,7 +1,8 @@
 import { isCancellationError } from "../utils/error-utils.js";
 import { scanCommissionScopes } from "../loaders/process-scope.js";
 
-const HTML_PATH = "developer-test-mask.html";
+// Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
+const HTML_PATH = "web/developer-test/index.html";
 const WINDOW_TAG = "developer-test";
 
 function baseName(path) {

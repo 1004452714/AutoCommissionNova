@@ -8,7 +8,8 @@ import { openPathRecorder } from "./path-recorder.js";
 import { PATHS } from "../config/index.js";
 import { loadAllBranchConfigs } from "../loaders/branch-config.js";
 
-const HTML_PATH = "process-editor-mask.html";
+// Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
+const HTML_PATH = "web/process-editor/index.html";
 const WINDOW_TAG = "process-editor";
 const RECENT_PATH = "Data/process-editor-recents.json";
 const MAX_RECENT_FILES = 8;

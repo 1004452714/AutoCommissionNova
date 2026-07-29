@@ -1,7 +1,8 @@
 /** 无地图路径录制器。 */
 import { isCancellationError } from "../utils/error-utils.js";
 
-const HTML_PATH = "path-recorder-mask.html";
+// Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
+const HTML_PATH = "web/path-recorder/index.html";
 const WINDOW_TAG = "path-recorder";
 const SETTINGS_PATH = "Data/path-recorder-settings.json";
 const DEFAULT_SETTINGS = {
