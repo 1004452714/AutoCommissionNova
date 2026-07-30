@@ -1,15 +1,29 @@
 /**
  * 对话步骤处理器
- * 使用 DialogProcessor 处理 NPC 对话
+ * 使用 BetterGI AutoSkip 实时任务处理 NPC 对话
  */
 import { DIALOG_REGIONS } from "../config/index.js";
-import { isInMainUI, isInTalkUI, bvPageOcrRegion, captureAndFindMulti, RO } from "../vision/index.js";
+import { isInMainUI, bvPageOcrRegion, RO } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { dispatchOnDialogOcr } from "../probes/index.js";
 
 import { defineStep } from "./define-step.js";
 const page = new BvPage();
+
+function createAutoSkipConfig(priorityOptions) {
+    const config = new AutoSkipConfig();
+    config.enabled = true;
+    config.quicklySkipConversationsEnabled = true;
+    config.clickChatOption = "优先选择最后一个选项";
+    config.customPriorityOptionsEnabled = priorityOptions.length > 0;
+    config.customPriorityOptions = priorityOptions.join("\n");
+    config.skipBuiltInClickOptions = true;
+    config.autoGetDailyRewardsEnabled = false;
+    config.autoReExploreEnabled = false;
+    return config;
+}
+
 export default [
     defineStep({
         type: "对话",
@@ -109,84 +123,24 @@ export default [
                 // 一条流程通常有多个对话，关键词可能在非目标对话里出现，所以默认关闭、按需打开
                 const probeEnabled = step.probe === true;
 
-                let attempts = 0;
-                for (; attempts < 100; attempts++) {
+                const autoSkipConfig = createAutoSkipConfig(priorityOptions);
+                dispatcher.AddTimer(new RealtimeTimer("AutoSkip", autoSkipConfig));
+                try {
                     const startTime = Date.now();
-                    while (Date.now() - startTime < 1000) {
-                        if (isInTalkUI()) {
-                            // 翻页前先 OCR 当前台词，否则 SPACE 一按下一段就过去了
-                            if (probeEnabled && !context.branchConditionMet) {
-                                const speechOcr = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_CONTENT);
-                                dispatchOnDialogOcr(context, speechOcr);
-                            }
-                            keyPress("VK_SPACE");
-                            await sleep(200);
-                        } else {
-                            break;
+                    while (Date.now() - startTime < 120000) {
+                        if (probeEnabled && !context.branchConditionMet) {
+                            dispatchOnDialogOcr(context, bvPageOcrRegion(DIALOG_REGIONS.DIALOG_CONTENT));
+                            dispatchOnDialogOcr(context, bvPageOcrRegion(DIALOG_REGIONS.DIALOG_OPTIONS_OCR));
                         }
-                    }
-                    if (isInMainUI()) { log.info("检测到已返回主界面，结束循环"); break; }
-
-                    let foundPriorityOption = false;
-                    const ocrResults = bvPageOcrRegion(DIALOG_REGIONS.DIALOG_OPTIONS_OCR);
-                    if (ocrResults.count > 0) {
-                        const optionList = Array.from(ocrResults)
-                            .map((result, index) => `#${index + 1} "${result.text}" (${result.x}, ${result.y})`)
-                            .join("; ");
-                        log.debug("对话选项OCR结果（{count}项）: {options}", ocrResults.count, optionList);
-                    } else {
-                        log.debug("对话选项OCR结果为空");
-                    }
-
-                    // 选项区也兼带扫一次：有些场景关键词出现在选项条目而非台词里（如 "偷吃看看"）
-                    if (probeEnabled && !context.branchConditionMet) {
-                        dispatchOnDialogOcr(context, ocrResults);
-                    }
-
-                    if (ocrResults.count > 0) {
-                        for (let i = 0; i < ocrResults.count; i++) {
-                            const ocrText = ocrResults[i].text;
-                            for (let j = 0; j < priorityOptions.length; j++) {
-                                if (ocrText.includes(priorityOptions[j])) {
-                                    log.info("找到优先选项: {option}，点击该选项", priorityOptions[j]);
-                                    ocrResults[i].click();
-                                    await sleep(500);
-                                    foundPriorityOption = true;
-                                    break;
-                                }
-                            }
-                            if (foundPriorityOption) break;
+                        if (isInMainUI()) {
+                            log.info("已返回主界面，AutoSkip 对话执行完成");
+                            return;
                         }
-
-                        if (!foundPriorityOption && isInTalkUI()) {
-                            const exitList = await captureAndFindMulti(RO.talkExit);
-                            const iconList = await captureAndFindMulti(RO.talkIcon);
-                            let clickXY = null;
-
-                            if (exitList.count === 1) {
-                                log.info("发现一个退出对话选项");
-                                clickXY = [exitList[0].x, exitList[0].y];
-                            } else if (iconList.count > 0) {
-                                log.info("发现{count}个气泡对话选项，点击最后一个气泡选项", iconList.count);
-                                const sorted = Array.from(iconList).sort(function (a, b) { return b.y - a.y; });
-                                clickXY = [sorted[0].x, sorted[0].y];
-                            } else if (ocrResults.count > 0) {
-                                log.info("默认点击最后一个选项");
-                                clickXY = [ocrResults[ocrResults.count - 1].x, ocrResults[ocrResults.count - 1].y];
-                            }
-
-                            if (clickXY) {
-                                click(clickXY[0], clickXY[1]);
-                                leftButtonClick();
-                            }
-                        }
+                        await sleep(probeEnabled ? 200 : 500);
                     }
-                }
-
-                if (isInMainUI()) {
-                    log.info("已返回主界面，自动对话执行完成");
-                } else {
-                    throw new Error(`自动对话已达到最大尝试次数 ${attempts}，但未检测到返回主界面`);
+                    throw new Error("AutoSkip 对话执行超过 120 秒，但未检测到返回主界面");
+                } finally {
+                    dispatcher.ClearAllTriggers();
                 }
             } catch (error) {
                 if (isCancellationError(error)) { throw error; }
