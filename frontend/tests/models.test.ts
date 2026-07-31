@@ -1,6 +1,6 @@
 import { buildBattleGroups, normalizeGlobalConfig, normalizePayload, normalizeStrategyValue } from "@/apps/commission-config/model";
 import { convertStepType, defaultStep, diagnosticText, parseOptionalJson } from "@/apps/process-editor/model";
-import { DEFAULT_SETTINGS, changePointAction, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints } from "@/apps/path-recorder/model";
+import { DEFAULT_SETTINGS, changePointAction, clonePoints, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints, timeControlValue } from "@/apps/path-recorder/model";
 
 describe("commission config model", () => {
     it("normalizes uid and legacy branch payloads", () => {
@@ -60,6 +60,18 @@ describe("path recorder model", () => {
         const point = { ...createPoint(1, 2), action: "log_output", action_params: "旧参数" };
         expect(changePointAction(point, "combat_script", settings).action_params).toBe("attack");
         expect(duplicatePoint([point], 0).map((item) => item.id)).toEqual([1, 2]);
+    });
+
+    it("preserves BetterGI point extension fields while cloning", () => {
+        // 编辑已有路线时未知的点位扩展结构必须原样往返。
+        const point = { ...createPoint(1, 2), point_ext_params: { description: "保留" }, items: [{ name: "材料" }] };
+        expect(clonePoints([point])[0]).toMatchObject({ point_ext_params: { description: "保留" }, items: [{ name: "材料" }] });
+    });
+
+    it("normalizes compatible set-time values for the native control", () => {
+        // 一至两位小时和分钟均补零为原生 time 输入要求的格式。
+        expect(["0:0", "6:2", "6:09", "06:2", "06:02", "23:59"].map(timeControlValue)).toEqual(["00:00", "06:02", "06:09", "06:02", "06:02", "23:59"]);
+        expect(["6：2", "24:0", "6:60", ":20", "6:", "6:2:1"].map(timeControlValue)).toEqual(["", "", "", "", "", ""]);
     });
 
     it("reconciles route authors and completes combat syntax", () => {

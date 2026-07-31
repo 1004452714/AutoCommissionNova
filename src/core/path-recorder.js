@@ -406,7 +406,7 @@ function normalizePoints(points, sourceOffset = 0) {
         if (action === "use_gadget" && actionParams.trim() && actionParams.trim().toLowerCase() !== "not_wait" && (!Number.isFinite(Number(actionParams)) || Number(actionParams) < 0)) {
             throw new Error(prefix + "使用小道具参数必须是非负等待秒数、not_wait 或留空");
         }
-        if (action === "set_time" && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(actionParams.trim())) throw new Error(prefix + "设置时间必须使用 HH:MM 格式");
+        if (action === "set_time" && !/^(?:[01]?\d|2[0-3]):[0-5]?\d$/.test(actionParams.trim())) throw new Error(prefix + "设置时间必须使用 H:M、H:MM、HH:M 或 HH:MM 格式");
         if (action === "linnea_mining" && actionParams.trim()) {
             const values = actionParams.split(",").map(value => value.trim());
             const matches = values.map(value => /^(?:(mines|rounds)=)?(\d+)$/i.exec(value));
@@ -415,7 +415,7 @@ function normalizePoints(points, sourceOffset = 0) {
                 throw new Error(prefix + "莉奈娅挖矿参数应为 1 至 999 的射箭次数和可选寻矿次数，例如 1 或 1,5");
             }
         }
-        return {
+        return Object.assign({}, point, {
             id: index + 1,
             x: roundCoordinate(x),
             y: roundCoordinate(y),
@@ -423,13 +423,14 @@ function normalizePoints(points, sourceOffset = 0) {
             move_mode: moveMode,
             action,
             action_params: actionParams,
-        };
+        });
     });
 }
 
-function buildPathingFile(name, points, meta, sourceOffset = 0) {
-    return {
-        info: {
+// 生成可执行路径文件，并在编辑模式下保留原文件的扩展元数据。
+function buildPathingFile(name, points, meta, sourceOffset = 0, original = null) {
+    return Object.assign({}, original || {}, {
+        info: Object.assign({}, original?.info || {}, {
             name: name.replace(/\.json$/i, ""),
             type: "collect",
             authors: meta.authors,
@@ -438,9 +439,17 @@ function buildPathingFile(name, points, meta, sourceOffset = 0) {
             map_name: "Teyvat",
             bgi_version: String(getVersion()),
             map_match_method: meta.mapMatchMethod,
-        },
+        }),
         positions: normalizePoints(points, sourceOffset),
-    };
+    });
+}
+
+// 按 BetterGI 地图编辑器规则递归排序全部字段后序列化路径数据。
+function stringifyPathingFile(value, space = 0) {
+    // 全局字段集合与本体 replacer 行为一致，并保留所有数组元素的原始顺序。
+    const allKeys = new Set();
+    JSON.stringify(value, (key, item) => (allKeys.add(key), item));
+    return JSON.stringify(value, Array.from(allKeys).sort(), space);
 }
 
 /**
@@ -452,11 +461,19 @@ export async function openPathRecorder(options = {}) {
     if (htmlMask.exists(WINDOW_TAG)) throw new Error("路径录制器已经打开");
     const targetDir = String(options.targetDir || "pathing").replace(/\\/g, "/").replace(/\/+$/, "");
     const commissionName = String(options.commissionName || "").trim();
+    const existingPath = String(options.existingPath || "").replace(/\\/g, "/").trim();
     const loadedSettings = loadSettings();
+    // 编辑模式下缓存原始文件，以初始化点位并在保存时保留未知字段。
+    let existingData = null;
+    if (existingPath) {
+        if (!file.isFile(existingPath)) throw new Error("路径文件不存在：" + existingPath);
+        try { existingData = JSON.parse(file.readTextSync(existingPath)); } catch (error) { throw new Error("路径文件 JSON 解析失败：" + error.message); }
+        if (!existingData || typeof existingData !== "object" || Array.isArray(existingData) || !Array.isArray(existingData.positions)) throw new Error("路径文件格式无效：" + existingPath);
+    }
     const session = {
-        phase: "idle",
+        phase: existingData ? "stopped" : "idle",
         settings: loadedSettings.settings,
-        points: [],
+        points: existingData ? existingData.positions.map((point, index) => Object.assign({}, point, { id: index + 1, x: point.x, y: point.y, type: point.type || (index ? "path" : "teleport"), move_mode: point.move_mode || "walk", action: point.action || "", action_params: point.action_params || "" })) : [],
         sampling: false,
         binding: false,
         interactionLock: false,
@@ -464,10 +481,10 @@ export async function openPathRecorder(options = {}) {
         altHeld: false,
         displayMode: "normal",
         running: false,
-        savedPath: "",
+        savedPath: existingPath,
         result: { status: "cancelled" },
     };
-    let suggestedFileName = commissionName
+    let suggestedFileName = existingPath ? existingPath.split("/").pop() : commissionName
         ? nextCommissionFile(targetDir, commissionName)
         : "未命名路线-" + timestamp() + ".json";
     const windowId = htmlMask.show(HTML_PATH, WINDOW_TAG);
@@ -517,7 +534,7 @@ export async function openPathRecorder(options = {}) {
     }
 
     async function samplePoint() {
-        if (session.phase !== "recording" || session.sampling || session.running) return;
+        if (session.sampling || session.running) return;
         session.sampling = true;
         pushState({ message: "正在识别当前位置..." });
         try {
@@ -540,10 +557,26 @@ export async function openPathRecorder(options = {}) {
         }
     }
 
+    // 开始快捷键采点模式，仅切换状态并保留当前已有点位。
+    function startRecording() {
+        if (session.running || session.phase === "recording") return;
+        session.savedPath = "";
+        session.result = { status: "cancelled" };
+        session.phase = "recording";
+        pushState({ message: "录制已开始，可通过快捷键或按钮添加点位" });
+    }
+
+    // 结束快捷键采点模式并允许检查和保存当前路线。
     function finishRecording() {
         if (session.phase !== "recording" || session.running) return;
         session.phase = "stopped";
         pushState({ message: "录制已结束，请检查点位后保存" });
+    }
+
+    // 由同一快捷键在开始和结束录制之间切换。
+    function toggleRecording() {
+        if (session.phase === "recording") finishRecording();
+        else startRecording();
     }
 
     function launchRun(output) {
@@ -557,7 +590,7 @@ export async function openPathRecorder(options = {}) {
         (async () => {
             try {
                 await sleep(120);
-                await pathingScript.run(JSON.stringify(output));
+                await pathingScript.run(stringifyPathingFile(output));
                 if (htmlMask.exists(windowId)) pushState({ message: "路线执行已结束，请查看 BetterGI 日志" });
             } catch (error) {
                 if (!isCancellationError(error) && htmlMask.exists(windowId)) pushState({ error: "路线执行结束：" + (error.message || String(error)) });
@@ -601,8 +634,8 @@ export async function openPathRecorder(options = {}) {
             applyDisplayMode();
         } else if (session.phase === "recording" && keyCode === session.settings.addKey) {
             samplePoint();
-        } else if (session.phase === "recording" && keyCode === session.settings.finishKey) {
-            finishRecording();
+        } else if (keyCode === session.settings.finishKey) {
+            toggleRecording();
         }
     });
     hook.onKeyUp(function (keyCode) {
@@ -635,8 +668,8 @@ export async function openPathRecorder(options = {}) {
                         warning: loadedSettings.warning,
                         targetDir,
                         commissionMode: Boolean(commissionName),
-                        routeAuthors: defaultRouteAuthors(),
-                        routeMapMatchMethod: session.settings.mapMatchMethod,
+                        routeAuthors: existingData?.info?.authors || defaultRouteAuthors(),
+                        routeMapMatchMethod: existingData?.info?.map_match_method || session.settings.mapMatchMethod,
                         combatSyntax: COMBAT_METHODS,
                     }));
                 } else if (message.url === "/settings") {
@@ -656,14 +689,10 @@ export async function openPathRecorder(options = {}) {
                 } else if (message.url === "/start") {
                     if (session.running) throw new Error("路线正在执行");
                     if (session.phase === "recording") throw new Error("已经在录制中");
-                    session.points = [];
-                    session.savedPath = "";
-                    session.result = { status: "cancelled" };
-                    session.phase = "recording";
+                    startRecording();
                     respond(windowId, message.requestId, viewState());
-                    samplePoint();
                 } else if (message.url === "/sample") {
-                    if (session.phase !== "recording") throw new Error("请先开始录制");
+                    if (session.running) throw new Error("路线执行过程中不能添加点位");
                     respond(windowId, message.requestId, { status: "ok" });
                     samplePoint();
                 } else if (message.url === "/resample") {
@@ -698,11 +727,11 @@ export async function openPathRecorder(options = {}) {
                     if (session.phase === "recording") throw new Error("请先结束录制");
                     session.points = message.data?.points;
                     const meta = normalizeRouteMeta(message.data, session.settings);
-                    const name = uniqueFileName(targetDir, message.data?.fileName || suggestedFileName);
-                    const output = buildPathingFile(name, session.points, meta);
+                    const name = existingPath ? suggestedFileName : uniqueFileName(targetDir, message.data?.fileName || suggestedFileName);
+                    const output = buildPathingFile(name, session.points, meta, 0, existingData);
                     if (!file.isFolder(targetDir) && !file.createDirectory(targetDir)) throw new Error("无法创建保存目录：" + targetDir);
-                    const path = targetDir + "/" + name;
-                    if (!file.writeTextSync(path, JSON.stringify(output, null, 4) + "\r\n", false)) throw new Error("路径文件写入失败：" + path);
+                    const path = existingPath || targetDir + "/" + name;
+                    if (!file.writeTextSync(path, stringifyPathingFile(output, 4) + "\r\n", false)) throw new Error("路径文件写入失败：" + path);
                     session.savedPath = path;
                     session.phase = "saved";
                     suggestedFileName = name;

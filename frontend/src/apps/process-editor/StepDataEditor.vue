@@ -11,18 +11,20 @@ import type { UiSelectOption } from "@/shared/types/ui";
 defineOptions({ name: "StepDataEditor" });
 
 // 编辑器属性描述当前 data 值、声明和嵌套步骤候选。
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     modelValue: unknown;
     spec: FieldSpec;
     stepType: string;
     processors: ProcessorMeta[];
     roles: string[];
     branches: Array<{ key: string; label: string }>;
-}>();
+    pathOptions?: Array<{ value: string; label: string }>;
+    subProcessOptions?: Array<{ value: string; label: string }>;
+}>(), { pathOptions: () => [], subProcessOptions: () => [] });
 // 数据编辑器静态文案来自共享中文文案表。
 const text = copy.processEditor;
 // 编辑器事件只提交结构化 data，并把路径录制请求交给页面处理。
-const emit = defineEmits<{ update: [value: unknown]; recordPath: [] }>();
+const emit = defineEmits<{ update: [value: unknown]; recordPath: []; editSubprocess: [path: string] }>();
 // 可选对象字段下拉的当前选择。
 const optionalField = ref("");
 // 角色重复状态就地提示，不阻断其他字段编辑。
@@ -259,8 +261,9 @@ function branchProcessor(key: string): ProcessorMeta | undefined {
                 <FieldLabel :label="spec.label || '数据'" name="data" :required="!spec.optional" :hint="spec.hint || (!spec.optional ? text.required : text.optional)" />
                 <div class="record-row">
                     <UiSelect v-if="spec.options" :model-value="String(modelValue ?? '')" :options="selectOptions(spec)" :aria-label="spec.label || text.dataField" width="content" @change="updateValue($event)" />
+                    <UiSelect v-else-if="stepType === '地图追踪'" editable :model-value="String(modelValue ?? '')" :options="pathOptions" :aria-label="spec.label || text.dataField" width="field" @update:model-value="updateValue($event)" />
                     <input v-else class="control" :type="spec.kind === 'number' ? 'number' : 'text'" :min="spec.min" :max="spec.max" :step="spec.integer ? 1 : 'any'" :value="modelValue ?? ''" @input="updateValue(coerceFieldValue(($event.target as HTMLInputElement).value, spec))">
-                    <button v-if="stepType === '地图追踪'" class="primary" type="button" @click="emit('recordPath')">{{ text.recordPath }}</button>
+                    <button v-if="stepType === '地图追踪'" class="primary" type="button" @click="emit('recordPath')">{{ pathOptions.some((option) => option.value === String(modelValue ?? '')) ? text.editPath : text.recordPath }}</button>
                 </div>
             </div>
         </template>
@@ -280,8 +283,10 @@ function branchProcessor(key: string): ProcessorMeta | undefined {
                         </div>
                     </div>
                     <UiSelect v-else-if="field.type === 'boolean'" :model-value="String(dataObject[name] ?? false)" :options="booleanOptions" :aria-label="fieldLabel(name, field)" width="compact" @change="updateObjectField(name, $event, field)" />
+                    <UiSelect v-else-if="stepType === '执行子流程' && name === 'path'" editable :model-value="String(dataObject[name] ?? '')" :options="subProcessOptions" :aria-label="fieldLabel(name, field)" width="field" @update:model-value="updateObjectField(name, $event, field)" />
                     <UiSelect v-else-if="field.options" :model-value="String(dataObject[name] ?? '')" :options="selectOptions(field)" :aria-label="fieldLabel(name, field)" width="content" :max-width="280" @change="updateObjectField(name, $event, field)" />
                     <input v-else class="control" :type="field.type === 'number' ? 'number' : 'text'" :min="field.min" :max="field.max" :step="field.integer ? 1 : 'any'" :value="dataObject[name] ?? ''" @input="updateObjectField(name, ($event.target as HTMLInputElement).value, field)">
+                    <button v-if="stepType === '执行子流程' && name === 'path'" class="primary mini" type="button" :disabled="!String(dataObject[name] ?? '').trim()" @click="emit('editSubprocess', String(dataObject[name] ?? ''))">{{ subProcessOptions.some((option) => option.value === String(dataObject[name] ?? '')) ? text.editSubprocess : text.createSubprocess }}</button>
                     <button v-if="!field.required && !field.alwaysVisible && !isConditionallyRequired(name)" class="danger mini" type="button" @click="removeObjectField(name)">{{ text.removeField }}</button>
                 </div>
             </section>
@@ -305,7 +310,7 @@ function branchProcessor(key: string): ProcessorMeta | undefined {
 
         <template v-else-if="spec.kind === 'custom' && spec.editor === 'branches'">
             <p v-if="!branches.length" class="status-error">{{ text.emptyBranches }}</p>
-            <section v-for="branch in branches" v-else :key="branch.key" class="branch-card"><header><FieldLabel :label="branch.label" :name="branch.key" /></header><StepTypeMenu :model-value="branchStep(branch.key).type" :processors="processors.filter((item) => item.type !== '用户分支选择')" :aria-label="`${branch.label} ${text.stepType}`" @change="updateBranchType(branch.key, $event)" /><StepDataEditor v-if="branchProcessor(branch.key)" :model-value="branchStep(branch.key).data" :spec="branchProcessor(branch.key)!.dataSpec" :step-type="branchStep(branch.key).type" :processors="processors" :roles="roles" :branches="[]" @update="updateBranchStep(branch.key, { data: $event })"></StepDataEditor><label><FieldLabel :label="text.note" name="note" /><input class="control" :value="branchStep(branch.key).note ?? ''" @input="updateBranchStep(branch.key, { note: ($event.target as HTMLInputElement).value })"></label></section>
+            <section v-for="branch in branches" v-else :key="branch.key" class="branch-card"><header><FieldLabel :label="branch.label" :name="branch.key" /></header><StepTypeMenu :model-value="branchStep(branch.key).type" :processors="processors.filter((item) => item.type !== '用户分支选择')" :aria-label="`${branch.label} ${text.stepType}`" @change="updateBranchType(branch.key, $event)" /><StepDataEditor v-if="branchProcessor(branch.key)" :model-value="branchStep(branch.key).data" :spec="branchProcessor(branch.key)!.dataSpec" :step-type="branchStep(branch.key).type" :processors="processors" :roles="roles" :branches="[]" :path-options="pathOptions" :sub-process-options="subProcessOptions" @update="updateBranchStep(branch.key, { data: $event })" @record-path="emit('recordPath')" @edit-subprocess="emit('editSubprocess', $event)"></StepDataEditor><label><FieldLabel :label="text.note" name="note" /><input class="control" :value="branchStep(branch.key).note ?? ''" @input="updateBranchStep(branch.key, { note: ($event.target as HTMLInputElement).value })"></label></section>
         </template>
 
         <p v-else class="status-error">{{ text.unsupportedEditor }}</p>

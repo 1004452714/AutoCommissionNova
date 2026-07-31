@@ -11,6 +11,7 @@ const initial: ProcessEditorInit = {
     processors: [
         { type: "等待", category: "流程控制", dataSpec: { kind: "number", label: "等待毫秒", default: 1000 } },
         { type: "地图追踪", category: "路径与定位", dataSpec: { kind: "string", label: "路径文件" } },
+        { type: "执行子流程", category: "流程控制", dataSpec: { kind: "object", fields: { path: { type: "string", label: "子流程文件", required: true } } } },
         { type: "自动战斗", category: "战斗与队伍", dataSpec: { kind: "object", optional: true, fields: {} } },
     ],
 };
@@ -20,10 +21,13 @@ export async function mockProcessEditorRequest(url: string, data: unknown): Prom
     // 请求对象仅用于回显流程内容和当前范围。
     const request = data as { scope?: ProcessScope; fileName?: string; content?: string };
     if (url === "/init") return initial;
-    if (url === "/target") return { status: "ok", scope: request.scope ?? scope, path: "process/蒙德/NPC/示例委托/城外/process.json", exists: true, branches: [] };
+    if (url === "/target") return { status: "ok", scope: request.scope ?? scope, path: "process/蒙德/NPC/示例委托/城外/process.json", exists: true, branches: [], subProcessOptions: [{ value: "sub-process.json", label: "sub-process.json" }] };
     if (url === "/load") return { status: "ok", scope, path: "process/蒙德/NPC/示例委托/城外/process.json", exists: true, branches: [], recentFiles: [], content: "[]" };
     if (url === "/validate") return { status: "ok", errors: [], warnings: [] };
     if (url === "/save") return { status: "ok", scope: request.scope ?? scope, path: "process/蒙德/NPC/示例委托/城外/process.json", content: request.content ?? "[]", warnings: [] };
     if (url === "/recordPath") return { status: "saved", fileName: "recorded.json", scope: request.scope ?? scope };
+    if (url === "/openSubprocess") return { status: "ok", path: "process/蒙德/NPC/示例委托/城外/sub-process.json", reference: "sub-process.json", exists: true, content: "[]", subProcessOptions: [] };
+    if (url === "/validateSubprocess") return { status: "ok", errors: [], warnings: [] };
+    if (url === "/saveSubprocess") return { status: "ok", path: "process/蒙德/NPC/示例委托/城外/sub-process.json", content: request.content ?? "[]", warnings: [] };
     return { status: "ok" };
 }

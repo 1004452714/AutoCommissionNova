@@ -9,13 +9,13 @@ import { copy } from "@/shared/i18n/zh-CN";
 import type { FieldSpec, ProcessStep, ProcessorMeta } from "@/apps/process-editor/types";
 
 // 检查器属性提供当前步骤和全部声明元数据。
-const props = defineProps<{ step: ProcessStep; processors: ProcessorMeta[]; roles: string[]; branches: Array<{ key: string; label: string }> }>();
+const props = withDefaults(defineProps<{ step: ProcessStep; processors: ProcessorMeta[]; roles: string[]; branches: Array<{ key: string; label: string }>; pathOptions?: Array<{ value: string; label: string }>; subProcessOptions?: Array<{ value: string; label: string }> }>(), { pathOptions: () => [], subProcessOptions: () => [] });
 // 检查器静态文案来自共享中文文案表。
 const text = copy.processEditor;
 // 公共字段名映射供可选字段下拉展示。
 const commonLabels: Record<string, string> = { desc: text.description, loc: text.locationField, retrySettings: text.retrySettings };
 // 检查器事件将所有业务变更交给页面统一标脏。
-const emit = defineEmits<{ changed: [step: ProcessStep]; changeType: [type: string]; recordPath: [] }>();
+const emit = defineEmits<{ changed: [step: ProcessStep]; changeType: [type: string]; recordPath: []; editSubprocess: [path: string] }>();
 // 检查器使用局部副本，提交时整体替换父页面步骤。
 const editableStep = ref<ProcessStep>(cloneProcessValue(props.step));
 // 父页面的录制回填等外部替换需要同步到局部副本。
@@ -170,7 +170,7 @@ function removeLoc(index: number): void {
                 <summary><span><strong>{{ text.stepParameters }}</strong><small>data</small></span><span class="summary-meta">{{ editableStep.type }} · {{ parameterCount }} {{ text.items }}</span></summary>
                 <div class="card-body">
                     <UiSelect v-if="canAddScalarData" v-model="optionalScalarData" class="field-picker" :options="[{ value: 'data', label: `${dataLabel} (data)` }]" :placeholder="text.selectParameter" :aria-label="text.selectParameter" width="field" :max-width="300" @change="addSelectedScalarData" />
-                    <StepDataEditor v-if="editableStep.data !== undefined || processor.dataSpec.kind === 'object' || !processor.dataSpec.optional" :model-value="editableStep.data" :spec="processor.dataSpec" :step-type="editableStep.type" :processors="processors" :roles="roles" :branches="branches" @update="updateStepField('data',$event)" @record-path="emit('recordPath')"></StepDataEditor>
+                    <StepDataEditor v-if="editableStep.data !== undefined || processor.dataSpec.kind === 'object' || !processor.dataSpec.optional" :model-value="editableStep.data" :spec="processor.dataSpec" :step-type="editableStep.type" :processors="processors" :roles="roles" :branches="branches" :path-options="pathOptions" :sub-process-options="subProcessOptions" @update="updateStepField('data',$event)" @record-path="emit('recordPath')" @edit-subprocess="emit('editSubprocess', $event)"></StepDataEditor>
                     <button v-if="processor.dataSpec.optional && editableStep.data !== undefined && editableStep.type !== '对话'" class="danger data-remove" type="button" @click="removeCommonField('data')">{{ text.removeField }}</button>
                 </div>
             </details>

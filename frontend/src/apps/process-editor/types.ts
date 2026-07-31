@@ -73,6 +73,19 @@ export interface TargetResult {
     path: string;
     exists: boolean;
     branches: Array<{ key: string; label: string }>;
+    pathOptions?: Array<{ value: string; label: string }>;
+    subProcessOptions?: Array<{ value: string; label: string }>;
+}
+
+// 子流程打开响应同时提供当前文档范围内的新候选。
+export interface SubProcessResult {
+    status: "ok" | "error";
+    message?: string;
+    path: string;
+    reference: string;
+    exists: boolean;
+    content: string;
+    subProcessOptions: Array<{ value: string; label: string }>;
 }
 
 // 流程读取响应。

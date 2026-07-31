@@ -13,6 +13,8 @@ export interface PathPoint {
     move_mode: MoveMode;
     action: string;
     action_params: string;
+    // BetterGI 新增的点位扩展字段在编辑和保存期间保持透传。
+    [key: string]: unknown;
 }
 
 // 路线作者信息。

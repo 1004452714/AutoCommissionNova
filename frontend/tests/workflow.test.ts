@@ -23,6 +23,7 @@ const processInit: ProcessEditorInit = {
         { type: "对话", category: "测试", dataSpec: { kind: "object", optional: true, fields: { priorityOptions: { type: "array", label: "优先对话选项" }, npcWhiteList: { type: "array", label: "NPC 白名单" } } } },
         { type: "摧毁哨塔", category: "测试", dataSpec: { kind: "object", optional: true, fields: { navigation: { type: "string", label: "寻路方式", default: "图标寻路", alwaysVisible: true, options: ["图标寻路", "路径追踪"] }, path: { type: "string", label: "路径文件" } } } },
         { type: "固若金汤", category: "测试", dataSpec: { kind: "custom", editor: "waves" } },
+        { type: "执行子流程", category: "测试", dataSpec: { kind: "object", fields: { path: { type: "string", label: "子流程文件", required: true } } } },
     ],
 };
 
@@ -212,6 +213,60 @@ describe("process editor workflows", () => {
         wavesWrapper.unmount();
     });
 
+    it("selects, creates, and opens subprocess documents", async () => {
+        // 已有子流程使用编辑按钮，手动的新路径使用新建按钮。
+        const subprocessSpec = processInit.processors.find(processor => processor.type === "执行子流程")!.dataSpec;
+        const fieldWrapper = mount(StepDataEditor, { props: {
+            modelValue: { path: "nested/child.json" }, spec: subprocessSpec, stepType: "执行子流程",
+            processors: processInit.processors, roles: [], branches: [], subProcessOptions: [{ value: "nested/child.json", label: "nested/child.json" }],
+        } });
+        expect(fieldWrapper.find("button.primary").text()).toBe("编辑子流程");
+        await fieldWrapper.find("button.primary").trigger("click");
+        expect(fieldWrapper.emitted("editSubprocess")?.[0]).toEqual(["nested/child.json"]);
+        await fieldWrapper.setProps({ modelValue: { path: "nested/new.json" } });
+        expect(fieldWrapper.find("button.primary").text()).toBe("新建子流程");
+        fieldWrapper.unmount();
+
+        // 用户分支内的地图追踪继续获得路径候选并向页面转发录制请求。
+        const branchWrapper = mount(StepDataEditor, { props: {
+            modelValue: { branch: { type: "地图追踪", data: "route.json" } },
+            spec: { kind: "custom", editor: "branches" }, stepType: "用户分支选择",
+            processors: processInit.processors, roles: [], branches: [{ key: "branch", label: "分支" }],
+            pathOptions: [{ value: "route.json", label: "route.json" }],
+        } });
+        expect(branchWrapper.find(".record-row button.primary").text()).toBe("编辑路径");
+        await branchWrapper.find(".record-row button.primary").trigger("click");
+        expect(branchWrapper.emitted("recordPath")).toHaveLength(1);
+        branchWrapper.unmount();
+
+        // 页面打开子流程后保留父流程草稿，并可返回恢复。
+        const init = structuredClone(processInit);
+        const request = installHost(async (url) => {
+            if (url === "/init") return init;
+            if (url === "/target") return { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [], subProcessOptions: [{ value: "child.json", label: "child.json" }] };
+            if (url === "/load") return { status: "ok", path: "process/process.json", content: JSON.stringify([{ type: "执行子流程", data: { path: "child.json" } }]), recentFiles: [], branches: [] };
+            if (url === "/openSubprocess") return { status: "ok", path: "process/child.json", reference: "child.json", exists: true, content: "[]", subProcessOptions: [] };
+            return { status: "ok" };
+        });
+        const page = mount(ProcessEditor);
+        await flushPromises();
+        const selects = page.findAll(".sidebar .ui-select");
+        await chooseUiOption(selects[0], processScope.country);
+        await chooseUiOption(selects[1], processScope.typeDir);
+        await chooseUiOption(selects[2], processScope.commissionName);
+        await chooseUiOption(selects[3], processScope.locationDir);
+        await page.find(".scope-action").trigger("click");
+        await flushPromises();
+        await page.find(".step").trigger("click");
+        await page.find(".inspector button.primary").trigger("click");
+        await flushPromises();
+        expect(request).toHaveBeenCalledWith("/openSubprocess", expect.objectContaining({ reference: "child.json" }));
+        expect(page.find(".back-button").exists()).toBe(true);
+        await page.find(".back-button").trigger("click");
+        expect(page.findAll(".step")).toHaveLength(1);
+        page.unmount();
+    });
+
     it("opens a recent file from create mode and protects immediate edits", async () => {
         // 请求桩提供最近文件和一个可编辑步骤。
         const request = installHost(async (url, data) => {
@@ -313,6 +368,96 @@ describe("path recorder workflows", () => {
         wrapper.unmount();
     });
 
+    it("uses a native minute time control for set-time actions", async () => {
+        // 旧路径的一位小时和分钟能够回显为浏览器接受的规范时间值。
+        const state = recorderState("stopped");
+        state.points[0].action = "set_time";
+        state.points[0].action_params = "6:2";
+        const request = installHost(async (url) => url === "/init" ? state : url === "/save" ? { status: "saved", path: "route.json", fileName: "route.json" } : { status: "ok" });
+        const wrapper = mount(PathRecorder);
+        await flushPromises();
+        const row = wrapper.find(".point-row:not(.point-header)");
+        const time = row.find<HTMLInputElement>('input[type="time"]');
+        expect(time.exists()).toBe(true);
+        expect(time.attributes("step")).toBe("60");
+        expect(time.element.value).toBe("06:02");
+        expect(row.find('input.action-params:not([type="time"])').exists()).toBe(false);
+        await time.setValue("09:07");
+        await wrapper.find(".footer .primary").trigger("click");
+        await flushPromises();
+        expect(request.mock.calls.find((call) => call[0] === "/save")?.[1]).toMatchObject({ points: [expect.objectContaining({ action_params: "09:07" })] });
+        wrapper.unmount();
+    });
+
+    it("keeps existing points when recording continues", async () => {
+        // 开始续录前先同步页面点位，宿主返回的原点位仍保留在表格中。
+        const state = recorderState("stopped");
+        const request = installHost(async (url) => {
+            if (url === "/init") return state;
+            if (url === "/points") return { status: "ok", phase: "stopped" };
+            if (url === "/start") return { ...state, phase: "recording" };
+            return { status: "ok" };
+        });
+        const wrapper = mount(PathRecorder);
+        await flushPromises();
+        await chooseUiOption(wrapper.find(".point-row:not(.point-header) .ui-select"), "target");
+        await wrapper.find(".toolbar-actions .primary").trigger("click");
+        await flushPromises();
+        const urls = request.mock.calls.map((call) => call[0]);
+        expect(urls.indexOf("/points")).toBeLessThan(urls.indexOf("/start"));
+        expect(urls).not.toContain("/sample");
+        expect(wrapper.findAll(".point-row:not(.point-header)")).toHaveLength(1);
+        wrapper.unmount();
+    });
+
+    it("adds the current point outside the recording phase", async () => {
+        // 已结束状态仍可直接请求当前位置，不需要先切回录制阶段。
+        const request = installHost(async (url) => url === "/init" ? recorderState("stopped") : { status: "ok" });
+        const wrapper = mount(PathRecorder);
+        await flushPromises();
+        const sampleButton = wrapper.findAll(".toolbar-actions button")[2];
+        expect(sampleButton.attributes("disabled")).toBeUndefined();
+        await sampleButton.trigger("click");
+        await flushPromises();
+        expect(request.mock.calls.some((call) => call[0] === "/sample")).toBe(true);
+        wrapper.unmount();
+    });
+
+    it("locks host shortcuts while editable controls have focus", async () => {
+        // 文件名和动作参数用于验证普通模式下全部输入控件的统一焦点锁。
+        const state = recorderState("stopped");
+        state.points[0].action = "log_output";
+        // 首次加锁响应由测试延迟，覆盖失焦发生在宿主确认之前的竞态。
+        let releaseLock: ((value: { status: string }) => void) | undefined;
+        const pendingLock = new Promise<{ status: string }>((resolve) => { releaseLock = resolve; });
+        const request = installHost(async (url, data) => url === "/init"
+            ? state
+            : url === "/interactionLock" && (data as { active?: boolean }).active
+                ? pendingLock
+                : { status: "ok" });
+        const wrapper = mount(PathRecorder, { attachTo: document.body });
+        await flushPromises();
+        request.mockClear();
+
+        // 输入控件之间切换不能产生中途解锁请求。
+        const fileNameInput = wrapper.find<HTMLInputElement>(".file-field input");
+        const parameterInput = wrapper.find<HTMLInputElement>("input.action-params");
+        fileNameInput.element.focus();
+        await flushPromises();
+        parameterInput.element.focus();
+        await flushPromises();
+        const focusCalls = request.mock.calls.filter((call) => call[0] === "/interactionLock");
+        expect(focusCalls.some((call) => (call[1] as { active: boolean }).active)).toBe(true);
+        expect(focusCalls.some((call) => !(call[1] as { active: boolean }).active)).toBe(false);
+
+        // 宿主确认加锁前离开控件，确认后仍必须补发最新的解锁状态。
+        parameterInput.element.blur();
+        releaseLock?.({ status: "ok" });
+        await flushPromises();
+        expect(request.mock.calls.filter((call) => call[0] === "/interactionLock").at(-1)?.[1]).toEqual({ active: false });
+        wrapper.unmount();
+    });
+
     it("keeps settings open when automatic saving fails", async () => {
         // 设置请求失败，交互锁请求仍正常响应。
         installHost(async (url) => url === "/init" ? recorderState("stopped") : url === "/settings" ? { status: "error", message: "保存失败" } : { status: "ok" });
@@ -403,6 +548,13 @@ describe("path recorder workflows", () => {
         await row.find(".strategy-search").setValue("战斗");
         await row.find(".strategy-search").trigger("keydown", { key: "Enter" });
         expect((row.find("textarea.action-params").element as HTMLTextAreaElement).value).toBe("keydown(W)");
+
+        // 搜索框真正失焦到策略区域外时自动关闭联想菜单。
+        await row.find(".strategy-trigger").trigger("click");
+        expect(row.find(".strategy-menu").exists()).toBe(true);
+        await row.find(".strategy-search").trigger("focusout", { relatedTarget: row.find("textarea.action-params").element });
+        await flushPromises();
+        expect(row.find(".strategy-menu").exists()).toBe(false);
         wrapper.unmount();
     });
 

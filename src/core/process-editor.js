@@ -50,6 +50,84 @@ function buildPath(scope, fileName) {
     return ["process", country, typeDir, commission, location, name].join("/");
 }
 
+// 返回当前委托地点的资源根目录，供路径候选和引用解析共用。
+function processResourceDir(scope) {
+    const typeDir = scope?.typeDir === "Basic" ? "Basic" : scope?.typeDir === "NPC" ? "NPC" : "";
+    if (!typeDir) throw new Error("委托类型只能是 Basic 或 NPC");
+    return ["process", safePart(scope?.country, "国家"), typeDir, safePart(scope?.commissionName, "委托名"), safePart(scope?.locationDir, "地点")].join("/");
+}
+
+// 将等价的相对引用统一为稳定形式，供循环检测和路径解析共用。
+function normalizeReferenceValue(reference) {
+    return String(reference || "").trim().replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^(?:\.\/)+/, "");
+}
+
+// 递归扫描当前委托目录，仅返回含有效坐标点的路径 JSON。
+function listPathOptions(scope) {
+    const root = processResourceDir(scope);
+    const result = [];
+    const seen = new Set();
+    function visit(dir) {
+        for (const entry of Array.from(file.readPathSync(dir) || [])) {
+            const normalized = String(entry).replace(/\\/g, "/");
+            if (file.isFolder(entry)) visit(normalized);
+            else if (/\.json$/i.test(normalized)) {
+                try {
+                    const value = JSON.parse(file.readTextSync(normalized));
+                    if (!value || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.positions)
+                        || !value.positions.some(point => point && Number.isFinite(Number(point.x)) && Number.isFinite(Number(point.y)))) continue;
+                    const relative = normalized.slice(root.length + 1);
+                    if (!seen.has(relative)) { seen.add(relative); result.push({ value: relative, label: relative }); }
+                } catch (error) {}
+            }
+        }
+    }
+    try { if (file.isFolder(root)) visit(root); } catch (error) { log.debug("读取路径候选失败 [{path}]: {err}", root, error.message); }
+    return result.sort((a, b) => a.value.localeCompare(b.value, "zh-CN"));
+}
+
+// 将前端提交的相对路径限制并解析在当前委托目录内。
+function resolvePathReference(scope, relative) {
+    const value = normalizeReferenceValue(relative).replace(/^\/+/, "");
+    if (!value || value.split("/").some(part => part === ".." || !part)) return null;
+    const root = processResourceDir(scope);
+    const path = root + "/" + value;
+    return path.toLowerCase().endsWith(".json") ? path : null;
+}
+
+// 判断解析结果是否满足子流程的最低结构要求。
+function isSubProcess(value) {
+    return Array.isArray(value) && value.every(step => step && typeof step === "object" && !Array.isArray(step) && Object.hasOwn(step, "type"));
+}
+
+// 递归扫描当前委托目录中的合法子流程，并排除正在编辑的文档链。
+function listSubProcessOptions(scope, excluded = []) {
+    const root = processResourceDir(scope);
+    const excludedKeys = new Set(excluded.map(value => normalizeReferenceValue(value).toLowerCase()));
+    const result = [];
+    function visit(dir) {
+        for (const entry of Array.from(file.readPathSync(dir) || [])) {
+            const normalized = String(entry).replace(/\\/g, "/");
+            if (file.isFolder(entry)) visit(normalized);
+            else if (/\.json$/i.test(normalized)) {
+                const relative = normalized.slice(root.length + 1);
+                if (excludedKeys.has(relative.toLowerCase())) continue;
+                try {
+                    if (isSubProcess(JSON.parse(file.readTextSync(normalized)))) result.push({ value: relative, label: relative });
+                } catch (error) {}
+            }
+        }
+    }
+    try { if (file.isFolder(root)) visit(root); } catch (error) { log.debug("读取子流程候选失败 [{path}]: {err}", root, error.message); }
+    return result.sort((a, b) => a.value.localeCompare(b.value, "zh-CN"));
+}
+
+// 创建目标文件的父目录，允许新子流程保存到多层目录。
+function ensureParentDir(path) {
+    const parent = processDir(path);
+    if (!file.isFolder(parent) && !file.createDirectory(parent)) throw new Error("无法创建目录：" + parent);
+}
+
 function baseName(path) {
     return String(path || "").replace(/\\/g, "/").split("/").pop();
 }
@@ -243,7 +321,7 @@ function resolveReference(resourceDir, reference, prefix, errors) {
         errors.push(prefix + "必须是非空路径字符串");
         return null;
     }
-    let normalized = reference.trim().replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/\/+/g, "/");
+    const normalized = normalizeReferenceValue(reference);
     const parts = normalized.split("/");
     if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized) || /[:*?"<>|]/.test(normalized) ||
         parts.includes(".") || parts.includes("..")) {
@@ -449,6 +527,15 @@ function validateSteps(steps, registry, scope, fileName) {
     return diagnostics;
 }
 
+// 使用委托资源根目录校验任意相对路径的子流程文档。
+function validateSubProcessSteps(steps, registry, scope, reference) {
+    const diagnostics = { errors: [], warnings: [] };
+    const path = resolveReference(processResourceDir(scope), reference, "子流程路径", diagnostics.errors);
+    if (!path) return { diagnostics, path: null };
+    validateProcess(steps, registry, path, processResourceDir(scope), scope, diagnostics, new Set([referenceKey(path)]), "");
+    return { diagnostics, path };
+}
+
 export async function openProcessEditor(registry) {
     if (typeof htmlMask === "undefined") return log.warn("当前环境不支持 htmlMask，无法打开流程编辑器");
     if (htmlMask.exists(WINDOW_TAG)) return;
@@ -493,6 +580,8 @@ export async function openProcessEditor(registry) {
                         path,
                         exists: file.isFile(path),
                         branches: branchOptions(scope),
+                        pathOptions: listPathOptions(scope),
+                        subProcessOptions: listSubProcessOptions(scope, [message.data?.fileName]),
                     });
                 } else if (message.url === "/load") {
                     const path = buildPath(message.data?.scope, message.data?.fileName);
@@ -522,9 +611,11 @@ export async function openProcessEditor(registry) {
                     htmlMask.send(windowId, "/toggleVisibility", JSON.stringify({ visible: false }));
                     let result;
                     try {
+                        const existingPath = resolvePathReference(scope, message.data?.existingPath);
                         result = await openPathRecorder({
                             targetDir: processDir(path),
                             commissionName: scope.commissionName,
+                            existingPath,
                         });
                     } finally {
                         recorderActive = false;
@@ -535,6 +626,50 @@ export async function openProcessEditor(registry) {
                         }
                     }
                     respond(windowId, message.requestId, Object.assign({}, result, { scope }));
+                } else if (message.url === "/openSubprocess") {
+                    const scope = message.data?.scope;
+                    const reference = normalizeReferenceValue(message.data?.reference);
+                    const blocked = Array.isArray(message.data?.blocked) ? message.data.blocked.map(normalizeReferenceValue) : [];
+                    if (blocked.some(value => value.toLowerCase() === reference.toLowerCase())) throw new Error("不能打开当前流程或上级流程：" + reference);
+                    const errors = [];
+                    const path = resolveReference(processResourceDir(scope), reference, "子流程路径", errors);
+                    if (!path) throw new Error(errors.join("\n"));
+                    let content = "[]";
+                    const exists = file.isFile(path);
+                    if (exists) {
+                        let parsed;
+                        try { parsed = JSON.parse(file.readTextSync(path)); } catch (error) { throw new Error("子流程 JSON 解析失败：" + error.message); }
+                        if (!isSubProcess(parsed)) throw new Error("文件不是合法子流程，数组内每个元素都必须包含 type 字段：" + path);
+                        content = JSON.stringify(parsed, null, 4) + "\r\n";
+                    }
+                    respond(windowId, message.requestId, {
+                        status: "ok", path, reference, exists, content,
+                        subProcessOptions: listSubProcessOptions(scope, [...blocked, reference]),
+                    });
+                } else if (message.url === "/validateSubprocess" || message.url === "/saveSubprocess") {
+                    let parsed;
+                    try { parsed = JSON.parse(String(message.data?.content || "")); } catch (error) { throw new Error("JSON 格式错误：" + error.message); }
+                    const scope = message.data?.scope;
+                    const result = validateSubProcessSteps(parsed, registry, scope, message.data?.reference);
+                    if (message.url === "/validateSubprocess") {
+                        respond(windowId, message.requestId, {
+                            status: result.diagnostics.errors.length ? "error" : result.diagnostics.warnings.length ? "warning" : "ok",
+                            errors: result.diagnostics.errors,
+                            warnings: result.diagnostics.warnings,
+                        });
+                        continue;
+                    }
+                    if (result.diagnostics.errors.length) throw new Error(result.diagnostics.errors.join("\n"));
+                    if (!result.path) throw new Error("子流程路径无效");
+                    if (file.isFile(result.path)) {
+                        try {
+                            if (!isSubProcess(JSON.parse(file.readTextSync(result.path)))) throw new Error("目标文件不是合法子流程，不能覆盖：" + result.path);
+                        } catch (error) { throw new Error(error.message || String(error)); }
+                    }
+                    ensureParentDir(result.path);
+                    const content = JSON.stringify(parsed.map(step => orderedStep(step, registry)), null, 4) + "\r\n";
+                    if (!file.writeTextSync(result.path, content, false)) throw new Error("写入失败：" + result.path);
+                    respond(windowId, message.requestId, { status: "ok", path: result.path, content, warnings: result.diagnostics.warnings });
                 } else if (message.url === "/validate" || message.url === "/save") {
                     let parsed;
                     try { parsed = JSON.parse(String(message.data?.content || "")); }

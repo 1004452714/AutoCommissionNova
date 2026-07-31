@@ -15,11 +15,7 @@
         "desc": "找到咕噜声的来源"
     },
     {
-        "type": "自动任务",
-        "data": {
-            "action": "enable",
-            "taskType": "AutoSkip"
-        }
+        "type": "对话"
     },
     {
         "type": "追踪委托",

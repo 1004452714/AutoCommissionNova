@@ -4,7 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, toRaw } 
 import { requestHtmlMask, subscribeHtmlMask, toError } from "@/shared/bridge/html-mask";
 import UiSelect from "@/shared/components/UiSelect.vue";
 import { copy } from "@/shared/i18n/zh-CN";
-import { ACTION_GROUPS, DEFAULT_SETTINGS, MOVE_MODES, PARAMETER_ACTIONS, POINT_TYPES, actionParameterHint, changePointAction, clonePoints, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints } from "@/apps/path-recorder/model";
+import { ACTION_GROUPS, DEFAULT_SETTINGS, MOVE_MODES, PARAMETER_ACTIONS, POINT_TYPES, actionParameterHint, changePointAction, clonePoints, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints, timeControlValue } from "@/apps/path-recorder/model";
 import type { CombatSyntax, PathPoint, RecorderResult, RecorderSettings, RecorderState, RouteAuthor } from "@/apps/path-recorder/types";
 import type { UiSelectOption } from "@/shared/types/ui";
 
@@ -94,8 +94,14 @@ const strategyExpandedIndex = ref(-1);
 const strategyQuery = ref("");
 // 策略预设键盘选择索引。
 const strategySelectedIndex = ref(0);
-// 交互锁的宿主确认状态用于去重请求。
+// 交互锁的宿主确认状态用于判断是否仍需发送请求。
 const interactionLocked = ref(false);
+// 最新期望状态允许焦点在宿主响应前再次变化。
+let interactionLockDesired = false;
+// 串行链确保较慢的旧响应不会覆盖新的焦点状态。
+let interactionLockChain: Promise<void> = Promise.resolve();
+// WebView 当前拥有焦点时，可编辑控件才需要阻断宿主快捷键。
+const windowFocused = ref(true);
 // 宿主推送卸载函数。
 let unsubscribe = (): void => undefined;
 // 当前是否处于录制阶段。
@@ -177,7 +183,7 @@ async function flushPoints(): Promise<void> {
     else await pointsSyncChain;
 }
 
-// 开始新录制或结束当前录制阶段。
+// 续录现有点位或结束当前录制阶段。
 async function toggleRecording(): Promise<void> {
     if (interactionBusy.value) return;
     try {
@@ -187,6 +193,7 @@ async function toggleRecording(): Promise<void> {
             dirty.value = points.value.length > 0;
             setStatus("录制已结束，请检查点位后保存", "success");
         } else {
+            await flushPoints();
             applyState(await requestHtmlMask<RecorderState>("/start", {}));
             dirty.value = true;
             saved.value = false;
@@ -199,7 +206,7 @@ async function toggleRecording(): Promise<void> {
 
 // 请求 BetterGI 识别当前位置并追加点位。
 async function samplePoint(): Promise<void> {
-    if (!recording.value || sampling.value || running.value) return;
+    if (sampling.value || running.value) return;
     try {
         await flushPoints();
         const result = await requestHtmlMask<RecorderResult>("/sample", {});
@@ -290,6 +297,14 @@ function actionSupportsParams(action: string): boolean {
     return PARAMETER_ACTIONS.has(action);
 }
 
+// 将原生时间控件的合法分钟值写回当前点位动作参数。
+function updatePointTime(index: number, event: Event): void {
+    const point = points.value[index];
+    if (!point) return;
+    point.action_params = (event.target as HTMLInputElement).value;
+    markPointsChanged();
+}
+
 // 展开指定点位的策略搜索并聚焦输入框。
 function openStrategyPicker(index: number): void {
     if (interactionBusy.value) return;
@@ -308,6 +323,19 @@ function closeStrategyPicker(): void {
     strategyExpandedIndex.value = -1;
     strategyQuery.value = "";
     strategySelectedIndex.value = 0;
+}
+
+// 焦点离开当前策略选择区域后关闭自动联想菜单。
+function handleStrategyFocusOut(event: FocusEvent): void {
+    const nextElement = event.relatedTarget as Element | null;
+    if (nextElement) {
+        if (!nextElement.closest("[data-strategy-picker]")) closeStrategyPicker();
+        return;
+    }
+    nextTick(() => {
+        const activeElement = document.activeElement as Element | null;
+        if (!activeElement?.closest("[data-strategy-picker]")) closeStrategyPicker();
+    });
 }
 
 // 将选中策略预设写入指定点位动作参数。
@@ -714,21 +742,37 @@ function cancelConfirmation(): void {
     void syncInteractionLock();
 }
 
-// 去重设置宿主点击穿透交互锁。
-async function setInteractionLock(active: boolean): Promise<void> {
-    if (interactionLocked.value === active) return;
-    try {
-        const result = await requestHtmlMask<RecorderResult>("/interactionLock", { active });
-        if (result.status === "error") throw new Error(result.message || "交互锁切换失败");
-        interactionLocked.value = active;
-    } catch { /* 快速切换焦点或宿主关闭时保留当前页面状态。 */ }
+// 串行收敛宿主点击穿透交互锁到最新焦点期望状态。
+function setInteractionLock(active: boolean): Promise<void> {
+    interactionLockDesired = active;
+    interactionLockChain = interactionLockChain.catch(() => undefined).then(async () => {
+        while (interactionLocked.value !== interactionLockDesired) {
+            const requestedState = interactionLockDesired;
+            try {
+                const result = await requestHtmlMask<RecorderResult>("/interactionLock", { active: requestedState });
+                if (result.status === "error") throw new Error(result.message || "交互锁切换失败");
+                interactionLocked.value = requestedState;
+            } catch {
+                // 宿主关闭或通信失败时停止本轮收敛，后续交互会重新触发同步。
+                return;
+            }
+        }
+    });
+    return interactionLockChain;
 }
 
-// 根据紧凑编辑区和全部弹窗统一协调交互锁。
+// 判断元素是否会接收文字、数字或选择类键盘输入。
+function isEditableElement(element: Element | null): boolean {
+    if (!element) return false;
+    return Boolean(element.closest('input,textarea,select,[role="combobox"],[contenteditable]:not([contenteditable="false"])'));
+}
+
+// 根据可编辑控件、紧凑编辑区和全部弹窗统一协调交互锁。
 async function syncInteractionLock(): Promise<void> {
     const activeElement = document.activeElement as HTMLElement | null;
-    const compactFocused = displayMode.value === "compact-edit" && Boolean(activeElement?.closest("[data-interactive-surface]"));
-    await setInteractionLock(settingsOpen.value || coordinateDialog.open || Boolean(confirmAction.value) || compactFocused);
+    const editableFocused = windowFocused.value && isEditableElement(activeElement);
+    const compactFocused = windowFocused.value && displayMode.value === "compact-edit" && Boolean(activeElement?.closest("[data-interactive-surface]"));
+    await setInteractionLock(settingsOpen.value || coordinateDialog.open || Boolean(confirmAction.value) || editableFocused || compactFocused);
 }
 
 // 聚焦任一交互面时立即保持点击交互。
@@ -741,10 +785,39 @@ function handleInteractionBlur(): void {
     nextTick(() => void syncInteractionLock());
 }
 
+// 页面内焦点进入可编辑控件时立即暂停全部宿主快捷键。
+function handleDocumentFocusIn(event: FocusEvent): void {
+    windowFocused.value = true;
+    if (isEditableElement(event.target as Element | null)) void setInteractionLock(true);
+    else void syncInteractionLock();
+}
+
+// 页面内焦点切换完成后根据新焦点决定是否恢复宿主快捷键。
+function handleDocumentFocusOut(): void {
+    nextTick(() => void syncInteractionLock());
+}
+
+// WebView 失焦时关闭临时联想并释放仅由输入焦点产生的锁。
+function handleWindowBlur(): void {
+    windowFocused.value = false;
+    closeStrategyPicker();
+    void syncInteractionLock();
+}
+
+// WebView 重新获得焦点时按当前活动控件恢复交互锁。
+function handleWindowFocus(): void {
+    windowFocused.value = true;
+    void syncInteractionLock();
+}
+
 // 初始化会话并订阅点位、按键和显示模式推送。
 async function initialize(): Promise<void> {
     document.addEventListener("pointerdown", handleDocumentPointerDown);
     document.addEventListener("keydown", handleDocumentKeydown);
+    document.addEventListener("focusin", handleDocumentFocusIn);
+    document.addEventListener("focusout", handleDocumentFocusOut);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
     unsubscribe = subscribeHtmlMask((message) => {
         if (message.url === "/bindingKey") {
             const keyCode = String((message.data as { keyCode?: string } | undefined)?.keyCode ?? "").trim();
@@ -780,6 +853,10 @@ function cleanupRecorder(): void {
     unsubscribe();
     document.removeEventListener("pointerdown", handleDocumentPointerDown);
     document.removeEventListener("keydown", handleDocumentKeydown);
+    document.removeEventListener("focusin", handleDocumentFocusIn);
+    document.removeEventListener("focusout", handleDocumentFocusOut);
+    window.removeEventListener("blur", handleWindowBlur);
+    window.removeEventListener("focus", handleWindowFocus);
     if (settingsTimer) clearTimeout(settingsTimer);
     if (pointsTimer) clearTimeout(pointsTimer);
 }
@@ -791,7 +868,7 @@ onBeforeUnmount(cleanupRecorder);
 <template>
     <section v-if="displayMode === 'compact'" class="compact">
         <header><div><h1>{{ text.title }}</h1><span>{{ phase }}</span></div><strong>{{ pointCountText }}</strong></header>
-        <div class="compact-shortcuts"><span>{{ settings.addKey }} {{ text.sample }}</span><span>{{ settings.finishKey }} {{ text.finish }}</span><span>{{ settings.toggleKey }} 切换</span><span>Alt 编辑</span></div>
+        <div class="compact-shortcuts"><span>{{ settings.addKey }} {{ text.sample }}</span><span>{{ settings.finishKey }} {{ text.finishKey }}</span><span>{{ settings.toggleKey }} 切换</span><span>Alt 编辑</span></div>
         <div class="compact-list">
             <article v-for="(point,index) in points" :key="point.id">
                 <strong>#{{ index + 1 }}</strong><span>{{ Math.round(point.x) }}, {{ Math.round(point.y) }}</span>
@@ -813,7 +890,7 @@ onBeforeUnmount(cleanupRecorder);
                 </div>
             </div>
             <label class="file-field">{{ text.fileName }}<input v-model.trim="fileName" class="control" :disabled="interactionBusy" @input="dirty = true; saved = false"></label>
-            <div class="toolbar-actions"><button class="danger" :disabled="!points.length || interactionBusy" @click="requestClearPoints">{{ text.clear }}</button><button class="primary" :disabled="interactionBusy" @click="toggleRecording">{{ recordButtonText }}</button><button :disabled="!recording || interactionBusy" @click="samplePoint">{{ text.sample }}</button><button :disabled="interactionBusy" @click="openCoordinate()">{{ text.coordinate }}</button></div>
+            <div class="toolbar-actions"><button class="danger" :disabled="!points.length || interactionBusy" @click="requestClearPoints">{{ text.clear }}</button><button class="primary" :disabled="interactionBusy" @click="toggleRecording">{{ recordButtonText }}</button><button :disabled="interactionBusy" @click="samplePoint">{{ text.sample }}</button><button :disabled="interactionBusy" @click="openCoordinate()">{{ text.coordinate }}</button></div>
         </section>
         <main class="content">
             <div class="point-table">
@@ -827,7 +904,7 @@ onBeforeUnmount(cleanupRecorder);
                     <UiSelect :model-value="point.action" :options="actionOptions" :aria-label="`动作 #${index + 1}`" :disabled="interactionBusy" width="table" @change="updatePointAction(index, $event)" />
                     <div class="param-cell" :class="{ 'combat-param': point.action === 'combat_script' }">
                         <template v-if="point.action === 'combat_script'">
-                            <div class="strategy-picker" :class="{ expanded: strategyExpandedIndex === index }" data-strategy-picker>
+                            <div class="strategy-picker" :class="{ expanded: strategyExpandedIndex === index }" data-strategy-picker @focusout="handleStrategyFocusOut($event)">
                                 <button v-if="strategyExpandedIndex !== index" class="icon-button strategy-trigger" type="button" :title="text.searchScript" :aria-label="text.searchScript" :disabled="interactionBusy || !settings.combatScripts.length" @click="openStrategyPicker(index)"><Search :size="16" /></button>
                                 <input v-else v-model="strategyQuery" class="control strategy-search" :data-strategy-search="index" :placeholder="text.searchScript" @input="strategySelectedIndex = 0" @keydown="handleStrategyKeydown($event,index)">
                                 <div v-if="strategyExpandedIndex === index" class="strategy-menu" role="listbox" :aria-label="text.searchScript">
@@ -837,6 +914,7 @@ onBeforeUnmount(cleanupRecorder);
                             </div>
                             <textarea v-model="point.action_params" class="control action-params" :disabled="interactionBusy" :placeholder="actionParameterHint(point.action)" rows="1" @input="markPointsChanged(); refreshSyntax(index, $event.target as HTMLTextAreaElement)" @focus="refreshSyntax(index, $event.target as HTMLTextAreaElement)" @keydown="handleSyntaxKeydown($event,index)"></textarea>
                         </template>
+                        <input v-else-if="point.action === 'set_time'" type="time" step="60" :value="timeControlValue(point.action_params)" class="control action-params" :disabled="interactionBusy" :aria-label="`${text.actionParams} #${index + 1}`" @input="updatePointTime(index, $event)">
                         <input v-else-if="actionSupportsParams(point.action)" v-model="point.action_params" class="control action-params" :disabled="interactionBusy" :placeholder="actionParameterHint(point.action)" @input="markPointsChanged">
                         <span v-else class="no-params">—</span>
                         <div v-if="syntaxPointIndex === index && syntaxItems.length" class="syntax-menu"><button v-for="(item,itemIndex) in syntaxItems" :key="`${item.label}-${item.value}`" type="button" :class="{ active: syntaxSelected === itemIndex }" @mousedown.prevent="applySyntaxCompletion(itemIndex)"><strong>{{ item.label }}</strong><small>{{ item.hint }}</small></button></div>

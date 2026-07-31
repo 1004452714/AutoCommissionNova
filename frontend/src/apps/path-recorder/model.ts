@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS: RecorderSettings = {
 // 深拷贝后端点位，避免推送对象与表单共享不可控引用。
 export function clonePoints(points: PathPoint[]): PathPoint[] {
     return points.map((point, index) => ({
+        ...structuredClone(point),
         id: index + 1,
         x: Number(point.x), y: Number(point.y), type: point.type,
         move_mode: point.move_mode, action: point.action ?? "", action_params: point.action_params ?? "",
@@ -73,10 +74,20 @@ export function actionParameterHint(action: string): string {
     const hints: Record<string, string> = {
         combat_script: "输入简易策略，例如 keydown(w),wait(0.2),keyup(w)", log_output: "需要输出的日志",
         stop_flying: "下落攻击等待时间（毫秒）", up_down_grab_leaf: "方向 up 或 down（可选）", mining: "可填 disablePickupAround",
-        set_time: "时间 HH:MM", linnea_mining: "射箭次数,旋转寻矿次数，例如 1,5", pick_up_collect: "可填角色或动作，例如 琴-短E",
+        set_time: "选择时间", linnea_mining: "射箭次数,旋转寻矿次数，例如 1,5", pick_up_collect: "可填角色或动作，例如 琴-短E",
         pick_around: "拾取轮数（正整数）", use_gadget: "最大等待秒数或 not_wait",
     };
     return hints[action] ?? "动作参数（可选）";
+}
+
+// 将兼容的一至两位小时和分钟转换为原生时间控件要求的 HH:MM。
+export function timeControlValue(value: string): string {
+    const match = /^(\d{1,2}):(\d{1,2})$/.exec(String(value || "").trim());
+    if (!match) return "";
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return "";
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 // 根据已保存作者预设清理当前路线的失效作者。
