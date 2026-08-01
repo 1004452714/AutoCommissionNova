@@ -7,7 +7,6 @@ import { recognizeCommissions, initCommissionReferenceData } from "../recognitio
 import { executeCommissionTracking } from "./commission-executor.js";
 import { enterCommissionScreen } from "../vision/index.js";
 import { loadGlobalConfig } from "../loaders/global-config.js";
-import { loadGlobalPartyConfig } from "../loaders/party-config.js";
 import { scanCommissionScopes } from "../loaders/process-scope.js";
 
 /**
@@ -46,7 +45,7 @@ export async function identification() {
 }
 
 /**
- * 委托前准备工作：前往七天神像、切换队伍
+ * 委托前准备工作：前往七天神像
  */
 export async function prepareForCommission() {
     log.info("开始执行委托前准备");
@@ -55,11 +54,6 @@ export async function prepareForCommission() {
         const globalConfig = loadGlobalConfig();
         if (!globalConfig.skipSafeTeleport) {
             await genshin.tpToStatueOfTheSeven();
-        }
-        const partyConfig = loadGlobalPartyConfig();
-        if (partyConfig.battleTeamName) {
-            log.info("切换至全局战斗队伍 {team}", partyConfig.battleTeamName);
-            await genshin.switchParty(partyConfig.battleTeamName);
         }
     } catch (error) {
         log.error("执行委托前准备时出错: {error}", error.message);

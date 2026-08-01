@@ -43,12 +43,13 @@ export async function isCompleted(commissionName) {
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
         log.error("检查委托完成状态失败: {error}", error.message);
+        return false;
+    } finally {
         try {
             await genshin.returnMainUi();
         } catch (exitError) {
             if (isCancellationError(exitError)) { throw exitError; }
-            log.warn("退出委托界面失败: {error}", exitError);
+            log.warn("退出委托界面失败: {error}", exitError.message);
         }
-        return false;
     }
 }

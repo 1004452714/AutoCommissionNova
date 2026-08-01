@@ -1,11 +1,8 @@
 /**
  * 按当前委托配置切换战斗队伍或元素采集队伍。
  */
-import {
-    loadPartyConfigForContext,
-    resolvePartySelection,
-    validateCompleteRoles,
-} from "../loaders/party-config.js";
+import { loadPartyConfigForContext, resolvePartySelection } from "../loaders/party-config.js";
+import { switchPartyByName, switchPartyWithRoles } from "../core/commission-party-switcher.js";
 import { defineStep } from "./define-step.js";
 
 export default defineStep({
@@ -26,24 +23,12 @@ export default defineStep({
             if (!resolved.customTeamName) {
                 throw new Error(`${step.data}队伍使用角色模式，但当前委托未配置 customTeamName`);
             }
-            const roleResult = validateCompleteRoles(resolved.roles);
-            if (!roleResult.ok) throw new Error(`${step.data}队伍角色配置无效: ${roleResult.error}`);
 
-            log.info("切换至{kind}自定义承载队伍: {team}", step.data, resolved.customTeamName);
-            const switched = await genshin.switchParty(resolved.customTeamName);
+            log.debug("切换至{kind}自定义承载队伍: {team}", step.data, resolved.customTeamName);
+            const switched = await switchPartyWithRoles(resolved.customTeamName, resolved.roles);
             if (!switched) {
-                throw new Error(`自定义承载队伍切换失败: ${resolved.customTeamName}`);
+                throw new Error(`${step.data}队伍角色重组失败: ${resolved.customTeamName}`);
             }
-            await sleep(300);
-            log.info("使用角色配置重组{kind}队伍", step.data);
-            const roles = roleResult.roles;
-            const roleSwitched = await genshin.SwitchCharacter(
-                roles["1"],
-                roles["2"],
-                roles["3"],
-                roles["4"]
-            );
-            if (!roleSwitched) throw new Error(`${step.data}队伍角色重组失败`);
             return true;
         }
 
@@ -52,9 +37,8 @@ export default defineStep({
             throw new Error(`${step.data}队伍未配置队伍名称`);
         }
 
-        const success = await genshin.switchParty(teamName);
+        const success = await switchPartyByName(teamName);
         if (!success) throw new Error(`队伍切换失败: ${teamName}`);
-        log.info("队伍切换成功: {team}", teamName);
         await sleep(300);
         return true;
     },

@@ -7,6 +7,7 @@ import { findNearestBasicProcess } from "./basic-process-matcher.js";
 import { loadBasicProcess } from "../loaders/index.js";
 import { trackCommission } from "../navigation/index.js";
 import { createCommissionContext, runStepsWithContext } from "./commission-context.js";
+import { prepareCommissionBattleParty } from "./commission-party-switcher.js";
 
 /**
  * 执行Basic委托
@@ -53,6 +54,7 @@ export async function executeBasicCommission(commission, stepRegistry, accountUi
         });
 
         try {
+            await prepareCommissionBattleParty(context);
             const success = await runStepsWithContext(context, { sleepMs: 1000, stopOnError: true });
             if (success) {
                 log.debug("Basic委托流程执行完成: {name}", commission.name);

@@ -6,6 +6,7 @@ import { COMMISSION_TYPE } from "../config/index.js";
 import { trackCommission } from "../navigation/index.js";
 import { loadNpcProcessFile } from "../loaders/index.js";
 import { createCommissionContext, runStepsWithContext } from "./commission-context.js";
+import { prepareCommissionBattleParty } from "./commission-party-switcher.js";
 
 /**
  * 执行NPC委托
@@ -26,7 +27,7 @@ export async function executeNpcCommission(commission, stepRegistry, accountUid)
             return { success: false, context: null };
         }
 
-        log.info("执行统一NPC委托流程: {name}", commission.name);
+        log.debug("执行统一NPC委托流程: {name}", commission.name);
         await trackCommission(commission.name);
 
         const context = createCommissionContext({
@@ -39,9 +40,10 @@ export async function executeNpcCommission(commission, stepRegistry, accountUid)
             stepRegistry,
         });
 
+        await prepareCommissionBattleParty(context);
         const success = await runStepsWithContext(context, { sleepMs: 250, stopOnError: true });
         if (success) {
-            log.info("NPC委托流程执行完成: {name}", commission.name);
+            log.debug("NPC委托流程执行完成: {name}", commission.name);
         }
         return { success, context };
     } catch (error) {
