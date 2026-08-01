@@ -74,7 +74,7 @@ export async function getCurrentUid(options = {}) {
             return "";
         }
 
-        log.info("当前UID: {uid}，识别值: {recognized}，相似度: {similarity}",
+        log.debug("当前UID: {uid}，识别值: {recognized}，相似度: {similarity}",
             match.uid,
             recognizedUid,
             match.bestSimilarity.toFixed(3));
@@ -85,7 +85,7 @@ export async function getCurrentUid(options = {}) {
     if (knownUids.length > 0) {
         const match = matchUidCandidate(recognizedUid, knownUids);
         if (match.uid) {
-            log.info("当前UID匹配到已有账号槽: {uid}，识别值: {recognized}，相似度: {similarity}",
+            log.debug("当前UID匹配到已有账号槽: {uid}，识别值: {recognized}，相似度: {similarity}",
                 match.uid,
                 recognizedUid,
                 match.bestSimilarity.toFixed(3));
@@ -94,7 +94,7 @@ export async function getCurrentUid(options = {}) {
         }
         log.info("当前UID未匹配到已有账号槽，使用识别值创建/读取账号槽: {uid}", recognizedUid);
     } else {
-        log.info("当前UID: {uid}", recognizedUid);
+        log.debug("当前UID: {uid}", recognizedUid);
     }
 
     cachedCurrentUid = recognizedUid;

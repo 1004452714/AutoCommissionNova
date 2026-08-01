@@ -54,7 +54,7 @@ export async function findCommissionTarget(commissionName) {
 export async function trackCommission(commissionName) {
     try {
         const page = new BvPage();
-        log.info("开始追踪委托: {name}", commissionName);
+        log.debug("开始追踪委托: {name}", commissionName);
         await genshin.returnMainUi();
 
         await enterCommissionScreen();

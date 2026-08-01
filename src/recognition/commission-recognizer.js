@@ -8,6 +8,23 @@ import { standardizeCommissionName, standardizeCommissionLocation } from "./comm
 import { getCommissionPosition, clickCommissionAndOpenMap, resolveCommissionNameOcrRegions } from "./commission-scanner.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { RO } from "../vision/index.js";
+
+/**
+ * 输出单个委托完成识别后的紧凑摘要。
+ */
+function logCommissionSummary(commission) {
+    const type = commission.type === COMMISSION_TYPE.BASIC
+        ? "Basic"
+        : commission.type === COMMISSION_TYPE.NPC ? "NPC" : "未支持";
+    const country = commission.country || "-";
+    const location = commission.location || "-";
+    const position = commission.commissionPosition;
+    const coordinates = Number.isFinite(position?.x) && Number.isFinite(position?.y)
+        ? `(${Math.round(position.x)}, ${Math.round(position.y)})`
+        : "-";
+    log.info(`委托 ${commission.id} | ${commission.name || "-"} | ${commission.status || COMMISSION_STATUS.UNKNOWN} | ${type} | ${country} | ${location} | 坐标: ${coordinates}`);
+}
+
 /**
  * 识别委托地点
  * @returns {Promise<string>} 地点名称；OCR 失败时返回空字符串（调用方据此设置 status）
@@ -101,7 +118,6 @@ export async function recognizeCommissions(supportedCommissions) {
                 if (i === 3) { await pageScroll(1) };  // 第4个委托需要翻页
                 const id = i + 1;
                 const rawName = bvPageOcrRegionText(commissionNameRegions[i]);
-                log.info("识别到第{id}个委托名称: {name}", id, rawName);
 
                 const standardizedName = standardizeCommissionName(rawName);
                 const isBasic = supportedCommissions.basic.includes(standardizedName);
@@ -116,14 +132,12 @@ export async function recognizeCommissions(supportedCommissions) {
                 };
                 allCommissions.push(commission);
                 const iconStatus = await detectCommissionStatusByImage(i);
-                log.info("第{id}个委托完成图标状态: {status}", id, iconStatus);
                 if (iconStatus === COMMISSION_STATUS.COMPLETED) {
                     commission.status = COMMISSION_STATUS.COMPLETED;
+                    logCommissionSummary(commission);
                     await sleep(1);
                     continue;
                 }
-
-                log.info("查看第{id}个委托详情: {name}", id, standardizedName);
 
                 await clickCommissionAndOpenMap(page, i);
 
@@ -151,6 +165,8 @@ export async function recognizeCommissions(supportedCommissions) {
                     keyPress("VK_ESCAPE");
                     await sleep(1000);
                 }).waitFor();
+
+                logCommissionSummary(commission);
 
             } catch (error) {
                 if (isCancellationError(error)) { throw error; }

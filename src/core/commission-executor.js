@@ -130,8 +130,6 @@ export async function executeCommissionTracking(stepRegistry) {
         }
 
         for (const comm of commissions) {
-            log.info("开始执行委托: {name} ({location}) [{type}], UID: {uid}", comm.name, comm.location, comm.type, uid);
-
             const executor = executorMap[comm.type];
             if (!executor) {
                 log.warn("未知委托类型 {type}，跳过委托 {name}", comm.type, comm.name);
@@ -140,9 +138,10 @@ export async function executeCommissionTracking(stepRegistry) {
 
             // tryCount 0 是首次尝试，1..MAX 是重试；总尝试数 = MAX+1
             const totalAttempts = MAX_COMMISSION_RETRY_COUNT + 1;
+            const typeLabel = comm.type === COMMISSION_TYPE.BASIC ? "Basic" : "NPC";
             let success = false;
             for (let tryCount = 0; tryCount <= MAX_COMMISSION_RETRY_COUNT && !success; tryCount++) {
-                log.info("第 {attempt}/{total} 次尝试执行委托 {name}", tryCount + 1, totalAttempts, comm.name);
+                log.info(`执行委托：${comm.name} | ${comm.country || "-"}/${comm.location || "-"} | ${typeLabel} | 第 ${tryCount + 1}/${totalAttempts} 次`);
 
                 const result = await executor(comm, stepRegistry, uid);
                 dispatcher.ClearAllTriggers();
@@ -152,7 +151,6 @@ export async function executeCommissionTracking(stepRegistry) {
                     if (completed) {
                         success = true;
                         successCount++;
-                        log.info("委托 {name} 执行完成", comm.name);
                         // 持久化已完成状态到当前 UID 的 commissions_data.json 账号槽，避免复用已有数据时重跑
                         await updateCommissionStatus(comm, COMMISSION_STATUS.COMPLETED, uid);
                         if (result.context) {
@@ -176,7 +174,7 @@ export async function executeCommissionTracking(stepRegistry) {
             if (!success) {
                 log.warn("委托 {name} 共 {total} 次尝试后仍未完成，跳过该委托", comm.name, totalAttempts);
             } else {
-                log.info("委托 {name} 执行成功", comm.name);
+                log.info(`委托执行成功：${comm.name}`);
             }
             await sleep(1);
         }

@@ -28,7 +28,10 @@ export async function executeBasicCommission(commission, stepRegistry, accountUi
             return { success: false, context: null };
         }
 
-        log.info("匹配到流程: {path} (距离: {distance})", matched.processPath, Math.round(matched.distance));
+        const normalizedProcessPath = matched.processPath.replace(/\\/g, "/");
+        const locationDir = matched.processDir.replace(/\\/g, "/").split("/").filter(Boolean).pop() || commission.location;
+        log.info(`匹配到流程：${commission.country || "蒙德"}/${locationDir}/${commission.name}`);
+        log.debug("流程匹配详情: {path} (距离: {distance})", normalizedProcessPath, Math.round(matched.distance));
 
         const processSteps = await loadBasicProcess(matched.processPath);
         if (!processSteps || processSteps.length === 0) {
@@ -52,7 +55,7 @@ export async function executeBasicCommission(commission, stepRegistry, accountUi
         try {
             const success = await runStepsWithContext(context, { sleepMs: 1000, stopOnError: true });
             if (success) {
-                log.info("Basic委托流程执行完成: {name}", commission.name);
+                log.debug("Basic委托流程执行完成: {name}", commission.name);
             }
             return { success, context };
         } finally {

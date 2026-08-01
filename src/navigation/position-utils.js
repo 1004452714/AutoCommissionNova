@@ -71,7 +71,7 @@ export async function getPositionWithVoting() {
         clusters.sort((a, b) => b.length - a.length);
         if (clusters.length > 0) {
             const bestPosition = clusters[0][0];
-            log.info('位置识别成功: ({x}, {y})', Math.round(bestPosition.x), Math.round(bestPosition.y));
+            log.debug('位置识别成功: ({x}, {y})', Math.round(bestPosition.x), Math.round(bestPosition.y));
             return bestPosition;
         }
     }

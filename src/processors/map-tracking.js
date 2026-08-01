@@ -11,9 +11,12 @@ export default defineStep({
     run: async (step, context) => {
         const scriptName = step.data;
         const fullPath = context.resolveResource(scriptName);
+        const normalizedPath = fullPath.replace(/\\/g, "/");
+        const fileName = normalizedPath.split("/").pop() || scriptName;
 
-        log.info("执行地图追踪: {path}", fullPath);
+        log.info("执行地图追踪: {file}", fileName);
+        log.debug("地图追踪完整路径: {path}", normalizedPath);
         await pathingScript.runFile(fullPath);
-        log.info("地图追踪执行完成");
+        log.debug("地图追踪执行完成");
     },
 });

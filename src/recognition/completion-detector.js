@@ -31,7 +31,7 @@ export async function isCompleted(commissionName) {
             const standardizedName = standardizeCommissionName(rawName);
 
             if (standardizedName === commissionName) {
-                log.info("找到委托 {name}，检测完成状态", commissionName);
+                log.debug("找到委托 {name}，检测完成状态", commissionName);
                 const iconStatus = await detectCommissionStatusByImage(i);
                 return iconStatus === COMMISSION_STATUS.COMPLETED;
             }

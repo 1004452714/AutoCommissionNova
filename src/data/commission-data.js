@@ -267,7 +267,6 @@ export async function saveCommissionsData(commissions) {
             return [];
         }
 
-        log.info("保存委托数据到UID槽: {uid}", uid);
         data.activeUid = uid;
         const account = ensureAccountData(data, uid);
 
@@ -298,7 +297,7 @@ export async function saveCommissionsData(commissions) {
         };
 
         writeCommissionsData(data);
-        log.info("委托数据保存完成: {uid}", uid);
+        log.debug("委托数据保存完成: {uid}", uid);
         return commissions.filter((c) => c.supported);
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
@@ -349,7 +348,7 @@ export async function updateCommissionStatus(commissionRef, status, accountUid =
 
         target.status = status;
         writeCommissionsData(data);
-        log.info("委托 {name} 状态已更新为 {status}，UID: {uid}", target.name, status, uid);
+        log.debug("委托 {name} 状态已更新为 {status}，UID: {uid}", target.name, status, uid);
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
         log.error("更新委托状态时出错: {name}, {error}",

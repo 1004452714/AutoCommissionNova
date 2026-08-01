@@ -16,8 +16,7 @@ import { standardizeCommissionName } from "./commission-standardizer.js";
  */
 export async function resolveCommissionNameOcrRegions() {
     const enabled = await isAdventureEncountersEnabled();
-    const mode = enabled ? "已启用" : "未启用";
-    log.info("冒险历练状态: {mode}，使用对应委托名 OCR 区域", mode);
+    log.debug(enabled ? "冒险历练已解锁" : "冒险历练未解锁");
     return enabled
         ? OCR_REGIONS.COMMISSION_NAME_ADVENTURE_ENCOUNTERS_ENABLED
         : OCR_REGIONS.COMMISSION_NAME_ADVENTURE_ENCOUNTERS_DISABLED;
