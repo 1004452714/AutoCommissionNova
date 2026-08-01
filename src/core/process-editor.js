@@ -216,12 +216,9 @@ function metadata(registry) {
 
 function roleOptions() {
     try {
-        const info = JSON.parse(file.readTextSync(PATHS.AVATAR_INFO));
-        return Object.keys(info).filter(name => {
-            const dir = PATHS.AVATAR_TEMPLATE_DIR + "/" + name;
-            if (!file.isFolder(dir)) return false;
-            return Array.from(file.readPathSync(dir) || []).some(entry => file.isFile(entry));
-        })
+        const names = JSON.parse(file.readTextSync(PATHS.AVATAR_NAMES));
+        if (!Array.isArray(names)) throw new Error("角色名称清单必须是数组");
+        return names.filter(name => typeof name === "string" && name.trim())
             .sort((a, b) => a.localeCompare(b, "zh-CN"));
     } catch (error) {
         log.warn("流程编辑器读取角色候选失败: {error}", error.message);

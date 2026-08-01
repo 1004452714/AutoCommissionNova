@@ -69,7 +69,6 @@ const _statics = {
  * @property {Object} talkIcon                                                  对话普通气泡
  * @property {(index: number) => Object} commissionCompleted                    委托已完成（按 buttonIndex 0-3 选区域）
  * @property {(index: number) => Object} commissionUncompleted                  委托未完成（按 buttonIndex 0-3 选区域）
- * @property {(slotNum: number) => Object} switchRoleSlot                       切换角色 - 队伍槽位图标（1-4）
  * @property {(arg: {tab: string, item: string}) => Object} bagItem             背包道具图标（按 tab + 道具名）
  */
 
@@ -92,9 +91,6 @@ RO.commissionCompleted = dynamicDef({
 RO.commissionUncompleted = dynamicDef({
     path: PATHS.UNCOMPLETED_IMAGE,
     regionFn: (index) => COMMISSION_STATUS_REGIONS[index],
-});
-RO.switchRoleSlot = dynamicDef({
-    pathFn: (num) => `${PATHS.SWITCH_ROLE_SLOT_DIR}/${num}.png`,
 });
 RO.bagItem = dynamicDef({
     pathFn: ({ tab, item }) => `Data/RecognitionObject/bag/items/${tab}/${item}.png`,
