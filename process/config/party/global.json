@@ -1,6 +1,6 @@
 {
-    "battleTeamName": "",
-    "elementTeamName": "",
+    "battleTeamName": "四神",
+    "elementTeamName": "采集",
     "customBattleTeamName": "",
     "customElementTeamName": "",
     "battleStrategy": "根据队伍自动选择"

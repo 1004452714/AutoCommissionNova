@@ -8,6 +8,7 @@ import { executeCommissionTracking } from "./commission-executor.js";
 import { enterCommissionScreen } from "../vision/index.js";
 import { loadGlobalConfig } from "../loaders/global-config.js";
 import { loadGlobalPartyConfig } from "../loaders/party-config.js";
+import { scanCommissionScopes } from "../loaders/process-scope.js";
 
 /**
  * 委托识别主函数
@@ -19,9 +20,11 @@ export async function identification() {
 
         await genshin.returnMainUi();
 
-        const supportedCommissions = await loadSupportedCommissions();
+        const commissionScopes = scanCommissionScopes().list;
 
-        await initCommissionReferenceData(supportedCommissions);
+        const supportedCommissions = await loadSupportedCommissions(commissionScopes);
+
+        await initCommissionReferenceData(supportedCommissions, commissionScopes);
 
         await enterCommissionScreen();
 

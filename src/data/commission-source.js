@@ -25,9 +25,9 @@ function loadWhitelist() {
     }
 }
 
-function scanCommissionNamesByType(type) {
-    const scopes = scanCommissionScopes().list.filter((scope) => scope.type === type);
-    return Array.from(new Set(scopes.map((scope) => scope.commissionName)));
+function scanCommissionNamesByType(type, scopes) {
+    const matchingScopes = scopes.filter((scope) => scope.type === type);
+    return Array.from(new Set(matchingScopes.map((scope) => scope.commissionName)));
 }
 
 /**
@@ -37,14 +37,16 @@ function scanCommissionNamesByType(type) {
  * 1. 在 process/config/support-list.json 白名单中声明
  * 2. 在 process/ 目录下有对应的流程文件
  * 
+ * @param {Array} [commissionScopes] - 可复用的流程范围快照；不传时扫描一次流程目录
  * @returns {Promise<Object>} 支持的委托列表
  * @returns {string[]} returns.basic - 支持的 Basic 委托名称列表
  * @returns {string[]} returns.npc - 支持的 NPC 委托名称列表
  */
-export async function loadSupportedCommissions() {
+export async function loadSupportedCommissions(commissionScopes) {
     const whitelist = loadWhitelist();
-    const availableBasic = scanCommissionNamesByType(COMMISSION_TYPE.BASIC);
-    const availableNpc = scanCommissionNamesByType(COMMISSION_TYPE.NPC);
+    const scopes = commissionScopes ?? scanCommissionScopes().list;
+    const availableBasic = scanCommissionNamesByType(COMMISSION_TYPE.BASIC, scopes);
+    const availableNpc = scanCommissionNamesByType(COMMISSION_TYPE.NPC, scopes);
 
     const supported = {
         basic: whitelist.basic.filter((name) => availableBasic.includes(name) && !whitelist.ban.includes(name)),

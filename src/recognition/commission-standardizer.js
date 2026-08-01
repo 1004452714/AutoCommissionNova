@@ -18,14 +18,16 @@ const referenceData = { basic: {}, npc: {} };
  * @param {Object} [supportedCommissions] - 支持的委托列表
  * @param {string[]} [supportedCommissions.basic] - Basic 委托名称列表，不传则从数据源加载
  * @param {string[]} [supportedCommissions.npc] - NPC 委托名称列表，不传则从数据源加载
+ * @param {Array} [commissionScopes] - 可复用的流程范围快照；不传时扫描一次流程目录
  */
-export async function initReferenceData(supportedCommissions) {
+export async function initReferenceData(supportedCommissions, commissionScopes) {
     try {
+        const scopes = commissionScopes ?? scanCommissionScopes().list;
         if (!supportedCommissions) {
-            supportedCommissions = await loadSupportedCommissions();
+            supportedCommissions = await loadSupportedCommissions(scopes);
         }
-        referenceData.basic = await buildBasicReferenceMap(supportedCommissions.basic);
-        referenceData.npc = await buildNpcReferenceMap(supportedCommissions.npc);
+        referenceData.basic = await buildBasicReferenceMap(supportedCommissions.basic, scopes);
+        referenceData.npc = await buildNpcReferenceMap(supportedCommissions.npc, scopes);
         log.debug("Basic委托参考数据: {count} 个委托", Object.keys(referenceData.basic).length);
         log.debug("NPC委托参考数据: {count} 个委托", Object.keys(referenceData.npc).length);
     } catch (error) {
@@ -35,9 +37,7 @@ export async function initReferenceData(supportedCommissions) {
 }
 
 /**
- * 构建Basic委托名称到地点列表的映射表
- * @param {string[]} basicCommissions - Basic 委托名称列表
- * @returns {Object} Basic 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
+ * 将一个国家和地点加入指定委托的参考数据，并保持列表去重。
  */
 function addReferenceLocation(target, commissionName, country, location) {
     if (!target[commissionName]) {
@@ -56,16 +56,21 @@ function addReferenceLocation(target, commissionName, country, location) {
     }
 }
 
-async function buildBasicReferenceMap(basicCommissions) {
+/**
+ * 根据单次目录快照构建 Basic 委托参考数据。
+ * @param {string[]} basicCommissions - 已启用的 Basic 委托名称
+ * @param {Array} scopes - 本次识别复用的流程范围快照
+ * @returns {Promise<Object>} Basic 委托名称到地点信息的映射表
+ */
+async function buildBasicReferenceMap(basicCommissions, scopes) {
     const basicList = {};
     try {
         const supported = new Set(basicCommissions);
-        for (const scope of scanCommissionScopes().list) {
+        for (const scope of scopes) {
             if (scope.type !== COMMISSION_TYPE.BASIC || !supported.has(scope.commissionName)) {
                 continue;
             }
             addReferenceLocation(basicList, scope.commissionName, scope.country, scope.location);
-            await sleep(1);
         }
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
@@ -78,18 +83,18 @@ async function buildBasicReferenceMap(basicCommissions) {
  * 构建NPC委托名称到地点列表的映射表
  * 
  * @param {string[]} npcCommissions - NPC 委托名称列表
+ * @param {Array} scopes - 本次识别复用的流程范围快照
  * @returns {Object} NPC 委托名称到地点列表的映射表，格式为 { "委托名": ["地点1", "地点2", ...] }
  */
-async function buildNpcReferenceMap(npcCommissions) {
+async function buildNpcReferenceMap(npcCommissions, scopes) {
     const npcList = {};
     try {
         const supported = new Set(npcCommissions);
-        for (const scope of scanCommissionScopes().list) {
+        for (const scope of scopes) {
             if (scope.type !== COMMISSION_TYPE.NPC || !supported.has(scope.commissionName)) {
                 continue;
             }
             addReferenceLocation(npcList, scope.commissionName, scope.country, scope.location);
-            await sleep(1);
         }
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
