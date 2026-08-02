@@ -198,3 +198,11 @@ export function buildBattleGroups(scopesByCommission: Record<string, PartyScope[
         return { key: `country:${country}`, title: country, count, groups };
     });
 }
+
+// 战斗侧栏选中具体国家和类型后，详情只展示同一分组下的地点配置。
+export function filterBattleScopes(scopes: PartyScope[], country: string, type: "NPC" | "Basic"): PartyScope[] {
+    return scopes.filter((scope) => {
+        const scopeType = String(scope.typeDir || scope.type).toLowerCase() === "basic" ? "Basic" : "NPC";
+        return scope.country === country && scopeType === type;
+    });
+}

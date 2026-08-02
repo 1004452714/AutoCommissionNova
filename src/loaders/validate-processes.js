@@ -9,7 +9,7 @@
  *   (4) 执行子流程引用的子流程文件递归校验，地图追踪引用的路径文件存在性校验
  *   (5) 通用条件字段 step.loc 是否为 [x, y]、[x, y, tolerance] 或 [[x, y], ...]
  *
- * 发现问题只 log.error，不阻断启动 —— 用户仍可跑其他正常委托，
+ * 发现问题只输出 DEBUG，不阻断启动 —— 用户仍可跑其他正常委托，
  * 但启动日志会明确指出问题文件 + 步骤索引 + 错误描述
  */
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
@@ -36,7 +36,7 @@ export async function validateAllProcesses(registry) {
     errors += validatePartyConfig();
 
     if (errors > 0) {
-        log.error("流程文件静态校验发现 {n} 处问题，详见上面的日志", errors);
+        log.debug("流程文件静态校验发现 {n} 处问题，详见上面的日志", errors);
     } else {
         log.info("流程文件静态校验通过");
     }
@@ -57,20 +57,20 @@ function referenceKey(path) {
 
 function readJsonFile(path, description) {
     if (!file.isFile(path)) {
-        log.error("[{path}] {description}不存在", path, description);
+        log.debug("[{path}] {description}不存在", path, description);
         return { ok: false };
     }
     try {
         return { ok: true, value: JSON.parse(file.readTextSync(path)) };
     } catch (error) {
-        log.error("[{path}] {description} JSON 解析失败: {error}", path, description, error.message);
+        log.debug("[{path}] {description} JSON 解析失败: {error}", path, description, error.message);
         return { ok: false };
     }
 }
 
 function resolveSafeReference(resourceDir, reference, processPath, stepNumber, stepType, fieldName) {
     if (typeof reference !== "string" || !reference.trim()) {
-        log.error("[{path}] 步骤 #{n} ({type}) {field} 必须是非空路径字符串",
+        log.debug("[{path}] 步骤 #{n} ({type}) {field} 必须是非空路径字符串",
             processPath, stepNumber, stepType, fieldName);
         return null;
     }
@@ -78,12 +78,12 @@ function resolveSafeReference(resourceDir, reference, processPath, stepNumber, s
     const parts = normalized.split("/");
     if (!normalized || normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized) ||
         /[:*?"<>|]/.test(normalized) || parts.includes(".") || parts.includes("..")) {
-        log.error("[{path}] 步骤 #{n} ({type}) {field} 必须是当前流程目录内的安全相对路径: {file}",
+        log.debug("[{path}] 步骤 #{n} ({type}) {field} 必须是当前流程目录内的安全相对路径: {file}",
             processPath, stepNumber, stepType, fieldName, reference);
         return null;
     }
     if (!normalized.toLowerCase().endsWith(".json")) {
-        log.error("[{path}] 步骤 #{n} ({type}) {field} 必须指向 .json 文件: {file}",
+        log.debug("[{path}] 步骤 #{n} ({type}) {field} 必须指向 .json 文件: {file}",
             processPath, stepNumber, stepType, fieldName, reference);
         return null;
     }
@@ -95,17 +95,17 @@ function validatePathFile(path, description) {
     if (!loaded.ok) return 1;
     const data = loaded.value;
     if (!data || typeof data !== "object" || Array.isArray(data)) {
-        log.error("[{path}] {description}根节点必须是对象", path, description);
+        log.debug("[{path}] {description}根节点必须是对象", path, description);
         return 1;
     }
     if (!Array.isArray(data.positions)) {
-        log.error("[{path}] {description}缺少 positions 数组", path, description);
+        log.debug("[{path}] {description}缺少 positions 数组", path, description);
         return 1;
     }
     const hasValidPoint = data.positions.some(position => position && position.type !== "orientation" &&
         Number.isFinite(position.id) && Number.isFinite(position.x) && Number.isFinite(position.y));
     if (!hasValidPoint) {
-        log.error("[{path}] {description}没有有效坐标点", path, description);
+        log.debug("[{path}] {description}没有有效坐标点", path, description);
         return 1;
     }
     return 0;
@@ -116,39 +116,39 @@ function validateMacroFile(path, description) {
     if (!loaded.ok) return 1;
     const data = loaded.value;
     if (!data || typeof data !== "object" || Array.isArray(data)) {
-        log.error("[{path}] {description}根节点必须是对象", path, description);
+        log.debug("[{path}] {description}根节点必须是对象", path, description);
         return 1;
     }
     if (!Array.isArray(data.macroEvents) || data.macroEvents.length === 0) {
-        log.error("[{path}] {description}必须包含非空 macroEvents 数组", path, description);
+        log.debug("[{path}] {description}必须包含非空 macroEvents 数组", path, description);
         return 1;
     }
     for (let index = 0; index < data.macroEvents.length; index++) {
         const event = data.macroEvents[index];
         if (!event || typeof event !== "object" || Array.isArray(event)) {
-            log.error("[{path}] {description} macroEvents[{index}] 必须是对象", path, description, index);
+            log.debug("[{path}] {description} macroEvents[{index}] 必须是对象", path, description, index);
             return 1;
         }
         if (!Number.isInteger(event.type) || event.type < 0 || event.type > 6) {
-            log.error("[{path}] {description} macroEvents[{index}].type 必须是 0 至 6", path, description, index);
+            log.debug("[{path}] {description} macroEvents[{index}].type 必须是 0 至 6", path, description, index);
             return 1;
         }
         if (!Number.isFinite(event.time) || event.time < 0) {
-            log.error("[{path}] {description} macroEvents[{index}].time 必须是非负有限数字", path, description, index);
+            log.debug("[{path}] {description} macroEvents[{index}].time 必须是非负有限数字", path, description, index);
             return 1;
         }
         if ((event.type === 0 || event.type === 1) &&
             (!Number.isInteger(event.keyCode) || event.keyCode < 1 || event.keyCode > 255)) {
-            log.error("[{path}] {description} macroEvents[{index}].keyCode 必须是 1 至 255 的整数", path, description, index);
+            log.debug("[{path}] {description} macroEvents[{index}].keyCode 必须是 1 至 255 的整数", path, description, index);
             return 1;
         }
         if (event.type >= 2 && event.type <= 6 &&
             (!Number.isFinite(event.mouseX) || !Number.isFinite(event.mouseY))) {
-            log.error("[{path}] {description} macroEvents[{index}] 缺少合法 mouseX/mouseY", path, description, index);
+            log.debug("[{path}] {description} macroEvents[{index}] 缺少合法 mouseX/mouseY", path, description, index);
             return 1;
         }
         if ((event.type === 4 || event.type === 5) && !["Left", "Right", "Middle"].includes(event.mouseButton)) {
-            log.error("[{path}] {description} macroEvents[{index}].mouseButton 只能是 Left、Right 或 Middle",
+            log.debug("[{path}] {description} macroEvents[{index}].mouseButton 只能是 Left、Right 或 Middle",
                 path, description, index);
             return 1;
         }
@@ -170,11 +170,11 @@ async function validateNpcProcesses(registry) {
             continue;
         }
         if (!Array.isArray(loaded.value)) {
-            log.error("[{path}] 流程文件根节点必须是步骤数组", processPath);
+            log.debug("[{path}] 流程文件根节点必须是步骤数组", processPath);
             errors++;
             continue;
         }
-        if (loaded.value.length === 0) log.warn("[{path}] 流程为空，没有可执行步骤", processPath);
+        if (loaded.value.length === 0) log.debug("[{path}] 流程为空，没有可执行步骤", processPath);
         errors += await validateProcessSteps(
             registry,
             processPath,
@@ -204,11 +204,11 @@ async function validateBasicProcesses(registry) {
             continue;
         }
         if (!Array.isArray(loaded.value)) {
-            log.error("[{path}] 流程文件根节点必须是步骤数组", processPath);
+            log.debug("[{path}] 流程文件根节点必须是步骤数组", processPath);
             errors++;
             continue;
         }
-        if (loaded.value.length === 0) log.warn("[{path}] 流程为空，没有可执行步骤", processPath);
+        if (loaded.value.length === 0) log.debug("[{path}] 流程为空，没有可执行步骤", processPath);
         errors += await validateProcessSteps(
             registry,
             processPath,
@@ -243,10 +243,10 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
         const stackKey = referenceKey(subPath);
         if (stack.has(stackKey)) {
             if (guarded) {
-                log.warn("[{path}] 步骤 #{n} ({type}) 检测到由 desc 条件保护的循环引用: {file}",
+                log.debug("[{path}] 步骤 #{n} ({type}) 检测到由 desc 条件保护的循环引用: {file}",
                     processPath, stepNumber, stepType, reference);
             } else {
-                log.error("[{path}] 步骤 #{n} ({type}) 检测到无条件循环引用: {file}",
+                log.debug("[{path}] 步骤 #{n} ({type}) 检测到无条件循环引用: {file}",
                     processPath, stepNumber, stepType, reference);
                 errors++;
             }
@@ -258,13 +258,13 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
             return;
         }
         if (!Array.isArray(loaded.value)) {
-            log.error("[{path}] 步骤 #{n} ({type}) 子流程根节点必须是步骤数组: {file}",
+            log.debug("[{path}] 步骤 #{n} ({type}) 子流程根节点必须是步骤数组: {file}",
                 processPath, stepNumber, stepType, reference);
             errors++;
             return;
         }
         if (loaded.value.length === 0) {
-            log.warn("[{path}] 步骤 #{n} ({type}) 子流程为空: {file}",
+            log.debug("[{path}] 步骤 #{n} ({type}) 子流程为空: {file}",
                 processPath, stepNumber, stepType, reference);
         }
         stack.add(stackKey);
@@ -285,7 +285,7 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
         const step = steps[i];
 
         if (!step || typeof step !== "object" || Array.isArray(step)) {
-            log.error("[{path}] 步骤 #{n} 必须是对象格式，收到: {value}", processPath, i + 1, step);
+            log.debug("[{path}] 步骤 #{n} 必须是对象格式，收到: {value}", processPath, i + 1, step);
             errors++;
             continue;
         }
@@ -294,14 +294,14 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
 
         const stepType = step.type;
         if (!registry.has(stepType)) {
-            log.error("[{path}] 步骤 #{n} 未知 type: {type}", processPath, i + 1, stepType);
+            log.debug("[{path}] 步骤 #{n} 未知 type: {type}", processPath, i + 1, stepType);
             errors++;
             continue;
         }
 
         const dataResult = registry.validateData(stepType, step.data);
         if (!dataResult.ok) {
-            log.error("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, dataResult.error);
+            log.debug("[{path}] 步骤 #{n} ({type}) 校验失败: {error}", processPath, i + 1, stepType, dataResult.error);
             errors++;
         }
 
@@ -310,7 +310,7 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
             const branchConfig = loadAllBranchConfigs()[commissionName];
             if (!branchConfig || !branchConfig.descriptions || typeof branchConfig.descriptions !== "object" ||
                 Array.isArray(branchConfig.descriptions)) {
-                log.error("[{path}] 步骤 #{n} ({type}) 当前委托没有有效分支配置",
+                log.debug("[{path}] 步骤 #{n} ({type}) 当前委托没有有效分支配置",
                     processPath, i + 1, stepType);
                 errors++;
             } else {
@@ -319,7 +319,7 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
                 const unknown = actual.filter(key => !configured.includes(key));
                 const missing = configured.filter(key => !actual.includes(key));
                 if (unknown.length || missing.length) {
-                    log.error("[{path}] 步骤 #{n} ({type}) 与分支配置不一致，未知: {unknown}，缺少: {missing}",
+                    log.debug("[{path}] 步骤 #{n} ({type}) 与分支配置不一致，未知: {unknown}，缺少: {missing}",
                         processPath, i + 1, stepType, unknown.join("、") || "无", missing.join("、") || "无");
                     errors++;
                 }
@@ -382,22 +382,22 @@ function validateCommonStepFields(processPath, stepNumber, step) {
 
     for (const fieldName of ["note", "desc"]) {
         if (step[fieldName] !== undefined && typeof step[fieldName] !== "string") {
-            log.error("[{path}] 步骤 #{n} {field} 必须是字符串", processPath, stepNumber, fieldName);
+            log.debug("[{path}] 步骤 #{n} {field} 必须是字符串", processPath, stepNumber, fieldName);
             errors++;
         }
     }
     if (step.retry !== undefined && (!Number.isInteger(step.retry) || step.retry < 0)) {
-        log.error("[{path}] 步骤 #{n} retry 必须是非负整数", processPath, stepNumber);
+        log.debug("[{path}] 步骤 #{n} retry 必须是非负整数", processPath, stepNumber);
         errors++;
     }
     if (step.retryOn !== undefined && !RETRY_MODES.has(step.retryOn)) {
-        log.error("[{path}] 步骤 #{n} retryOn 只能是 throw、return-false 或 all", processPath, stepNumber);
+        log.debug("[{path}] 步骤 #{n} retryOn 只能是 throw、return-false 或 all", processPath, stepNumber);
         errors++;
     }
 
     const locResult = parseStepLoc(step.loc);
     if (!locResult.ok) {
-        log.error("[{path}] 步骤 #{n} loc 校验失败: {error}", processPath, stepNumber, locResult.error);
+        log.debug("[{path}] 步骤 #{n} loc 校验失败: {error}", processPath, stepNumber, locResult.error);
         errors++;
     }
 
@@ -414,13 +414,13 @@ function validateCommonStepFields(processPath, stepNumber, step) {
  *   4. completed 中的分支必须在 conditions 中（偏好分支不应进 completed）
  *   5. note 仅允许纯文本，UI 不再消费 noteLevel
  *
- * 加载错误（目录不存在 / 单文件 JSON 解析失败）由 loadAllBranchConfigs 自己 log.error，
+ * 加载错误（目录不存在 / 单文件 JSON 解析失败）由 loadAllBranchConfigs 自行记录，
  * 此处只校验已成功解析的内容
  */
 function validateBranchConfig() {
     const composite = loadAllBranchConfigs();
     if (!composite || Object.keys(composite).length === 0) {
-        log.warn("分支配置为空，跳过校验: {dir}", PATHS.BRANCHES_DIR);
+        log.debug("分支配置为空，跳过校验: {dir}", PATHS.BRANCHES_DIR);
         return 0;
     }
 
@@ -430,7 +430,7 @@ function validateBranchConfig() {
         const cfg = composite[commissionName];
         const filePath = PATHS.BRANCHES_DIR + "/" + commissionName + ".json";
         if (!cfg || typeof cfg !== "object") {
-            log.error("[{path}] 配置必须是对象", filePath);
+            log.debug("[{path}] 配置必须是对象", filePath);
             errors++;
             continue;
         }
@@ -439,35 +439,35 @@ function validateBranchConfig() {
         const conditions = cfg.conditions || {};
         const completedByUid = cfg.completedByUid || {};
         if (cfg.completedByUid === undefined) {
-            log.error("[{path}] 缺少 completedByUid", filePath);
+            log.debug("[{path}] 缺少 completedByUid", filePath);
             errors++;
         }
         if (cfg.completed !== undefined) {
-            log.error("[{path}] completed 已废弃，请使用 completedByUid", filePath);
+            log.debug("[{path}] completed 已废弃，请使用 completedByUid", filePath);
             errors++;
         }
         if (!completedByUid || typeof completedByUid !== "object" || Array.isArray(completedByUid)) {
-            log.error("[{path}] completedByUid 必须是对象", filePath);
+            log.debug("[{path}] completedByUid 必须是对象", filePath);
             errors++;
         }
         if (cfg.note !== undefined && typeof cfg.note !== "string") {
-            log.error("[{path}] note 必须是字符串", filePath);
+            log.debug("[{path}] note 必须是字符串", filePath);
             errors++;
         }
         if (cfg.noteLevel !== undefined) {
-            log.warn("[{path}] noteLevel 已废弃，请移除该字段", filePath);
+            log.debug("[{path}] noteLevel 已废弃，请移除该字段", filePath);
         }
 
         // 1-2: 每个 condition 用探针注册表校验
         for (const branchKey of Object.keys(conditions)) {
             const cond = conditions[branchKey];
             if (!cond || typeof cond !== "object") {
-                log.error("[{path}] conditions.{br} 必须是对象", filePath, branchKey);
+                log.debug("[{path}] conditions.{br} 必须是对象", filePath, branchKey);
                 errors++;
                 continue;
             }
             if (!probeRegistry.has(cond.type)) {
-                log.error("[{path}] conditions.{br}.type 未注册: {t}（已注册类型: {list}）",
+                log.debug("[{path}] conditions.{br}.type 未注册: {t}（已注册类型: {list}）",
                     filePath, branchKey, cond.type, registeredTypes);
                 errors++;
                 continue;
@@ -476,7 +476,7 @@ function validateBranchConfig() {
             if (probe.validate) {
                 const result = probe.validate(cond);
                 if (!result.ok) {
-                    log.error("[{path}] conditions.{br} ({t}) 校验失败: {error}",
+                    log.debug("[{path}] conditions.{br} ({t}) 校验失败: {error}",
                         filePath, branchKey, cond.type, result.error);
                     errors++;
                 }
@@ -486,29 +486,29 @@ function validateBranchConfig() {
         // 3: 孤儿分支告警（key 不在 descriptions 中）
         for (const branchKey of Object.keys(conditions)) {
             if (!descriptions[branchKey]) {
-                log.warn("[{path}] conditions.{br} 不在 descriptions 中，UI 将无法显示该分支",
+                log.debug("[{path}] conditions.{br} 不在 descriptions 中，UI 将无法显示该分支",
                     filePath, branchKey);
             }
         }
         if (cfg.default && !descriptions[cfg.default]) {
-            log.warn("[{path}] default = {br} 不在 descriptions 中", filePath, cfg.default);
+            log.debug("[{path}] default = {br} 不在 descriptions 中", filePath, cfg.default);
         }
 
         // 4: completedByUid 中的分支必须在 conditions 中
         if (completedByUid && typeof completedByUid === "object" && !Array.isArray(completedByUid)) {
             for (const uid of Object.keys(completedByUid)) {
                 if (!/^\d+$/.test(uid)) {
-                    log.warn("[{path}] completedByUid 包含非数字 UID: {uid}", filePath, uid);
+                    log.debug("[{path}] completedByUid 包含非数字 UID: {uid}", filePath, uid);
                 }
                 const completed = completedByUid[uid];
                 if (!Array.isArray(completed)) {
-                    log.error("[{path}] completedByUid.{uid} 必须是数组", filePath, uid);
+                    log.debug("[{path}] completedByUid.{uid} 必须是数组", filePath, uid);
                     errors++;
                     continue;
                 }
                 for (const branchKey of completed) {
                     if (!conditions[branchKey]) {
-                        log.warn("[{path}] completedByUid.{uid} 包含偏好分支 {br}（未在 conditions 中声明），运行时不会被使用",
+                        log.debug("[{path}] completedByUid.{uid} 包含偏好分支 {br}（未在 conditions 中声明），运行时不会被使用",
                             filePath, uid, branchKey);
                     }
                 }
@@ -543,53 +543,53 @@ function walkJsonFiles(dir) {
 function validatePartyModeConfig(config, filePath, fieldName, { allowStrategy }) {
     let errors = 0;
     if (!config || typeof config !== "object" || Array.isArray(config)) {
-        log.error("[{path}] {field} 必须是对象", filePath, fieldName);
+        log.debug("[{path}] {field} 必须是对象", filePath, fieldName);
         return 1;
     }
 
     if (config.mode !== undefined && config.mode !== "global" && config.mode !== "custom") {
-        log.error("[{path}] {field}.mode 只能是 global 或 custom", filePath, fieldName);
+        log.debug("[{path}] {field}.mode 只能是 global 或 custom", filePath, fieldName);
         errors++;
     }
     if (config.teamMode !== undefined && config.teamMode !== "teamName" && config.teamMode !== "roles") {
-        log.error("[{path}] {field}.teamMode 只能是 teamName 或 roles", filePath, fieldName);
+        log.debug("[{path}] {field}.teamMode 只能是 teamName 或 roles", filePath, fieldName);
         errors++;
     }
     if (config.teamName !== undefined && typeof config.teamName !== "string") {
-        log.error("[{path}] {field}.teamName 必须是字符串", filePath, fieldName);
+        log.debug("[{path}] {field}.teamName 必须是字符串", filePath, fieldName);
         errors++;
     }
     if (config.customTeamName !== undefined && typeof config.customTeamName !== "string") {
-        log.error("[{path}] {field}.customTeamName 必须是字符串", filePath, fieldName);
+        log.debug("[{path}] {field}.customTeamName 必须是字符串", filePath, fieldName);
         errors++;
     }
     if (config.mode === "custom" && config.teamMode === undefined) {
-        log.error("[{path}] {field}.teamMode 在 custom 模式下必填", filePath, fieldName);
+        log.debug("[{path}] {field}.teamMode 在 custom 模式下必填", filePath, fieldName);
         errors++;
     }
     if (config.mode === "custom" && config.teamMode === "teamName" &&
         (typeof config.teamName !== "string" || !config.teamName.trim())) {
-        log.error("[{path}] {field}.teamName 在 custom/teamName 模式下必须是非空字符串", filePath, fieldName);
+        log.debug("[{path}] {field}.teamName 在 custom/teamName 模式下必须是非空字符串", filePath, fieldName);
         errors++;
     }
     if (config.mode === "custom" && config.teamMode === "roles") {
         if (typeof config.customTeamName !== "string" || !config.customTeamName.trim()) {
-            log.error("[{path}] {field}.customTeamName 在 custom/roles 模式下必须是非空字符串", filePath, fieldName);
+            log.debug("[{path}] {field}.customTeamName 在 custom/roles 模式下必须是非空字符串", filePath, fieldName);
             errors++;
         }
         const roleResult = validateCompleteRoles(config.roles);
         if (!roleResult.ok) {
-            log.error("[{path}] {field} 角色配置无效: {error}", filePath, fieldName, roleResult.error);
+            log.debug("[{path}] {field} 角色配置无效: {error}", filePath, fieldName, roleResult.error);
             errors++;
         }
     }
     if (allowStrategy) {
         if (config.strategy !== undefined && typeof config.strategy !== "string") {
-            log.error("[{path}] {field}.strategy 必须是字符串", filePath, fieldName);
+            log.debug("[{path}] {field}.strategy 必须是字符串", filePath, fieldName);
             errors++;
         }
     } else if (config.strategy !== undefined) {
-        log.warn("[{path}] {field}.strategy 不会被使用，建议移除", filePath, fieldName);
+        log.debug("[{path}] {field}.strategy 不会被使用，建议移除", filePath, fieldName);
     }
 
     return errors;
@@ -612,42 +612,42 @@ function validatePartyConfig() {
             const raw = file.readTextSync(filePath);
             config = JSON.parse(raw);
         } catch (error) {
-            log.error("[{path}] 队伍配置 JSON 解析失败: {error}", filePath, error.message);
+            log.debug("[{path}] 队伍配置 JSON 解析失败: {error}", filePath, error.message);
             errors++;
             continue;
         }
 
         if (baseName(filePath) === "global.json") {
             if (!config || typeof config !== "object" || Array.isArray(config)) {
-                log.error("[{path}] 全局队伍配置必须是对象", filePath);
+                log.debug("[{path}] 全局队伍配置必须是对象", filePath);
                 errors++;
                 continue;
             }
             if (typeof config.battleTeamName !== "string" || !config.battleTeamName.trim()) {
-                log.error("[{path}] battleTeamName 必须是非空字符串", filePath);
+                log.debug("[{path}] battleTeamName 必须是非空字符串", filePath);
                 errors++;
             }
             if (typeof config.elementTeamName !== "string" || !config.elementTeamName.trim()) {
-                log.error("[{path}] elementTeamName 必须是非空字符串", filePath);
+                log.debug("[{path}] elementTeamName 必须是非空字符串", filePath);
                 errors++;
             }
             if (config.customBattleTeamName !== undefined && typeof config.customBattleTeamName !== "string") {
-                log.error("[{path}] customBattleTeamName 必须是字符串", filePath);
+                log.debug("[{path}] customBattleTeamName 必须是字符串", filePath);
                 errors++;
             }
             if (config.customElementTeamName !== undefined && typeof config.customElementTeamName !== "string") {
-                log.error("[{path}] customElementTeamName 必须是字符串", filePath);
+                log.debug("[{path}] customElementTeamName 必须是字符串", filePath);
                 errors++;
             }
             if (config.battleStrategy !== undefined && typeof config.battleStrategy !== "string") {
-                log.error("[{path}] battleStrategy 必须是字符串", filePath);
+                log.debug("[{path}] battleStrategy 必须是字符串", filePath);
                 errors++;
             }
             continue;
         }
 
         if (!config || typeof config !== "object" || Array.isArray(config)) {
-            log.error("[{path}] 委托队伍配置必须是对象", filePath);
+            log.debug("[{path}] 委托队伍配置必须是对象", filePath);
             errors++;
             continue;
         }

@@ -4,7 +4,7 @@ import { Trash2 } from "@lucide/vue";
 import { requestHtmlMask, subscribeHtmlMask, toError } from "@/shared/bridge/html-mask";
 import UiSelect from "@/shared/components/UiSelect.vue";
 import { copy } from "@/shared/i18n/zh-CN";
-import { DEFAULT_STRATEGY, ROLE_SLOTS, buildBattleGroups, globalConfigForSave, normalizePayload, normalizeStrategyValue } from "@/apps/commission-config/model";
+import { DEFAULT_STRATEGY, ROLE_SLOTS, buildBattleGroups, filterBattleScopes, globalConfigForSave, normalizePayload, normalizeStrategyValue } from "@/apps/commission-config/model";
 import type { BranchConfig, CommissionConfigPayload, ConfigOperationResult, PartyScope, StrategyEntry, StrategyNode, TeamConfig } from "@/apps/commission-config/types";
 
 // 页面文案由共享中文文案表提供。
@@ -17,6 +17,9 @@ const config = ref<CommissionConfigPayload>(normalizePayload({}));
 const currentTab = ref<"global" | "battle" | "branch">("global");
 // 当前委托名称在战斗和分支视图间独立校正。
 const selectedCommission = ref("");
+// 战斗详情使用国家和类型共同限定同名委托的地点范围。
+const selectedBattleCountry = ref("");
+const selectedBattleType = ref<"NPC" | "Basic">("NPC");
 // 侧栏搜索仅过滤当前业务视图。
 const searchTerm = ref("");
 // 用户手动展开的国家分组允许多个国家同时查看。
@@ -70,7 +73,11 @@ const filteredBattleCount = computed(() => battleGroups.value.reduce((count, cou
 // 当前委托的分支配置由组合视图直接引用。
 const selectedBranch = computed(() => config.value.branches[selectedCommission.value] ?? null);
 // 当前委托的地点队伍集合由组合视图直接引用。
-const selectedScopes = computed(() => config.value.party.scopesByCommission[selectedCommission.value] ?? []);
+const selectedScopes = computed(() => filterBattleScopes(
+    config.value.party.scopesByCommission[selectedCommission.value] ?? [],
+    selectedBattleCountry.value,
+    selectedBattleType.value,
+));
 // 展开的策略节点扁平化后便于虚拟层级展示。
 const strategyRows = computed(() => {
     // 展示行同时包含缩进层级。
@@ -90,7 +97,17 @@ const strategyRows = computed(() => {
 function setTab(tab: "global" | "battle" | "branch"): void {
     currentTab.value = tab;
     searchTerm.value = "";
-    selectedCommission.value = tab === "global" ? "" : (commissionNames.value[0] ?? "");
+    if (tab === "global") {
+        selectedCommission.value = "";
+    } else if (tab === "branch") {
+        selectedCommission.value = commissionNames.value[0] ?? "";
+    } else {
+        const country = battleGroups.value[0];
+        const group = country?.groups[0];
+        selectedCommission.value = group?.items[0]?.name ?? "";
+        selectedBattleCountry.value = country?.title ?? "";
+        selectedBattleType.value = group?.title ?? "NPC";
+    }
     if (tab !== "battle") {
         openBattleCountries.value = new Set();
         openBattleTypes.value = new Set();
@@ -125,9 +142,20 @@ function toggleBattleType(key: string): void {
 }
 
 // 选择委托并补齐缺失的默认分支。
-function selectCommission(name: string): void {
+function selectCommission(name: string, country = "", type: "NPC" | "Basic" = "NPC"): void {
     selectedCommission.value = name;
+    if (currentTab.value === "battle") {
+        selectedBattleCountry.value = country;
+        selectedBattleType.value = type;
+    }
     ensureBranchDefault();
+}
+
+// 同名委托在不同国家或类型下是不同的侧栏选择。
+function battleCommissionSelected(name: string, country: string, type: "NPC" | "Basic"): boolean {
+    return selectedCommission.value === name
+        && selectedBattleCountry.value === country
+        && selectedBattleType.value === type;
 }
 
 // 当配置没有有效默认值时使用第一条已声明分支。
@@ -382,7 +410,7 @@ onBeforeUnmount(cleanupPage);
                     <div v-show="battleCountryOpen(country.key)" class="country-groups">
                         <section v-for="group in country.groups" :key="group.key" class="battle-group">
                             <button class="group-header" :aria-expanded="battleTypeOpen(country.key, group.key)" @click="toggleBattleType(group.key)"><span><i>{{ battleTypeOpen(country.key, group.key) ? '▾' : '▸' }}</i>{{ group.title }}</span><small>{{ group.items.length }}</small></button>
-                            <div v-show="battleTypeOpen(country.key, group.key)" class="group-items"><button v-for="item in group.items" :key="`${group.key}-${item.name}`" :class="{ active: selectedCommission === item.name }" @click="selectCommission(item.name)"><span>{{ item.name }}</span><small v-if="item.progress">{{ item.progress }}</small></button></div>
+                            <div v-show="battleTypeOpen(country.key, group.key)" class="group-items"><button v-for="item in group.items" :key="`${group.key}-${item.name}`" :class="{ active: battleCommissionSelected(item.name, country.title, group.title) }" @click="selectCommission(item.name, country.title, group.title)"><span>{{ item.name }}</span><small v-if="item.progress">{{ item.progress }}</small></button></div>
                         </section>
                     </div>
                 </section>

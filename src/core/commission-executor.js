@@ -109,7 +109,7 @@ async function updateBranchCompletion(commissionName, context) {
  */
 export async function executeCommissionTracking(stepRegistry) {
     try {
-        log.info("开始执行委托追踪");
+        log.debug("开始执行委托追踪");
         await genshin.returnMainUi();
 
         let successCount = 0;

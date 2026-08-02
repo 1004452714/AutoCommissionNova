@@ -18,7 +18,6 @@ import { scanCommissionScopes } from "../loaders/process-scope.js";
 import { loadKnownCommissionUids } from "../data/index.js";
 import { getCurrentUid } from "../utils/account-utils.js";
 import { PATHS } from "../config/index.js";
-import { RO } from "../vision/index.js";
 
 // Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
 const HTML_PATH = "web/commission-config/index.html";
@@ -331,19 +330,7 @@ export async function openCommissionConfigEditor() {
 
                     const x = Number(target.x);
                     const y = Number(target.y);
-                    const page = new BvPage();
-                    if (!page.locator(RO.inMap).isExist()) {
-                        await genshin.returnMainUi();
-                        keyPress("M");
-                        await sleep(2000);
-                    }
-
-                    if (country) {
-                        await genshin.moveMapTo(x, y, country);
-                    } else {
-                        await genshin.moveMapTo(x, y);
-                    }
-                    await genshin.setBigMapZoomLevel(1.0);
+                    await genshin.clickMapPoint(x, y, country);
                     response.target = { x, y, country, processPath, mapPath };
                     log.debug("已定位委托流程: {path} -> ({x}, {y})", response.target.mapPath, response.target.x, response.target.y);
                 } catch (err) {

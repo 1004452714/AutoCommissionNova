@@ -1,4 +1,4 @@
-import { buildBattleGroups, normalizeGlobalConfig, normalizePayload, normalizeStrategyValue } from "@/apps/commission-config/model";
+import { buildBattleGroups, filterBattleScopes, normalizeGlobalConfig, normalizePayload, normalizeStrategyValue } from "@/apps/commission-config/model";
 import { convertStepType, defaultStep, diagnosticText, parseOptionalJson } from "@/apps/process-editor/model";
 import { DEFAULT_SETTINGS, changePointAction, clonePoints, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints, timeControlValue } from "@/apps/path-recorder/model";
 
@@ -23,6 +23,19 @@ describe("commission config model", () => {
         expect(groups[0].groups.map((group) => group.title)).toEqual(["NPC", "Basic"]);
         expect(groups[0].groups[0].items[0]).toEqual({ name: "多地点", progress: "2" });
         expect(buildBattleGroups(payload.party.scopesByCommission, "基础")[0].groups[0].items).toHaveLength(1);
+    });
+
+    it("filters same-name basic scopes by country", () => {
+        const payload = normalizePayload({ party: { scopesByCommission: {
+            同名基础: [
+                { country: "蒙德", typeDir: "Basic", locationDir: "风起地" },
+                { country: "璃月", typeDir: "Basic", locationDir: "归离原" },
+                { country: "蒙德", typeDir: "NPC", locationDir: "蒙德城" },
+            ],
+        } } });
+        const scopes = payload.party.scopesByCommission.同名基础;
+        expect(filterBattleScopes(scopes, "蒙德", "Basic").map((scope) => scope.locationDir)).toEqual(["风起地"]);
+        expect(filterBattleScopes(scopes, "璃月", "Basic").map((scope) => scope.locationDir)).toEqual(["归离原"]);
     });
 });
 
