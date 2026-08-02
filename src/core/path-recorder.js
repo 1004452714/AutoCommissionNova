@@ -5,6 +5,7 @@ import { isCancellationError } from "../utils/error-utils.js";
 const HTML_PATH = "web/path-recorder/index.html";
 const WINDOW_TAG = "path-recorder";
 const SETTINGS_PATH = "Data/path-recorder-settings.json";
+const PATHING_BGI_VERSION = "0.52.0";
 const DEFAULT_SETTINGS = {
     addKey: "NumPad2",
     finishKey: "NumPad1",
@@ -429,16 +430,21 @@ function normalizePoints(points, sourceOffset = 0) {
 
 // 生成可执行路径文件，并在编辑模式下保留原文件的扩展元数据。
 function buildPathingFile(name, points, meta, sourceOffset = 0, original = null) {
+    const originalInfo = original?.info && typeof original.info === "object" ? original.info : null;
+    const hasOriginalName = originalInfo && Object.prototype.hasOwnProperty.call(originalInfo, "name");
+    const originalMapMatchMethod = typeof originalInfo?.map_match_method === "string"
+        ? originalInfo.map_match_method
+        : "";
     return Object.assign({}, original || {}, {
-        info: Object.assign({}, original?.info || {}, {
-            name: name.replace(/\.json$/i, ""),
+        info: Object.assign({}, originalInfo || {}, {
+            name: hasOriginalName ? originalInfo.name : name.replace(/\.json$/i, ""),
             type: "collect",
             authors: meta.authors,
             version: "1.0",
             description: "",
             map_name: "Teyvat",
-            bgi_version: String(getVersion()),
-            map_match_method: meta.mapMatchMethod,
+            bgi_version: PATHING_BGI_VERSION,
+            map_match_method: originalMapMatchMethod.trim() ? originalMapMatchMethod : meta.mapMatchMethod,
         }),
         positions: normalizePoints(points, sourceOffset),
     });
@@ -669,7 +675,9 @@ export async function openPathRecorder(options = {}) {
                         targetDir,
                         commissionMode: Boolean(commissionName),
                         routeAuthors: existingData?.info?.authors || defaultRouteAuthors(),
-                        routeMapMatchMethod: existingData?.info?.map_match_method || session.settings.mapMatchMethod,
+                        routeMapMatchMethod: typeof existingData?.info?.map_match_method === "string" && existingData.info.map_match_method.trim()
+                            ? existingData.info.map_match_method
+                            : session.settings.mapMatchMethod,
                         combatSyntax: COMBAT_METHODS,
                     }));
                 } else if (message.url === "/settings") {
