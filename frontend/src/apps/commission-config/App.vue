@@ -416,7 +416,7 @@ onBeforeUnmount(cleanupPage);
                 </section>
                 <div v-if="!filteredBattleCount" class="empty">{{ commonText.empty }}</div>
             </nav>
-            <footer class="side-footer">{{ currentTab === 'global' ? 'process/config/global.json' : currentTab === 'battle' ? `共 ${filteredBattleCount} 个 · process/config/party` : 'process/config/branches' }}</footer>
+            <footer class="side-footer">{{ currentTab === 'global' ? 'Data/user-config.json' : currentTab === 'battle' ? `共 ${filteredBattleCount} 个 · Data/user-config.json` : 'config/branches' }}</footer>
         </aside>
 
         <main class="workspace">

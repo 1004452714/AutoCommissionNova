@@ -150,14 +150,13 @@ function normalizeData(data, activeUid = "") {
 }
 
 /**
- * 读取并规范化 commissions_data.json
+ * 读取并规范化 account-state.json。
  * @param {string} [activeUid=""] - 读取失败或结构无效时使用的 activeUid
  * @returns {Object}
  */
 function readCommissionsData(activeUid = "") {
     try {
-        const sourcePath = file.isFile(PATHS.ACCOUNT_STATE) ? PATHS.ACCOUNT_STATE : PATHS.LEGACY_COMMISSIONS_DATA;
-        const data = normalizeData(JSON.parse(file.readTextSync(sourcePath)), activeUid);
+        const data = normalizeData(JSON.parse(file.readTextSync(PATHS.ACCOUNT_STATE)), activeUid);
         for (const account of Object.values(data.accounts || {})) {
             if (!account.branchCompleted || typeof account.branchCompleted !== "object" || Array.isArray(account.branchCompleted)) {
                 account.branchCompleted = {};
@@ -171,7 +170,7 @@ function readCommissionsData(activeUid = "") {
 }
 
 /**
- * 写回 commissions_data.json
+ * 写回 account-state.json。
  * @param {Object} data - v2 委托数据根对象
  */
 function writeCommissionsData(data) {
@@ -352,7 +351,7 @@ export async function saveCommissionsData(commissions) {
 }
 
 /**
- * 更新当前 UID 下单个委托的状态并回写 commissions_data.json
+ * 更新当前 UID 下单个委托的状态并回写 account-state.json。
  *
  * 用于委托执行完成后把 status 标记为「已完成」，
  * 避免复用当前 UID 已有数据时重复执行。

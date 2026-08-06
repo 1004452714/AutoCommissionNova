@@ -19,6 +19,7 @@ import { validateCompleteRoles } from "./party-config.js";
 import { probeRegistry } from "../probes/index.js";
 import { loadAllBranchConfigs } from "./branch-config.js";
 import { buildProcessBasePath, scanCommissionScopes } from "./process-scope.js";
+import { loadUserConfig } from "./user-config.js";
 
 const RETRY_MODES = new Set(["throw", "return-false", "all"]);
 
@@ -41,10 +42,6 @@ export async function validateAllProcesses(registry) {
         log.info("流程文件静态校验通过");
     }
     return errors;
-}
-
-function baseName(path) {
-    return path.split("/").pop().split("\\").pop();
 }
 
 function normalizePath(path) {
@@ -409,7 +406,7 @@ function validateCommonStepFields(processPath, stepNumber, step) {
 }
 
 /**
- * 校验 process/config/branches/ 下的所有分支配置文件
+ * 校验 config/branches/ 下的所有分支配置文件和账户状态中合成的完成进度。
  *
  * 检查项：
  *   1. conditions[branchKey].type 必须在 probeRegistry 中注册
@@ -522,28 +519,6 @@ function validateBranchConfig() {
     return errors;
 }
 
-function walkJsonFiles(dir) {
-    const files = [];
-    let entries;
-    try {
-        entries = Array.from(file.readPathSync(dir) || []);
-    } catch (error) {
-        log.debug("读取目录失败 [{path}]: {err}", dir, error.message);
-        return files;
-    }
-
-    for (const entry of entries) {
-        if (file.isFolder(entry)) {
-            files.push(...walkJsonFiles(entry));
-            continue;
-        }
-        if (entry.toLowerCase().endsWith(".json")) {
-            files.push(entry);
-        }
-    }
-    return files;
-}
-
 function validatePartyModeConfig(config, filePath, fieldName, { allowStrategy }) {
     let errors = 0;
     if (!config || typeof config !== "object" || Array.isArray(config)) {
@@ -600,64 +575,61 @@ function validatePartyModeConfig(config, filePath, fieldName, { allowStrategy })
 }
 
 function validatePartyConfig() {
-    if (!file.isFolder(PATHS.PARTY_CONFIG_DIR)) {
-        return 0;
+    const filePath = PATHS.USER_CONFIG;
+    let userConfig;
+    if (!file.isFile(filePath)) return 0;
+    try {
+        userConfig = JSON.parse(file.readTextSync(filePath));
+    } catch (error) {
+        log.debug("[{path}] 用户配置 JSON 解析失败: {error}", filePath, error.message);
+        return 1;
     }
-
-    const files = walkJsonFiles(PATHS.PARTY_CONFIG_DIR);
-    if (files.length === 0) {
-        return 0;
+    if (!userConfig || typeof userConfig !== "object" || Array.isArray(userConfig)) {
+        log.debug("[{path}] 用户配置根节点必须是对象", filePath);
+        return 1;
     }
-
+    if (!userConfig.party || typeof userConfig.party !== "object" || Array.isArray(userConfig.party)) {
+        log.debug("[{path}] party 必须是对象", filePath);
+        return 1;
+    }
     let errors = 0;
-    for (const filePath of files) {
-        let config;
-        try {
-            const raw = file.readTextSync(filePath);
-            config = JSON.parse(raw);
-        } catch (error) {
-            log.debug("[{path}] 队伍配置 JSON 解析失败: {error}", filePath, error.message);
+    const global = userConfig.party.global;
+    if (!global || typeof global !== "object" || Array.isArray(global)) {
+        log.debug("[{path}] party.global 必须是对象", filePath);
+        errors++;
+    } else {
+        if (typeof global.battleTeamName !== "string" || !global.battleTeamName.trim()) {
+            log.debug("[{path}] party.global.battleTeamName 必须是非空字符串", filePath);
             errors++;
-            continue;
         }
-
-        if (baseName(filePath) === "global.json") {
-            if (!config || typeof config !== "object" || Array.isArray(config)) {
-                log.debug("[{path}] 全局队伍配置必须是对象", filePath);
-                errors++;
-                continue;
-            }
-            if (typeof config.battleTeamName !== "string" || !config.battleTeamName.trim()) {
-                log.debug("[{path}] battleTeamName 必须是非空字符串", filePath);
-                errors++;
-            }
-            if (typeof config.elementTeamName !== "string" || !config.elementTeamName.trim()) {
-                log.debug("[{path}] elementTeamName 必须是非空字符串", filePath);
-                errors++;
-            }
-            if (config.customBattleTeamName !== undefined && typeof config.customBattleTeamName !== "string") {
-                log.debug("[{path}] customBattleTeamName 必须是字符串", filePath);
-                errors++;
-            }
-            if (config.customElementTeamName !== undefined && typeof config.customElementTeamName !== "string") {
-                log.debug("[{path}] customElementTeamName 必须是字符串", filePath);
-                errors++;
-            }
-            if (config.battleStrategy !== undefined && typeof config.battleStrategy !== "string") {
-                log.debug("[{path}] battleStrategy 必须是字符串", filePath);
-                errors++;
-            }
-            continue;
+        if (typeof global.elementTeamName !== "string" || !global.elementTeamName.trim()) {
+            log.debug("[{path}] party.global.elementTeamName 必须是非空字符串", filePath);
+            errors++;
         }
-
+        for (const field of ["customBattleTeamName", "customElementTeamName", "battleStrategy"]) {
+            if (global[field] !== undefined && typeof global[field] !== "string") {
+                log.debug("[{path}] party.global.{field} 必须是字符串", filePath, field);
+                errors++;
+            }
+        }
+    }
+    if (!userConfig.party.scopes || typeof userConfig.party.scopes !== "object" || Array.isArray(userConfig.party.scopes)) {
+        log.debug("[{path}] party.scopes 必须是对象", filePath);
+        return errors + 1;
+    }
+    for (const [scopeKey, config] of Object.entries(userConfig.party.scopes)) {
+        const scopePath = `${filePath}#party.scopes.${scopeKey}`;
+        if (!scopeKey.split("/").every(Boolean) || scopeKey.split("/").length !== 4) {
+            log.debug("[{path}] scope 键必须是 country/type/commission/location", scopePath);
+            errors++;
+        }
         if (!config || typeof config !== "object" || Array.isArray(config)) {
-            log.debug("[{path}] 委托队伍配置必须是对象", filePath);
+            log.debug("[{path}] 委托队伍配置必须是对象", scopePath);
             errors++;
             continue;
         }
-
-        errors += validatePartyModeConfig(config.battle || {}, filePath, "battle", { allowStrategy: true });
-        errors += validatePartyModeConfig(config.collect || {}, filePath, "collect", { allowStrategy: false });
+        errors += validatePartyModeConfig(config.battle || {}, scopePath, "battle", { allowStrategy: true });
+        errors += validatePartyModeConfig(config.collect || {}, scopePath, "collect", { allowStrategy: false });
     }
     return errors;
 }

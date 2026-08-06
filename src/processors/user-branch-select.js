@@ -1,7 +1,7 @@
 /**
  * 用户分支选择步骤处理器
  *
- * 分支配置存储：process/config/branches/{委托名}.json（每个委托一个文件）
+ * 分支配置存储：config/branches/{委托名}.json（每个委托一个文件）
  * 内存视图：合并后的 composite { 委托名: config }，缓存在 context.branchConfigCache
  *
  * 每个委托的 config 结构：

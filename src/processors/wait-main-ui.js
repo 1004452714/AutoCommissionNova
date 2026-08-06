@@ -4,7 +4,7 @@
 import { isInMainUI } from "../vision/index.js";
 import { defineStep } from "./define-step.js";
 
-const run = async (step, context) => {
+const run = async (step) => {
     log.info("等待返回主界面");
     let maxWaitTime = 120000;
     let checkInterval = 1000;

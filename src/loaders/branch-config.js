@@ -1,8 +1,8 @@
 /**
  * 分支配置加载器
  *
- * 磁盘存储：每个委托一个文件 process/config/branches/{委托名}.json
- * 磁盘结构使用 completedByUid 保存账号隔离后的完成进度：
+ * 磁盘存储：每个委托一个文件 config/branches/{委托名}.json
+ * 运行时结构使用 completedByUid 保存账号隔离后的完成进度：
  * {
  *   descriptions,
  *   conditions,
@@ -214,10 +214,12 @@ export function loadAllBranchConfigs() {
         try {
             const raw = file.readTextSync(p);
             const parsed = JSON.parse(raw);
-            const legacyProgress = isPlainObject(parsed.completedByUid) ? parsed.completedByUid : {};
+            if (Object.prototype.hasOwnProperty.call(parsed, "completedByUid")) {
+                throw new Error("静态分支文件禁止包含 completedByUid，请将进度写入 Data/account-state.json");
+            }
             composite[commissionName] = {
                 ...sanitizeStaticBranchConfig(parsed),
-                completedByUid: { ...legacyProgress, ...(completionState[commissionName] || {}) },
+                completedByUid: completionState[commissionName] || {},
             };
         } catch (error) {
             log.error("分支配置文件解析失败 [{path}]: {err}", p, error.message);

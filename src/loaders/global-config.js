@@ -1,14 +1,7 @@
-import { PATHS } from "../config/index.js";
 import { loadUserConfig, writeUserConfig } from "./user-config.js";
 
 function isPlainObject(value) {
     return value && typeof value === "object" && !Array.isArray(value);
-}
-
-function ensureParentDir(path) {
-    const parts = path.split(/[\\/]/);
-    parts.pop();
-    file.createDirectory(parts.join("/"));
 }
 
 function normalizeUid(value) {

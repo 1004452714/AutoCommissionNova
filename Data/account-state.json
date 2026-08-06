@@ -8,65 +8,12 @@
       "scriptVersion": "1.0.0",
       "bgiVersion": "0.62.2-alpha.4",
       "commissions": [
-        {
-          "id": 1,
-          "name": "盗亦无道",
-          "supported": true,
-          "type": "BASIC",
-          "location": "那夏镇",
-          "status": "已完成",
-          "country": "挪德卡莱",
-          "commissionPosition": {
-            "X": 9285.916015625,
-            "Y": 1430.4169921875
-          }
-        },
-        {
-          "id": 2,
-          "name": "攀高危险",
-          "supported": true,
-          "type": "BASIC",
-          "location": "伦波岛",
-          "status": "已完成",
-          "country": "挪德卡莱",
-          "commissionPosition": {
-            "X": 8956.1455078125,
-            "Y": 2171.6611328125
-          }
-        },
-        {
-          "id": 3,
-          "name": "正中靶心",
-          "supported": true,
-          "type": "BASIC",
-          "location": "苔骨荒原",
-          "status": "已完成",
-          "country": "挪德卡莱",
-          "commissionPosition": {
-            "X": 9316.55078125,
-            "Y": 1996.28125
-          }
-        },
-        {
-          "id": 4,
-          "name": "乐流奔引",
-          "supported": true,
-          "type": "BASIC",
-          "location": "伦波岛",
-          "status": "已完成",
-          "country": "挪德卡莱",
-          "commissionPosition": {
-            "X": 9320.060546875,
-            "Y": 2221.72802734375
-          }
-        }
+        {"id": 1, "name": "盗亦无道", "supported": true, "type": "BASIC", "location": "那夏镇", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 9285.916015625, "Y": 1430.4169921875}},
+        {"id": 2, "name": "攀高危险", "supported": true, "type": "BASIC", "location": "伦波岛", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 8956.1455078125, "Y": 2171.6611328125}},
+        {"id": 3, "name": "正中靶心", "supported": true, "type": "BASIC", "location": "苔骨荒原", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 9316.55078125, "Y": 1996.28125}},
+        {"id": 4, "name": "乐流奔引", "supported": true, "type": "BASIC", "location": "伦波岛", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 9320.060546875, "Y": 2221.72802734375}}
       ],
-      "branchCompleted": {
-        "说到做到": [],
-        "餐品订单": [
-          "branch-2"
-        ]
-      }
+      "branchCompleted": {"说到做到": [], "餐品订单": ["branch-2"]}
     }
   }
 }

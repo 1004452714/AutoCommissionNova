@@ -14,7 +14,7 @@ import { defineProbe } from "./define-probe.js";
 export default defineProbe({
     type: "completion",
     label: "委托完成即达成",
-    validate(_cond) {
+    validate() {
         // 本类型无额外字段
         return { ok: true };
     },
@@ -24,4 +24,3 @@ export default defineProbe({
             context.commissionName, context.activeBranch);
     },
 });
-

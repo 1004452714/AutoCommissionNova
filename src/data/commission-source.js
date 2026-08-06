@@ -1,18 +1,18 @@
 /**
  * 委托数据源模块
- * 从 process/config/support-list.json 白名单和 process/ 目录扫描取交集，获取支持的委托列表
+ * 从统一委托目录和 process/ 目录扫描取交集，获取支持的委托列表。
  */
 import { COMMISSION_TYPE, PATHS } from "../config/index.js";
 import { scanCommissionScopes } from "../loaders/process-scope.js";
 
 /**
- * 从 process/config/support-list.json 加载白名单
+ * 从 config/commission-catalog.json 加载白名单。
  *
  * @returns {Object} 白名单 { basic: [], npc: [] }
  */
 function loadWhitelist() {
     try {
-        const content = file.readTextSync(PATHS.SUPPORT_LIST);
+        const content = file.readTextSync(PATHS.COMMISSION_CATALOG);
         const data = JSON.parse(content);
         return {
             basic: data.basic || [],
@@ -34,7 +34,7 @@ function scanCommissionNamesByType(type, scopes) {
  * 加载支持的委托列表
  * 
  * 确保只有同时满足以下两个条件的委托才会被执行：
- * 1. 在 process/config/support-list.json 白名单中声明
+ * 1. 在统一委托目录白名单中声明
  * 2. 在 process/ 目录下有对应的流程文件
  * 
  * @param {Array} [commissionScopes] - 可复用的流程范围快照；不传时扫描一次流程目录

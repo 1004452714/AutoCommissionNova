@@ -51,7 +51,7 @@ export default defineStep({
         ],
         validate: validateKeyData,
     },
-    run: async (step, context) => {
+    run: async (step) => {
         if (!step.data) {
             log.warn("按键步骤缺少数据");
             return;

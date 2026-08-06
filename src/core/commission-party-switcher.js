@@ -16,7 +16,7 @@ let battlePartyWhitelist = null;
 function loadBattlePartyWhitelist() {
     if (battlePartyWhitelist) return battlePartyWhitelist;
     try {
-        const catalog = JSON.parse(file.readTextSync(PATHS.BATTLE_PARTY_WHITELIST));
+        const catalog = JSON.parse(file.readTextSync(PATHS.COMMISSION_CATALOG));
         const parsed = catalog.switchBattleParty;
         if (!Array.isArray(parsed)) throw new Error("switchBattleParty 必须是委托名数组");
         battlePartyWhitelist = new Set(parsed.filter((name) => typeof name === "string" && name.trim()).map((name) => name.trim()));

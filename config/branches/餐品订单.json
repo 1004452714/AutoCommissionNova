@@ -5,10 +5,7 @@
         "branch-2": "偷吃餐品"
     },
     "conditions": {
-        "branch-2": {
-            "type": "achievement",
-            "name": "这不是应急食品"
-        }
+        "branch-2": { "type": "achievement", "name": "这不是应急食品" }
     },
     "note": "",
     "default": "branch-1"

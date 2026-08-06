@@ -277,7 +277,7 @@ async function autoNavigateToTalk(options = {}) {
     }
 }
 
-const run = async (step, context) => {
+const run = async (step) => {
     const targetNpc = step.data.npc || "";
     const iconType = step.data.iconType;
     const autoTalk = step.data.autoTalk;

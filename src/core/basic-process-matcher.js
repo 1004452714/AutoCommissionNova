@@ -2,7 +2,6 @@
  * Basic流程匹配器模块
  * 负责扫描Basic委托子目录，读取 _path.json 获取目标坐标，计算距离并匹配最近的流程
  */
-import { PATHS } from "../config/index.js";
 import { calculateDistance, getCommissionTargetPosition } from "../navigation/index.js";
 import { buildProcessBasePath } from "../loaders/process-scope.js";
 import { parseLocationDir } from "../utils/location-dir.js";

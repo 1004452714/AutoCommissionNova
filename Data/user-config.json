@@ -1,8 +1,6 @@
 {
     "schemaVersion": 1,
-    "uids": [
-        "test"
-    ],
+    "uids": ["test"],
     "skipSafeTeleport": true,
     "party": {
         "global": {

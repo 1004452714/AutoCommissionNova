@@ -37,7 +37,7 @@ export default defineStep({
         },
     },
     swallow: true,
-    run: async (step, context) => {
+    run: async (step) => {
         const { tab, items } = step.data;
         if (!Array.isArray(items) || items.length === 0 || !items.every(i => typeof i === "string" && i.length > 0)) {
             log.warn("使用道具：items 必须是非空字符串数组");

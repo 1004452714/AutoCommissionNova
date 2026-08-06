@@ -12,7 +12,7 @@ export default defineStep({
         integer: true,
         min: 0,
     },
-    run: async (step, context) => {
+    run: async (step) => {
         const waitTime = step.data;
         log.info("等待 {time}ms", waitTime);
         await sleep(waitTime);

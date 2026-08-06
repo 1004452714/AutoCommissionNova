@@ -94,10 +94,3 @@ export function releaseAllTemplates() {
         entry.cache.clear();
     }
 }
-
-/** 仅用于启动期校验：返回所有静态模板的 path（动态模板路径依赖 arg，无法预校验） */
-export function listStaticPaths() {
-    return _registry
-        .filter(e => e.def.path && !e.def.pathFn)
-        .map(e => e.def.path);
-}

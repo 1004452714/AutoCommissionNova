@@ -90,18 +90,13 @@ export const THRESHOLDS = {
 export const PATHS = {
     PROCESS_ROOT: "process",
     COMMISSION_CATALOG: "config/commission-catalog.json",
-    SUPPORT_LIST: "config/commission-catalog.json",
-    BASIC_SCRIPT_BASE: "process/蒙德/Basic",
     NPC_PROCESS_BASE: "process/蒙德/NPC",
     ACCOUNT_STATE: "Data/account-state.json",
-    LEGACY_COMMISSIONS_DATA: "Data/commissions_data.json",
-    COMMISSIONS_DATA: "Data/account-state.json",
     HAS_NO_RESULT_IMAGE: "Data/RecognitionObject/hasNoResult.png",
     COMPLETED_IMAGE: "Data/RecognitionObject/Completed.png",
     UNCOMPLETED_IMAGE: "Data/RecognitionObject/UnCompleted.png",
     TALK_EXIT_IMAGE: "Data/RecognitionObject/TalkExit.png",
     TALK_ICON_IMAGE: "Data/RecognitionObject/TalkIcon.png",
-    F_ICON_IMAGE: "Data/RecognitionObject/F.png",
     PAIMON_MENU_IMAGE: "Data/RecognitionObject/paimon_menu.png",
     IN_MAP_IMAGE: "Data/RecognitionObject/inMap.png",
     INTALK_IMAGE: "Data/RecognitionObject/InTalk.png",
@@ -112,25 +107,11 @@ export const PATHS = {
     MOON_LIGHT_ICON: "Data/RecognitionObject/MoonLightIcon.png",
     TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",
     AVATAR_STRATEGIES: "config/avatar-strategies.json",
-    AVATAR_NAMES: "config/avatar-strategies.json",
-    WATCHTOWER_STRATEGY_FILES: [
-        "Data/avatar/简易策略_法器.txt",
-        "Data/avatar/简易策略_弓.txt",
-        "Data/avatar/简易策略_单手剑.txt",
-        "Data/avatar/简易策略_双手剑.txt",
-        "Data/avatar/简易策略_长柄武器.txt",
-    ],
-    CONFIG_BASE: "process/config",
     USER_CONFIG: "Data/user-config.json",
-    LEGACY_GLOBAL_CONFIG: "process/config/global.json",
-    GLOBAL_CONFIG: "Data/user-config.json",
-    BATTLE_PARTY_WHITELIST: "config/commission-catalog.json",
-    LEGACY_PARTY_CONFIG_DIR: "process/config/party",
-    PARTY_CONFIG_DIR: "process/config/party",
     /** 委托分支配置目录。每个委托一个文件：{委托名}.json
      *  内存视图（branchConfigCache / UI 编辑器）是合并后的 { 委托名: config }，
      *  磁盘按委托名拆分存储，新增委托加文件即可，零冲突 */
-    BRANCHES_DIR: "process/config/branches",
+    BRANCHES_DIR: "config/branches",
 };
 
 /** 对话相关区域常量 */

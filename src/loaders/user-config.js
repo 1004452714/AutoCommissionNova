@@ -39,25 +39,12 @@ function scopeKey(scope) {
     return [scope.country, scope.typeDir, scope.commissionName, scope.locationDir].join("/");
 }
 
-function migrateLegacy() {
-    const config = emptyConfig();
-    const global = readJson(PATHS.LEGACY_GLOBAL_CONFIG);
-    if (isPlainObject(global)) {
-        config.uids = Array.isArray(global.uids) ? global.uids : [];
-        config.skipSafeTeleport = global.skipSafeTeleport === true;
-    }
-    const partyGlobal = readJson(`${PATHS.LEGACY_PARTY_CONFIG_DIR}/global.json`);
-    if (isPlainObject(partyGlobal)) config.party.global = partyGlobal;
-    return config;
-}
-
 export function loadUserConfig() {
     try {
         const current = readJson(PATHS.USER_CONFIG);
-        return normalize(current || migrateLegacy());
+        return normalize(current || emptyConfig());
     } catch (error) {
-        log.debug("读取统一用户配置失败，使用默认值: {err}", error.message);
-        return emptyConfig();
+        throw new Error(`统一用户配置解析失败，请修复 ${PATHS.USER_CONFIG}: ${error.message}`);
     }
 }
 
@@ -74,3 +61,6 @@ export function setUserPartyScope(config, scope, value) {
     config.party.scopes[scopeKey(scope)] = value;
 }
 
+export function deleteUserPartyScope(config, scope) {
+    delete config.party.scopes[scopeKey(scope)];
+}

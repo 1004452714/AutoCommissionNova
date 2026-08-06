@@ -47,7 +47,7 @@ export default defineStep({
         },
     },
     swallow: true,
-    run: async (step, context) => {
+    run: async (step) => {
         const action = step.data && step.data.action;
         const taskType = (step.data && step.data.taskType) || "default";
         const config = step.data && step.data.config;

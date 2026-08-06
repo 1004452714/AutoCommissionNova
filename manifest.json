@@ -22,11 +22,8 @@
     "saved_files": [
         "Data/user-config.json",
         "Data/account-state.json",
-        "Data/commissions_data.json",
         "Data/path-recorder-settings.json",
         "Data/process-editor-recents.json",
-        "process/config/global.json",
-        "process/config/party/",
         "pathing/"
     ],
     "http_allowed_urls": [

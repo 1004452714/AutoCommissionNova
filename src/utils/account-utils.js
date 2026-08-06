@@ -35,10 +35,6 @@ export function matchUidCandidate(recognizedUid, candidates) {
     };
 }
 
-export function resetCurrentUidCache() {
-    cachedCurrentUid = "";
-}
-
 export async function getCurrentUid(options = {}) {
     if (cachedCurrentUid) {
         return cachedCurrentUid;

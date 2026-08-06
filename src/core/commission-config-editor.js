@@ -4,7 +4,7 @@
  *              通过 ~ 键(Oem3)切换显示/隐藏,隐藏时遮罩自动开启点击穿透,
  *              不影响游戏交互。修改即时写回文件。
  *
- *              磁盘存储为 process/config/branches/{委托名}.json 多文件结构，
+ *              磁盘存储为 config/branches/{委托名}.json 多文件结构，
  *              本编辑器透过 loadAllBranchConfigs / writeAllBranchConfigs 在
  *              composite 对象（与历史单文件结构一致）与多文件之间转换，
  *              HTML 侧无需感知拆分

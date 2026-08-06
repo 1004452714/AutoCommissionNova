@@ -88,11 +88,10 @@ function makeMask(srcMat, resources) {
 /**
  * 在 mask 中查找面积最大的挑战目标区域。
  * @param {Mat} mask - HSV 分割后的二值 mask。
- * @param {Object[]} resources - 资源列表，用于兼容后续需要释放的对象。
  * @returns {{x:number,y:number,width:number,height:number,area:number,centerX:number,centerY:number}|null}
  * 面积大于阈值的最大外接矩形，未找到时返回 null。
  */
-function findLargestTarget(mask, resources) {
+function findLargestTarget(mask) {
     const contoursVar = host.newVarOfArr(cv.Point, 2);
     const hierarchyVar = host.newVarOfArr(cv.HierarchyIndex, 1);
     cv.Cv2.FindContours(
@@ -134,7 +133,7 @@ function findChallengeTarget() {
     try {
         const cap = own(captureGameRegion(), resources);
         const mask = makeMask(cap.srcMat || cap.SrcMat, resources);
-        return findLargestTarget(mask, resources);
+        return findLargestTarget(mask);
     } finally {
         disposeAll(resources);
     }

@@ -1,6 +1,5 @@
-import { PATHS } from "../config/index.js";
 import { buildCommissionScope, buildCommissionScopeFromContext } from "./process-scope.js";
-import { getUserPartyScope, loadUserConfig, setUserPartyScope, writeUserConfig } from "./user-config.js";
+import { deleteUserPartyScope, getUserPartyScope, loadUserConfig, setUserPartyScope, writeUserConfig } from "./user-config.js";
 
 export const DEFAULT_BATTLE_STRATEGY = "根据队伍自动选择";
 
@@ -93,34 +92,6 @@ export function normalizeScopePartyConfig(config) {
     };
 }
 
-export function getPartyGlobalConfigPath() {
-    return `${PATHS.PARTY_CONFIG_DIR}/global.json`;
-}
-
-export function getPartyScopeConfigPath(scope) {
-    const normalizedScope = buildCommissionScope(scope);
-    return `${PATHS.PARTY_CONFIG_DIR}/${normalizedScope.country}/${normalizedScope.typeDir}/${normalizedScope.commissionName}/${normalizedScope.locationDir}.json`;
-}
-
-function ensureParentDir(path) {
-    const parts = path.split(/[\\/]/);
-    parts.pop();
-    file.createDirectory(parts.join("/"));
-}
-
-function readJsonIfExists(path) {
-    if (!file.isFile(path)) {
-        return null;
-    }
-
-    const raw = file.readTextSync(path);
-    if (!raw) {
-        return null;
-    }
-
-    return JSON.parse(raw);
-}
-
 function hasRoleValue(roles) {
     for (const key of ["1", "2", "3", "4"]) {
         if (roles && typeof roles[key] === "string" && roles[key].trim()) {
@@ -152,8 +123,7 @@ function shouldPersistScopeConfig(config) {
 export function loadGlobalPartyConfig() {
     try {
         const userConfig = loadUserConfig();
-        let json = userConfig.party.global;
-        if (!Object.keys(json).length) json = readJsonIfExists(getPartyGlobalConfigPath());
+        const json = userConfig.party.global;
         if (!json) {
             return normalizeGlobalPartyConfig({});
         }
@@ -164,16 +134,10 @@ export function loadGlobalPartyConfig() {
     }
 }
 
-export function writeGlobalPartyConfig(config) {
-    const userConfig = loadUserConfig();
-    userConfig.party.global = normalizeGlobalPartyConfig(config);
-    writeUserConfig(userConfig);
-}
-
 export function loadScopePartyConfig(scope) {
     try {
         const userConfig = loadUserConfig();
-        const json = getUserPartyScope(userConfig, buildCommissionScope(scope)) || readJsonIfExists(getPartyScopeConfigPath(scope));
+        const json = getUserPartyScope(userConfig, buildCommissionScope(scope));
         if (!json) {
             return normalizeScopePartyConfig({});
         }
@@ -182,12 +146,6 @@ export function loadScopePartyConfig(scope) {
         log.debug("读取委托队伍配置失败 [{key}]，使用默认值: {err}", scope?.key, error.message);
         return normalizeScopePartyConfig({});
     }
-}
-
-export function writeScopePartyConfig(scope, config) {
-    const userConfig = loadUserConfig();
-    setUserPartyScope(userConfig, buildCommissionScope(scope), normalizeScopePartyConfig(config));
-    writeUserConfig(userConfig);
 }
 
 export function loadPartyConfigForContext(context) {
@@ -270,35 +228,34 @@ export function writePartyConfigView(view) {
     }
 
     const scopesByCommission = isPlainObject(view.scopesByCommission) ? view.scopesByCommission : {};
-    let shouldWriteGlobal = isPlainObject(view.global);
-    const pendingWrites = [];
+    const userConfig = loadUserConfig();
+    let changed = false;
 
     for (const scopeList of Object.values(scopesByCommission)) {
         if (!Array.isArray(scopeList)) continue;
         for (const scopeEntry of scopeList) {
             if (!scopeEntry || !scopeEntry.key || !scopeEntry.config) continue;
-            const path = getPartyScopeConfigPath(scopeEntry);
-            const exists = Boolean(getUserPartyScope(loadUserConfig(), buildCommissionScope(scopeEntry))) || file.isFile(path);
+            const scope = buildCommissionScope(scopeEntry);
+            const exists = Boolean(getUserPartyScope(userConfig, scope));
             const normalizedConfig = normalizeScopePartyConfig(scopeEntry.config);
             const shouldPersist = shouldPersistScopeConfig(normalizedConfig);
 
             if (shouldPersist) {
-                shouldWriteGlobal = true;
-                pendingWrites.push({ scopeEntry, config: normalizedConfig });
+                setUserPartyScope(userConfig, scope, normalizedConfig);
+                changed = true;
                 continue;
             }
 
             if (exists) {
-                pendingWrites.push({ scopeEntry, config: normalizeScopePartyConfig({}) });
+                deleteUserPartyScope(userConfig, scope);
+                changed = true;
             }
         }
     }
 
-    if (shouldWriteGlobal) {
-        writeGlobalPartyConfig(view.global || {});
+    if (isPlainObject(view.global)) {
+        userConfig.party.global = normalizeGlobalPartyConfig(view.global);
+        changed = true;
     }
-
-    for (const item of pendingWrites) {
-        writeScopePartyConfig(item.scopeEntry, item.config);
-    }
+    if (changed) writeUserConfig(userConfig);
 }
