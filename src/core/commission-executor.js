@@ -16,8 +16,7 @@ import { executeNpcCommission } from "./npc-executor.js";
 import { executeBasicCommission } from "./basic-executor.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { dispatchOnCommissionComplete } from "../probes/index.js";
-import { writeBranchConfig } from "../loaders/branch-config.js";
-import { loadCurrentCommissionsData, updateCommissionStatus } from "../data/index.js";
+import { appendBranchCompletion, loadCurrentCommissionsData, updateCommissionStatus } from "../data/index.js";
 
 /**
  * 委托类型 → 执行器映射
@@ -73,25 +72,12 @@ async function updateBranchCompletion(commissionName, context) {
             return;
         }
 
-        if (!commissionConfig.completedByUid || typeof commissionConfig.completedByUid !== "object" || Array.isArray(commissionConfig.completedByUid)) {
-            commissionConfig.completedByUid = {};
+        if (appendBranchCompletion(accountUid, commissionName, activeBranch)) {
+            if (!commissionConfig.completedByUid) commissionConfig.completedByUid = {};
+            const completed = commissionConfig.completedByUid[accountUid] || [];
+            commissionConfig.completedByUid[accountUid] = [...completed, activeBranch];
+            log.info("已更新分支完成进度: {branch}, UID: {uid}", activeBranch, accountUid);
         }
-
-        const completed = Array.isArray(commissionConfig.completedByUid[accountUid])
-            ? commissionConfig.completedByUid[accountUid]
-            : [];
-        if (completed.includes(activeBranch)) {
-            return;
-        }
-
-        completed.push(activeBranch);
-        commissionConfig.completedByUid[accountUid] = completed;
-        delete commissionConfig.completed;
-
-        log.info("已更新分支完成进度: {branch}, UID: {uid}", activeBranch, accountUid);
-        // 只写当前委托对应的单个文件，避免一次保存把整个 BRANCHES_DIR 都覆盖
-        writeBranchConfig(commissionName, commissionConfig);
-        log.info("分支配置文件已更新: {name}.json", commissionName);
     } catch (error) {
         if (isCancellationError(error)) { throw error; }
         log.error("更新分支完成进度时出错: {error}", error.message);

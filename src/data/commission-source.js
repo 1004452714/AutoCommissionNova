@@ -17,7 +17,7 @@ function loadWhitelist() {
         return {
             basic: data.basic || [],
             npc: data.npc || [],
-            ban: data.ban || [],
+            ban: data.unsupported || data.ban || [],
         };
     } catch (error) {
         log.error("读取白名单文件失败: {error}", error.message);

@@ -216,8 +216,8 @@ function metadata(registry) {
 
 function roleOptions() {
     try {
-        const names = JSON.parse(file.readTextSync(PATHS.AVATAR_NAMES));
-        if (!Array.isArray(names)) throw new Error("角色名称清单必须是数组");
+        const strategies = JSON.parse(file.readTextSync(PATHS.AVATAR_STRATEGIES));
+        const names = Object.keys(strategies);
         return names.filter(name => typeof name === "string" && name.trim())
             .sort((a, b) => a.localeCompare(b, "zh-CN"));
     } catch (error) {

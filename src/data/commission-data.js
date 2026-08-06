@@ -156,7 +156,14 @@ function normalizeData(data, activeUid = "") {
  */
 function readCommissionsData(activeUid = "") {
     try {
-        return normalizeData(JSON.parse(file.readTextSync(PATHS.COMMISSIONS_DATA)), activeUid);
+        const sourcePath = file.isFile(PATHS.ACCOUNT_STATE) ? PATHS.ACCOUNT_STATE : PATHS.LEGACY_COMMISSIONS_DATA;
+        const data = normalizeData(JSON.parse(file.readTextSync(sourcePath)), activeUid);
+        for (const account of Object.values(data.accounts || {})) {
+            if (!account.branchCompleted || typeof account.branchCompleted !== "object" || Array.isArray(account.branchCompleted)) {
+                account.branchCompleted = {};
+            }
+        }
+        return data;
     } catch (error) {
         log.debug("读取委托数据失败，使用空数据: {error}", error.message);
         return createEmptyData(activeUid);
@@ -168,7 +175,44 @@ function readCommissionsData(activeUid = "") {
  * @param {Object} data - v2 委托数据根对象
  */
 function writeCommissionsData(data) {
-    file.writeTextSync(PATHS.COMMISSIONS_DATA, JSON.stringify(data, null, 2));
+    file.createDirectory("Data");
+    file.writeTextSync(PATHS.ACCOUNT_STATE, JSON.stringify(data, null, 2));
+}
+
+export function loadBranchCompletionState() {
+    const data = readCommissionsData();
+    const result = {};
+    for (const [uid, account] of Object.entries(data.accounts || {})) {
+        for (const [commissionName, completed] of Object.entries(account.branchCompleted || {})) {
+            if (!result[commissionName]) result[commissionName] = {};
+            result[commissionName][uid] = Array.isArray(completed) ? completed : [];
+        }
+    }
+    return result;
+}
+
+export function setBranchCompletion(accountUid, commissionName, completed) {
+    if (!accountUid || !commissionName) return;
+    const data = readCommissionsData(accountUid);
+    const account = ensureAccountData(data, accountUid);
+    account.branchCompleted[commissionName] = Array.from(new Set(Array.isArray(completed) ? completed : []));
+    data.activeUid = accountUid;
+    writeCommissionsData(data);
+}
+
+export function appendBranchCompletion(accountUid, commissionName, branchKey) {
+    if (!accountUid || !commissionName || !branchKey) return false;
+    const data = readCommissionsData(accountUid);
+    const account = ensureAccountData(data, accountUid);
+    const completed = Array.isArray(account.branchCompleted[commissionName])
+        ? account.branchCompleted[commissionName]
+        : [];
+    if (completed.includes(branchKey)) return false;
+    completed.push(branchKey);
+    account.branchCompleted[commissionName] = completed;
+    data.activeUid = accountUid;
+    writeCommissionsData(data);
+    return true;
 }
 
 /**
@@ -203,6 +247,7 @@ function createAccountData(uid) {
         scriptVersion: SCRIPT_VERSION,
         bgiVersion: "",
         commissions: [],
+        branchCompleted: {},
     };
 }
 

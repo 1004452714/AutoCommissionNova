@@ -89,10 +89,13 @@ export const THRESHOLDS = {
 /** 文件路径常量 */
 export const PATHS = {
     PROCESS_ROOT: "process",
-    SUPPORT_LIST: "process/config/support-list.json",
+    COMMISSION_CATALOG: "config/commission-catalog.json",
+    SUPPORT_LIST: "config/commission-catalog.json",
     BASIC_SCRIPT_BASE: "process/蒙德/Basic",
     NPC_PROCESS_BASE: "process/蒙德/NPC",
-    COMMISSIONS_DATA: "Data/commissions_data.json",
+    ACCOUNT_STATE: "Data/account-state.json",
+    LEGACY_COMMISSIONS_DATA: "Data/commissions_data.json",
+    COMMISSIONS_DATA: "Data/account-state.json",
     HAS_NO_RESULT_IMAGE: "Data/RecognitionObject/hasNoResult.png",
     COMPLETED_IMAGE: "Data/RecognitionObject/Completed.png",
     UNCOMPLETED_IMAGE: "Data/RecognitionObject/UnCompleted.png",
@@ -108,7 +111,8 @@ export const PATHS = {
     ICON_TASK_COMMISSION: "Data/RecognitionObject/IconTaskCommission.png",
     MOON_LIGHT_ICON: "Data/RecognitionObject/MoonLightIcon.png",
     TRACK_IMAGE: "Data/RecognitionObject/TrackButton.png",
-    AVATAR_NAMES: "Data/avatar/avatar_names.json",
+    AVATAR_STRATEGIES: "config/avatar-strategies.json",
+    AVATAR_NAMES: "config/avatar-strategies.json",
     WATCHTOWER_STRATEGY_FILES: [
         "Data/avatar/简易策略_法器.txt",
         "Data/avatar/简易策略_弓.txt",
@@ -117,8 +121,11 @@ export const PATHS = {
         "Data/avatar/简易策略_长柄武器.txt",
     ],
     CONFIG_BASE: "process/config",
-    GLOBAL_CONFIG: "process/config/global.json",
-    BATTLE_PARTY_WHITELIST: "process/config/battle-party-whitelist.json",
+    USER_CONFIG: "Data/user-config.json",
+    LEGACY_GLOBAL_CONFIG: "process/config/global.json",
+    GLOBAL_CONFIG: "Data/user-config.json",
+    BATTLE_PARTY_WHITELIST: "config/commission-catalog.json",
+    LEGACY_PARTY_CONFIG_DIR: "process/config/party",
     PARTY_CONFIG_DIR: "process/config/party",
     /** 委托分支配置目录。每个委托一个文件：{委托名}.json
      *  内存视图（branchConfigCache / UI 编辑器）是合并后的 { 委托名: config }，

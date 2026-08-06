@@ -294,7 +294,7 @@ function getStrategyAvatarName(line) {
 }
 
 /**
- * 从独立 TXT 文件加载简易策略，并筛选当前队伍中的角色。
+ * 从统一角色策略文件加载简易策略，并筛选当前队伍中的角色。
  * @returns {string[]} 护盾角色优先、其余角色保持策略文件顺序的当前队伍策略行
  */
 function loadCurrentTeamStrategies() {
@@ -304,32 +304,16 @@ function loadCurrentTeamStrategies() {
         currentNames.add(getAvatarName(avatars, i));
     }
 
-    const strategies = [];
-    const configuredNames = new Set();
-    for (const strategyPath of PATHS.WATCHTOWER_STRATEGY_FILES) {
-        if (!file.isFile(strategyPath)) {
-            throw new Error(`哨塔简易策略文件不存在: ${strategyPath}`);
-        }
-
-        const lines = file.readTextSync(strategyPath).split(/\r?\n/);
-        for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
-            const line = lines[lineNumber].trim();
-            if (!line || line.startsWith("#") || line.startsWith("//")) continue;
-
-            const match = line.match(/^(\S+)\s+(.+)$/);
-            if (!match) {
-                throw new Error(`哨塔简易策略格式错误: ${strategyPath}:${lineNumber + 1}`);
+    if (!file.isFile(PATHS.AVATAR_STRATEGIES)) throw new Error(`角色策略文件不存在: ${PATHS.AVATAR_STRATEGIES}`);
+    const configured = JSON.parse(file.readTextSync(PATHS.AVATAR_STRATEGIES));
+    const strategies = Object.entries(configured)
+        .filter(([avatarName]) => currentNames.has(avatarName))
+        .map(([avatarName, value]) => {
+            if (!value || typeof value.script !== "string" || !value.script.trim()) {
+                throw new Error(`哨塔简易策略格式错误: ${avatarName}`);
             }
-            const avatarName = match[1];
-            if (configuredNames.has(avatarName)) {
-                throw new Error(`哨塔简易策略角色重复: ${avatarName}`);
-            }
-            configuredNames.add(avatarName);
-            if (currentNames.has(avatarName)) {
-                strategies.push(line);
-            }
-        }
-    }
+            return `${avatarName} ${value.script.trim()}`;
+        });
 
     if (strategies.length === 0) {
         throw new Error("当前队伍没有匹配到哨塔简易策略");

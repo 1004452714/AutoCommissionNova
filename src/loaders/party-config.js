@@ -1,5 +1,6 @@
 import { PATHS } from "../config/index.js";
 import { buildCommissionScope, buildCommissionScopeFromContext } from "./process-scope.js";
+import { getUserPartyScope, loadUserConfig, setUserPartyScope, writeUserConfig } from "./user-config.js";
 
 export const DEFAULT_BATTLE_STRATEGY = "根据队伍自动选择";
 
@@ -150,7 +151,9 @@ function shouldPersistScopeConfig(config) {
 
 export function loadGlobalPartyConfig() {
     try {
-        const json = readJsonIfExists(getPartyGlobalConfigPath());
+        const userConfig = loadUserConfig();
+        let json = userConfig.party.global;
+        if (!Object.keys(json).length) json = readJsonIfExists(getPartyGlobalConfigPath());
         if (!json) {
             return normalizeGlobalPartyConfig({});
         }
@@ -162,14 +165,15 @@ export function loadGlobalPartyConfig() {
 }
 
 export function writeGlobalPartyConfig(config) {
-    const path = getPartyGlobalConfigPath();
-    ensureParentDir(path);
-    file.writeTextSync(path, JSON.stringify(normalizeGlobalPartyConfig(config), null, 4));
+    const userConfig = loadUserConfig();
+    userConfig.party.global = normalizeGlobalPartyConfig(config);
+    writeUserConfig(userConfig);
 }
 
 export function loadScopePartyConfig(scope) {
     try {
-        const json = readJsonIfExists(getPartyScopeConfigPath(scope));
+        const userConfig = loadUserConfig();
+        const json = getUserPartyScope(userConfig, buildCommissionScope(scope)) || readJsonIfExists(getPartyScopeConfigPath(scope));
         if (!json) {
             return normalizeScopePartyConfig({});
         }
@@ -181,9 +185,9 @@ export function loadScopePartyConfig(scope) {
 }
 
 export function writeScopePartyConfig(scope, config) {
-    const path = getPartyScopeConfigPath(scope);
-    ensureParentDir(path);
-    file.writeTextSync(path, JSON.stringify(normalizeScopePartyConfig(config), null, 4));
+    const userConfig = loadUserConfig();
+    setUserPartyScope(userConfig, buildCommissionScope(scope), normalizeScopePartyConfig(config));
+    writeUserConfig(userConfig);
 }
 
 export function loadPartyConfigForContext(context) {
@@ -274,7 +278,7 @@ export function writePartyConfigView(view) {
         for (const scopeEntry of scopeList) {
             if (!scopeEntry || !scopeEntry.key || !scopeEntry.config) continue;
             const path = getPartyScopeConfigPath(scopeEntry);
-            const exists = file.isFile(path);
+            const exists = Boolean(getUserPartyScope(loadUserConfig(), buildCommissionScope(scopeEntry))) || file.isFile(path);
             const normalizedConfig = normalizeScopePartyConfig(scopeEntry.config);
             const shouldPersist = shouldPersistScopeConfig(normalizedConfig);
 

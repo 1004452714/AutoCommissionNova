@@ -1,4 +1,5 @@
 import { PATHS } from "../config/index.js";
+import { loadUserConfig, writeUserConfig } from "./user-config.js";
 
 function isPlainObject(value) {
     return value && typeof value === "object" && !Array.isArray(value);
@@ -28,22 +29,11 @@ export function normalizeGlobalConfig(config) {
 }
 
 export function loadGlobalConfig() {
-    try {
-        if (!file.isFile(PATHS.GLOBAL_CONFIG)) {
-            return normalizeGlobalConfig({});
-        }
-        const raw = file.readTextSync(PATHS.GLOBAL_CONFIG);
-        if (!raw) {
-            return normalizeGlobalConfig({});
-        }
-        return normalizeGlobalConfig(JSON.parse(raw));
-    } catch (error) {
-        log.debug("读取全局配置失败，使用默认值: {err}", error.message);
-        return normalizeGlobalConfig({});
-    }
+    return normalizeGlobalConfig(loadUserConfig());
 }
 
 export function writeGlobalConfig(config) {
-    ensureParentDir(PATHS.GLOBAL_CONFIG);
-    file.writeTextSync(PATHS.GLOBAL_CONFIG, JSON.stringify(normalizeGlobalConfig(config), null, 4));
+    const userConfig = loadUserConfig();
+    Object.assign(userConfig, normalizeGlobalConfig(config));
+    writeUserConfig(userConfig);
 }

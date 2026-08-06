@@ -15,6 +15,7 @@
  * mergeBranchConfigView 在「当前 UID 视图」和「磁盘结构」之间转换。
  */
 import { PATHS } from "../config/index.js";
+import { loadBranchCompletionState, setBranchCompletion } from "../data/commission-data.js";
 
 /**
  * 取路径最后一级名称，兼容 Windows / POSIX 分隔符
@@ -67,6 +68,12 @@ export function sanitizeBranchConfig(config) {
     }
     delete next.completed;
     delete next.noteLevel;
+    return next;
+}
+
+function sanitizeStaticBranchConfig(config) {
+    const next = sanitizeBranchConfig(config);
+    delete next.completedByUid;
     return next;
 }
 
@@ -168,6 +175,7 @@ export function mergeBranchConfigView(viewComposite, accountUid, existingComposi
             : {};
         if (accountUid) {
             completedByUid[accountUid] = completed;
+            setBranchCompletion(accountUid, commissionName, completed);
         }
 
         composite[commissionName] = sanitizeBranchConfig({
@@ -196,6 +204,7 @@ export function loadAllBranchConfigs() {
     }
 
     const composite = {};
+    const completionState = loadBranchCompletionState();
     for (const p of paths) {
         if (file.isFolder(p)) continue;
         const filename = baseName(p);
@@ -204,7 +213,12 @@ export function loadAllBranchConfigs() {
         const commissionName = commissionNameFromFile(filename);
         try {
             const raw = file.readTextSync(p);
-            composite[commissionName] = JSON.parse(raw);
+            const parsed = JSON.parse(raw);
+            const legacyProgress = isPlainObject(parsed.completedByUid) ? parsed.completedByUid : {};
+            composite[commissionName] = {
+                ...sanitizeStaticBranchConfig(parsed),
+                completedByUid: { ...legacyProgress, ...(completionState[commissionName] || {}) },
+            };
         } catch (error) {
             log.error("分支配置文件解析失败 [{path}]: {err}", p, error.message);
         }
@@ -222,7 +236,7 @@ export function loadAllBranchConfigs() {
  */
 export function writeBranchConfig(commissionName, config) {
     const path = branchFilePath(commissionName);
-    file.writeTextSync(path, JSON.stringify(sanitizeBranchConfig(config), null, 4));
+    file.writeTextSync(path, JSON.stringify(sanitizeStaticBranchConfig(config), null, 4));
 }
 
 /**

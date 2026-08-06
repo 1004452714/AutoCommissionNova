@@ -11,10 +11,5 @@
         }
     },
     "note": "",
-    "default": "branch-1",
-    "completedByUid": {
-        "103063933": [
-            "branch-2"
-        ]
-    }
+    "default": "branch-1"
 }
