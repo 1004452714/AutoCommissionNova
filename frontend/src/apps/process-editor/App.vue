@@ -5,7 +5,7 @@ import { copy } from "@/shared/i18n/zh-CN";
 import UiSelect from "@/shared/components/UiSelect.vue";
 import StepInspector from "@/apps/process-editor/StepInspector.vue";
 import StepTypeMenu from "@/apps/process-editor/StepTypeMenu.vue";
-import { cloneProcessValue, convertStepType, defaultStep, diagnosticText } from "@/apps/process-editor/model";
+import { cloneProcessValue, convertStepType, defaultStep, diagnosticText, editableRecord } from "@/apps/process-editor/model";
 import type { DiagnosticResult, LoadResult, ProcessEditorInit, ProcessScope, ProcessStep, ProcessorMeta, RecentProcess, RecordPathResult, SaveResult, SubProcessResult, TargetResult } from "@/apps/process-editor/types";
 
 // 文档快照用于在多层子流程之间无损恢复编辑状态。
@@ -395,12 +395,19 @@ async function returnToParent(): Promise<void> {
     setStatus(parent.dirty ? text.unsaved : "已返回上级流程");
 }
 
-// 暂时隐藏编辑器并打开同目录路径录制器。
-async function recordPath(): Promise<void> {
+// 暂时隐藏编辑器并打开同目录路径录制器，字段名用于回填对象型步骤的指定路径。
+async function recordPath(field?: string): Promise<void> {
     const step = selectedStep.value;
-    if (recording.value || !targetComplete.value || step?.type !== "地图追踪") return;
+    // 地图追踪回填标量 data，摧毁哨塔仅允许回填两个公开路径字段。
+    const isMapPath = step?.type === "地图追踪" && field === undefined;
+    const isWatchtowerPath = step?.type === "摧毁哨塔" && (field === "path1" || field === "path2");
+    if (recording.value || !targetComplete.value || !step || (!isMapPath && !isWatchtowerPath)) return;
+    // 守卫已确保对象型录制请求只能指向两个哨塔路径之一。
+    const watchtowerField = field as "path1" | "path2";
+    // 当前字段值用于判断录制器是覆盖已有文件还是创建新文件。
+    const currentReference = isMapPath ? step.data : editableRecord(step.data)[watchtowerField];
     // 只有后端确认合法存在的相对路径才进入覆盖编辑模式。
-    const existingReference = typeof step.data === "string" && target.value?.pathOptions?.some((option) => option.value === step.data) ? step.data : "";
+    const existingReference = typeof currentReference === "string" && target.value?.pathOptions?.some((option) => option.value === currentReference) ? currentReference : "";
     recording.value = true;
     try {
         const result = await requestHtmlMask<RecordPathResult>("/recordPath", {
@@ -409,7 +416,11 @@ async function recordPath(): Promise<void> {
         }, 0x7fffffff);
         if (result.status === "error") throw new Error(result.message || "路径录制失败");
         if (result.fileName) {
-            steps.value[selectedIndex.value] = { ...toRaw(step), data: existingReference || result.fileName };
+            // 已有路径保持原引用，新录制路径使用宿主返回的文件名。
+            const savedReference = existingReference || result.fileName;
+            steps.value[selectedIndex.value] = isMapPath
+                ? { ...toRaw(step), data: savedReference }
+                : { ...toRaw(step), data: { ...editableRecord(toRaw(step.data)), [watchtowerField]: savedReference } };
             if (createMode.value && result.scope) savedScope.value = result.scope;
             markChanged();
             await refreshTarget();

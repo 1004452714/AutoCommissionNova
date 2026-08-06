@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
 // 数据编辑器静态文案来自共享中文文案表。
 const text = copy.processEditor;
 // 编辑器事件只提交结构化 data，并把路径录制请求交给页面处理。
-const emit = defineEmits<{ update: [value: unknown]; recordPath: []; editSubprocess: [path: string] }>();
+const emit = defineEmits<{ update: [value: unknown]; recordPath: [field?: string]; editSubprocess: [path: string] }>();
 // 可选对象字段下拉的当前选择。
 const optionalField = ref("");
 // 角色重复状态就地提示，不阻断其他字段编辑。
@@ -61,7 +61,7 @@ function selectOptions(field: FieldSpec): UiSelectOption[] {
 
 // 判断当前步骤状态下需要立即展示并标记必填的条件字段。
 function isConditionallyRequired(name: string): boolean {
-    return props.stepType === "摧毁哨塔" && name === "path" && String(dataObject.value.navigation ?? "图标寻路") === "路径追踪";
+    return props.stepType === "摧毁哨塔" && (name === "path1" || name === "path2") && String(dataObject.value.navigation ?? "图标寻路") === "路径追踪";
 }
 
 // 根据处理器条件裁剪当前可编辑字段。
@@ -75,7 +75,7 @@ function filteredFields(): Array<[string, FieldSpec]> {
     }
     if (props.stepType === "摧毁哨塔") {
         const navigation = String(dataObject.value.navigation ?? "图标寻路");
-        return fields.filter(([name]) => name === "navigation" || (navigation === "路径追踪" && name === "path"));
+        return fields.filter(([name]) => name === "navigation" || (navigation === "路径追踪" && (name === "path1" || name === "path2")));
     }
     return fields;
 }
@@ -94,7 +94,11 @@ function updateObjectField(name: string, value: unknown, field: FieldSpec): void
         delete next.config;
     }
     if (props.stepType === "自动任务" && name === "taskType" && value !== "AutoPick") delete next.config;
-    if (props.stepType === "摧毁哨塔" && name === "navigation" && value !== "路径追踪") delete next.path;
+    if (props.stepType === "摧毁哨塔" && name === "navigation" && value !== "路径追踪") {
+        delete next.path;
+        delete next.path1;
+        delete next.path2;
+    }
     updateValue(next);
 }
 
@@ -286,6 +290,7 @@ function branchProcessor(key: string): ProcessorMeta | undefined {
                     <UiSelect v-else-if="stepType === '执行子流程' && name === 'path'" editable :model-value="String(dataObject[name] ?? '')" :options="subProcessOptions" :aria-label="fieldLabel(name, field)" width="field" @update:model-value="updateObjectField(name, $event, field)" />
                     <UiSelect v-else-if="field.options" :model-value="String(dataObject[name] ?? '')" :options="selectOptions(field)" :aria-label="fieldLabel(name, field)" width="content" :max-width="280" @change="updateObjectField(name, $event, field)" />
                     <input v-else class="control" :type="field.type === 'number' ? 'number' : 'text'" :min="field.min" :max="field.max" :step="field.integer ? 1 : 'any'" :value="dataObject[name] ?? ''" @input="updateObjectField(name, ($event.target as HTMLInputElement).value, field)">
+                    <button v-if="stepType === '摧毁哨塔' && (name === 'path1' || name === 'path2')" class="primary mini" type="button" @click="emit('recordPath', name)">{{ pathOptions.some((option) => option.value === String(dataObject[name] ?? '')) ? text.editPath : text.recordPath }}</button>
                     <button v-if="stepType === '执行子流程' && name === 'path'" class="primary mini" type="button" :disabled="!String(dataObject[name] ?? '').trim()" @click="emit('editSubprocess', String(dataObject[name] ?? ''))">{{ subProcessOptions.some((option) => option.value === String(dataObject[name] ?? '')) ? text.editSubprocess : text.createSubprocess }}</button>
                     <button v-if="!field.required && !field.alwaysVisible && !isConditionallyRequired(name)" class="danger mini" type="button" @click="removeObjectField(name)">{{ text.removeField }}</button>
                 </div>

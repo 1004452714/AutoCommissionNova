@@ -351,10 +351,14 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
         }
 
         if (stepType === "摧毁哨塔" && step.data && typeof step.data === "object" &&
-            step.data.navigation === "路径追踪" && typeof step.data.path === "string") {
-            const mapPath = resolveSafeReference(resourceDir, step.data.path, processPath, i + 1, stepType, "data.path");
-            if (!mapPath) errors++;
-            else errors += validatePathFile(mapPath, "摧毁哨塔路径文件");
+            step.data.navigation === "路径追踪") {
+            const pathFields = typeof step.data.path === "string" ? ["path"] : ["path1", "path2"];
+            for (const field of pathFields) {
+                if (typeof step.data[field] !== "string") continue;
+                const mapPath = resolveSafeReference(resourceDir, step.data[field], processPath, i + 1, stepType, `data.${field}`);
+                if (!mapPath) errors++;
+                else errors += validatePathFile(mapPath, `摧毁哨塔${field}路径文件`);
+            }
         }
 
         if (stepType === "固若金汤") {

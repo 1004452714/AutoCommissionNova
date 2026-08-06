@@ -477,8 +477,11 @@ function validateProcess(steps, registry, processPath, resourceDir, scope, diagn
         } else if (step.type === "摧毁哨塔") {
             const data = step.data && typeof step.data === "object" && !Array.isArray(step.data) ? step.data : {};
             if (data.navigation === "路径追踪") {
-                const path = resolveReference(resourceDir, data.path, prefix + "data.path：", errors);
-                if (path) validatePathFile(path, prefix + "路径追踪文件：", errors);
+                const pathFields = typeof data.path === "string" ? ["path"] : ["path1", "path2"];
+                for (const field of pathFields) {
+                    const path = resolveReference(resourceDir, data[field], prefix + `data.${field}：`, errors);
+                    if (path) validatePathFile(path, prefix + `${field} 路径追踪文件：`, errors);
+                }
             }
         } else if (step.type === "固若金汤") {
             const result = collectImpregnableDefensePaths(step.data);

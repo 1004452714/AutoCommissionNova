@@ -21,7 +21,7 @@ const processInit: ProcessEditorInit = {
         { type: "无数据步骤", category: "测试", dataSpec: { kind: "none" } },
         { type: "可选数值", category: "测试", dataSpec: { kind: "number", label: "次数", optional: true, default: 3 } },
         { type: "对话", category: "测试", dataSpec: { kind: "object", optional: true, fields: { priorityOptions: { type: "array", label: "优先对话选项" }, npcWhiteList: { type: "array", label: "NPC 白名单" } } } },
-        { type: "摧毁哨塔", category: "测试", dataSpec: { kind: "object", optional: true, fields: { navigation: { type: "string", label: "寻路方式", default: "图标寻路", alwaysVisible: true, options: ["图标寻路", "路径追踪"] }, path: { type: "string", label: "路径文件" } } } },
+        { type: "摧毁哨塔", category: "测试", dataSpec: { kind: "object", optional: true, fields: { navigation: { type: "string", label: "寻路方式", default: "图标寻路", alwaysVisible: true, options: ["图标寻路", "路径追踪"] }, path: { type: "string", label: "旧版路径文件" }, path1: { type: "string", label: "哨塔1路径" }, path2: { type: "string", label: "哨塔2路径" } } } },
         { type: "固若金汤", category: "测试", dataSpec: { kind: "custom", editor: "waves" } },
         { type: "执行子流程", category: "测试", dataSpec: { kind: "object", fields: { path: { type: "string", label: "子流程文件", required: true } } } },
     ],
@@ -190,18 +190,30 @@ describe("process editor workflows", () => {
     it("shows conditional required fields and wave threshold guidance", async () => {
         // 路径追踪使路径文件立即成为可见必填项，切回后清除旧值。
         const watchtowerSpec = processInit.processors[6].dataSpec;
-        const watchtowerWrapper = mount(StepDataEditor, { props: { modelValue: { navigation: "图标寻路" }, spec: watchtowerSpec, stepType: "摧毁哨塔", processors: processInit.processors, roles: [], branches: [] } });
+        const watchtowerWrapper = mount(StepDataEditor, { props: { modelValue: { navigation: "图标寻路" }, spec: watchtowerSpec, stepType: "摧毁哨塔", processors: processInit.processors, roles: [], branches: [], pathOptions: [{ value: "tower-1.json", label: "tower-1.json" }, { value: "tower-2.json", label: "tower-2.json" }] } });
         expect(watchtowerWrapper.findAll(".data-field")).toHaveLength(1);
         expect(watchtowerWrapper.find(".optional-picker").exists()).toBe(false);
         await chooseUiOption(watchtowerWrapper.find(".data-field .ui-select"), "路径追踪");
         expect(watchtowerWrapper.emitted("update")?.at(-1)?.[0]).toEqual({ navigation: "路径追踪" });
         await watchtowerWrapper.setProps({ modelValue: { navigation: "路径追踪" } });
-        expect(watchtowerWrapper.findAll(".data-field")).toHaveLength(2);
+        expect(watchtowerWrapper.findAll(".data-field")).toHaveLength(3);
         expect(watchtowerWrapper.findAll(".field-label")[1].classes()).toContain("required");
+        expect(watchtowerWrapper.findAll(".field-label")[2].classes()).toContain("required");
         expect(watchtowerWrapper.findAll(".field-label-hint")[1].text()).toBe("必填");
+        expect(watchtowerWrapper.findAll(".field-label-hint")[2].text()).toBe("必填");
         expect(watchtowerWrapper.find(".optional-picker").exists()).toBe(false);
-        await watchtowerWrapper.find(".data-field input").setValue("route.json");
-        await watchtowerWrapper.setProps({ modelValue: { navigation: "路径追踪", path: "route.json" } });
+        // 两个路径输入按声明顺序对应哨塔一和哨塔二。
+        const pathInputs = watchtowerWrapper.findAll(".data-field input");
+        await pathInputs[0].setValue("tower-1.json");
+        await watchtowerWrapper.setProps({ modelValue: { navigation: "路径追踪", path1: "tower-1.json" } });
+        await watchtowerWrapper.findAll(".data-field input")[1].setValue("tower-2.json");
+        await watchtowerWrapper.setProps({ modelValue: { navigation: "路径追踪", path1: "tower-1.json", path2: "tower-2.json" } });
+        // 每座哨塔的按钮携带对应字段名，供页面精确回填录制结果。
+        const watchtowerPathButtons = watchtowerWrapper.findAll(".data-field button.primary");
+        expect(watchtowerPathButtons.map((button) => button.text())).toEqual(["编辑路径", "编辑路径"]);
+        await watchtowerPathButtons[1].trigger("click");
+        expect(watchtowerWrapper.emitted("recordPath")?.at(-1)).toEqual(["path2"]);
+        await watchtowerWrapper.setProps({ modelValue: { navigation: "路径追踪", path: "legacy.json", path1: "tower-1.json", path2: "tower-2.json" } });
         await chooseUiOption(watchtowerWrapper.find(".data-field .ui-select"), "图标寻路");
         expect(watchtowerWrapper.emitted("update")?.at(-1)?.[0]).toEqual({ navigation: "图标寻路" });
         watchtowerWrapper.unmount();
@@ -335,6 +347,30 @@ describe("process editor workflows", () => {
         await wrapper.find(".record-row button").trigger("click");
         await flushPromises();
         expect((wrapper.find(".record-row input").element as HTMLInputElement).value).toBe("recorded.json");
+        wrapper.unmount();
+    });
+
+    it("writes recorded path back to the selected watchtower field", async () => {
+        // 双路径录制只替换用户点击的字段，避免覆盖另一座哨塔的路径。
+        installHost(async (url) => {
+            if (url === "/init") return processInit;
+            if (url === "/target") return { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [] };
+            if (url === "/load") return { status: "ok", scope: processScope, path: "process/process.json", content: JSON.stringify([{ type: "摧毁哨塔", data: { navigation: "路径追踪", path1: "tower-1.json", path2: "tower-2.json" } }]), recentFiles: [], branches: [] };
+            if (url === "/recordPath") return { status: "saved", fileName: "recorded-tower-2.json", scope: processScope };
+            return { status: "ok" };
+        });
+        // 选择哨塔步骤并点击第二个路径按钮。
+        const wrapper = mount(ProcessEditor);
+        await flushPromises();
+        await wrapper.find(".recent button").trigger("click");
+        await flushPromises();
+        await wrapper.find(".step").trigger("click");
+        await wrapper.findAll(".data-field button.primary")[1].trigger("click");
+        await flushPromises();
+        // 路径一保持原值，路径二接收录制器返回的新文件名。
+        const pathInputs = wrapper.findAll(".data-field input");
+        expect((pathInputs[0].element as HTMLInputElement).value).toBe("tower-1.json");
+        expect((pathInputs[1].element as HTMLInputElement).value).toBe("recorded-tower-2.json");
         wrapper.unmount();
     });
 });
