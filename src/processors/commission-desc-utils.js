@@ -32,7 +32,7 @@ function isCommissionNameText(ocrText, commissionName) {
     return cleanText(standardizeCommissionName(cleanedOcr)) === cleanedCommissionName;
 }
 
-function readTrackedDescriptionText(context) {
+export function readTrackedDescriptionText(context) {
     const firstLine = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL);
     const secondLine = bvPageOcrRegionText(OCR_REGIONS.COMMISSION_DETAIL_SECOND_LINE);
 

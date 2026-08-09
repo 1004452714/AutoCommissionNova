@@ -6,6 +6,7 @@ import { RO } from "../vision/index.js";
 import { bvPageOcrRegionText } from "../vision/ocr-utils.js";
 import { defineStep } from "./define-step.js";
 import { isCancellationError } from "../utils/error-utils.js";
+import { readTrackedDescriptionText } from "./commission-desc-utils.js";
 
 const WATCHTOWER_CONFIG = {
     /** 单次执行最多摧毁的哨塔数量；攀高危险最多两个，之后的任务图标可能属于其他委托。 */
@@ -24,8 +25,6 @@ const WATCHTOWER_CONFIG = {
     combatCancelTimeout: 10 * 1000,
     /** 单次前进时长（毫秒）：视角对准图标后按住 W 前进的时间。 */
     forwardMs: 600,
-    /** 委托描述区域，显示“摧毁丘丘人哨塔 0/2”等进度。 */
-    descriptionRegion: new OpenCvSharp.OpenCvSharp.Rect(80, 250, 380, 65),
     /** 与乐流奔引一致的“委托完成”提示区域。 */
     completionRegion: new OpenCvSharp.OpenCvSharp.Rect(880, 165, 160, 45),
     /** 距离文字 OCR 区域：以任务图标坐标为基准偏移后裁剪，识别形如 23m 的整数距离。 */
@@ -78,7 +77,7 @@ function resolveStepOptions(step) {
 }
 
 /**
- * 解析“摧毁丘丘人哨塔0/2”一类委托描述。
+ * 解析“丘丘人哨塔0/2”一类委托描述。
  * @returns {{current: number, total: number}|null}
  */
 export function parseWatchtowerProgress(text) {
@@ -86,17 +85,19 @@ export function parseWatchtowerProgress(text) {
         .replace(/\s/g, "")
         .replace(/[oO]/g, "0")
         .replace(/[|\\]/g, "/");
-    const match = normalized.match(/摧毁丘丘人哨塔.*?(\d+)\/(\d+)/);
+    const match = normalized.match(/丘丘人哨塔.*?(\d+)\/(\d+)/);
     if (!match) return null;
     return { current: Number(match[1]), total: Number(match[2]) };
 }
 
-function readDestroyStatus() {
+function readDestroyStatus(context) {
     let descriptionText = "";
     let completionText = "";
     try {
-        descriptionText = bvPageOcrRegionText(WATCHTOWER_CONFIG.descriptionRegion);
+        descriptionText = readTrackedDescriptionText(context);
         completionText = bvPageOcrRegionText(WATCHTOWER_CONFIG.completionRegion);
+        log.debug("摧毁哨塔委托描述 OCR: {text}", descriptionText);
+        log.debug("摧毁哨塔委托完成 OCR: {text}", completionText);
     } catch (error) {
         if (isCancellationError(error)) throw error;
         log.debug("摧毁哨塔状态 OCR 失败: {error}", error.message);
@@ -398,9 +399,10 @@ function assertCombatLoopRunning(combat) {
  * 并行执行简易策略与状态 OCR，直到摧毁数量增加、委托完成或软超时。
  * @param {number|null} initialCount - 开始攻击前识别到的已摧毁数量
  * @param {string[]} strategies - 当前队伍匹配到的策略行
+ * @param {Object} context - 当前委托执行上下文
  * @returns {Promise<string>} 攻击结束原因
  */
-async function attackUntilDestroyed(initialCount, strategies) {
+async function attackUntilDestroyed(initialCount, strategies, context) {
     const startTime = Date.now();
     const fullScript = strategies.join("\n");
     const combat = createCombatLoop(fullScript, strategies.length);
@@ -408,7 +410,7 @@ async function attackUntilDestroyed(initialCount, strategies) {
     try {
         while (result === null) {
             assertCombatLoopRunning(combat);
-            const status = readDestroyStatus();
+            const status = readDestroyStatus(context);
             if (status.completed) {
                 log.info("识别到委托完成文本: {text}", status.completionText);
                 result = ATTACK_RESULT.COMPLETED;
@@ -479,7 +481,7 @@ async function destroyAllWatchtowers(options, context) {
             }
         }
 
-        const initialStatus = readDestroyStatus();
+        const initialStatus = readDestroyStatus(context);
         const initialCount = initialStatus.progress ? initialStatus.progress.current : null;
         if (initialStatus.completed) return true;
         if (initialStatus.progress && initialStatus.progress.current >= initialStatus.progress.total) return true;
@@ -495,7 +497,7 @@ async function destroyAllWatchtowers(options, context) {
             attackStrategies = loadCurrentTeamStrategies();
         }
 
-        const attackResult = await attackUntilDestroyed(initialCount, attackStrategies);
+        const attackResult = await attackUntilDestroyed(initialCount, attackStrategies, context);
         if (attackResult === ATTACK_RESULT.COMPLETED) {
             return true;
         }

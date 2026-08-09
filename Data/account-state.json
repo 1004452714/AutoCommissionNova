@@ -4,16 +4,64 @@
   "accounts": {
     "103063933": {
       "uid": "103063933",
-      "timestamp": "2026-08-06T13:14:46.426Z",
+      "timestamp": "2026-08-09T20:27:18.481Z",
       "scriptVersion": "1.0.0",
-      "bgiVersion": "0.62.2-alpha.4",
+      "bgiVersion": "0.63.0",
       "commissions": [
-        {"id": 1, "name": "盗亦无道", "supported": true, "type": "BASIC", "location": "那夏镇", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 9285.916015625, "Y": 1430.4169921875}},
-        {"id": 2, "name": "攀高危险", "supported": true, "type": "BASIC", "location": "伦波岛", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 8956.1455078125, "Y": 2171.6611328125}},
-        {"id": 3, "name": "正中靶心", "supported": true, "type": "BASIC", "location": "苔骨荒原", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 9316.55078125, "Y": 1996.28125}},
-        {"id": 4, "name": "乐流奔引", "supported": true, "type": "BASIC", "location": "伦波岛", "status": "已完成", "country": "挪德卡莱", "commissionPosition": {"X": 9320.060546875, "Y": 2221.72802734375}}
+        {
+          "id": 1,
+          "name": "为了执行官大人",
+          "supported": true,
+          "type": "BASIC",
+          "location": "伦波岛",
+          "status": "已完成",
+          "country": "挪德卡莱",
+          "commissionPosition": {
+            "X": 9542.6474609375,
+            "Y": 2031.419921875
+          }
+        },
+        {
+          "id": 2,
+          "name": "攀高危险",
+          "supported": true,
+          "type": "BASIC",
+          "location": "伦波岛",
+          "status": "已完成",
+          "country": "挪德卡莱",
+          "commissionPosition": {
+            "X": 10053.0107421875,
+            "Y": 1554.43505859375
+          }
+        },
+        {
+          "id": 3,
+          "name": "正中靶心",
+          "supported": true,
+          "type": "BASIC",
+          "location": "星砂滩",
+          "status": "已完成",
+          "country": "挪德卡莱",
+          "commissionPosition": {
+            "X": 9451.0546875,
+            "Y": 2292.46142578125
+          }
+        },
+        {
+          "id": 4,
+          "name": "乐流奔引",
+          "supported": true,
+          "type": "BASIC",
+          "location": "伦波岛",
+          "status": "已完成",
+          "country": "挪德卡莱",
+          "commissionPosition": {
+            "X": 9320.2373046875,
+            "Y": 2221.87744140625
+          }
+        }
       ],
-      "branchCompleted": {"说到做到": [], "餐品订单": ["branch-2"]}
+      "branchCompleted": {}
     }
   }
 }
