@@ -59,7 +59,7 @@ export const copy = {
         title: "委托流程编辑器",
         existing: "现有委托",
         create: "新增委托",
-        validate: "校验",
+        validateAll: "校验全部",
         addStep: "添加步骤",
         clear: "清除",
         empty: "选择委托并打开流程",

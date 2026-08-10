@@ -1,7 +1,7 @@
 /**
  * 流程文件静态校验
  *
- * 启动期遍历 process/<国家>/{NPC,Basic}/** 下所有 process.json，
+ * 手动遍历 process/<国家>/{NPC,Basic}/** 下所有 process.json，
  * 对每个 step 检查：
  *   (1) step.type 是否已在 registry 注册
  *   (2) step.data 是否通过该 type 声明的严格 dataSpec
@@ -24,15 +24,17 @@ import { loadUserConfig } from "./user-config.js";
 const RETRY_MODES = new Set(["throw", "return-false", "all"]);
 
 /**
- * 启动期遍历所有 process.json 做静态校验
+ * 遍历所有 process.json 做静态校验
  * @param {Object} registry - StepProcessorRegistry 实例
+ * @param {Array} [commissionScopes] - 可复用的流程范围快照；不传时扫描一次流程目录
  * @returns {Promise<number>} 发现的错误数（0 表示全部通过）
  */
-export async function validateAllProcesses(registry) {
+export async function validateAllProcesses(registry, commissionScopes) {
     log.info("开始静态校验流程文件...");
+    const scopes = commissionScopes ?? scanCommissionScopes().list;
     let errors = 0;
-    errors += await validateNpcProcesses(registry);
-    errors += await validateBasicProcesses(registry);
+    errors += await validateNpcProcesses(registry, scopes);
+    errors += await validateBasicProcesses(registry, scopes);
     errors += validateBranchConfig();
     errors += validatePartyConfig();
 
@@ -153,11 +155,11 @@ function validateMacroFile(path, description) {
     return 0;
 }
 
-async function validateNpcProcesses(registry) {
+async function validateNpcProcesses(registry, scopes) {
     let errors = 0;
-    const scopes = scanCommissionScopes().list.filter((scope) => scope.type === COMMISSION_TYPE.NPC);
 
     for (const scope of scopes) {
+        if (scope.type !== COMMISSION_TYPE.NPC) continue;
         const baseDir = buildProcessBasePath(scope.country, COMMISSION_TYPE.NPC);
         const processDir = baseDir + "/" + scope.commissionName + "/" + scope.locationDir;
         const processPath = processDir + "/process.json";
@@ -184,11 +186,11 @@ async function validateNpcProcesses(registry) {
     return errors;
 }
 
-async function validateBasicProcesses(registry) {
+async function validateBasicProcesses(registry, scopes) {
     let errors = 0;
-    const scopes = scanCommissionScopes().list.filter((scope) => scope.type === COMMISSION_TYPE.BASIC);
 
     for (const scope of scopes) {
+        if (scope.type !== COMMISSION_TYPE.BASIC) continue;
         const baseDir = buildProcessBasePath(scope.country, COMMISSION_TYPE.BASIC);
         const processDir = baseDir + "/" + scope.commissionName + "/" + scope.locationDir;
         const processPath = processDir + "/process.json";

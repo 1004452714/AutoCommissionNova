@@ -1,7 +1,6 @@
 import { stepRegistry } from "./src/processors/registry.js";
 import { registerAllProcessors } from "./src/processors/index.js";
 import { registerAllProbes } from "./src/probes/index.js";
-import { validateAllProcesses } from "./src/loaders/index.js";
 import { executeMainProcess } from "./src/core/main-process.js";
 import { checkVersion } from "./src/version/check-version.js";
 import { runTestCommission } from "./src/core/test-runner.js";
@@ -11,6 +10,7 @@ import { openDeveloperTestEditor } from "./src/core/developer-test-editor.js";
 import { openProcessEditor } from "./src/core/process-editor.js";
 import { openPathRecorder } from "./src/core/path-recorder.js";
 import { releaseAllTemplates } from "./src/vision/index.js";
+import { scanCommissionScopes } from "./src/loaders/process-scope.js";
 
 registerAllProcessors(stepRegistry);
 registerAllProbes();
@@ -20,9 +20,6 @@ registerAllProbes();
         setGameMetrics(1920, 1080, genshin.ScreenDpiScale); 
         //检查版本
         await checkVersion();
-        //静态校验所有流程文件
-        await validateAllProcesses(stepRegistry);
-
         // 获取界面设置
         const setting = getSetting();
 
@@ -51,7 +48,9 @@ registerAllProbes();
             await runTestCommission(developerTestConfig);
         } else {
             // 执行主流程
-            await executeMainProcess(stepRegistry);
+            // 本次自动委托执行复用的流程目录快照。
+            const commissionScopes = scanCommissionScopes().list;
+            await executeMainProcess(stepRegistry, commissionScopes);
         }
 
         log.info("自动委托执行完毕");

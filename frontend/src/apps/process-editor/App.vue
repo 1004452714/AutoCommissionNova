@@ -289,17 +289,19 @@ async function loadFile(recent?: RecentProcess): Promise<void> {
     }
 }
 
-// 调用后端验证当前流程及所有资源引用。
-async function validateProcess(): Promise<void> {
+// 调用后端校验磁盘上的全部流程和资源引用。
+async function validateAllProcesses(): Promise<void> {
+    if (loading.value) return;
+    loading.value = true;
+    setStatus("正在校验全部流程...");
     try {
-        const result = await requestHtmlMask<DiagnosticResult>(activeSubProcess.value ? "/validateSubprocess" : "/validate", {
-            scope: { ...currentScope.value }, fileName: currentFileName.value,
-            reference: activeSubProcess.value,
-            content: JSON.stringify(steps.value, null, 4), create: createMode.value && !savedScope.value,
-        });
-        setStatus(diagnosticText(result), result.status === "ok" ? "success" : result.status === "warning" ? "warning" : "error");
+        // 全量校验结果仅包含汇总，详细问题由 BetterGI 日志承载。
+        const result = await requestHtmlMask<DiagnosticResult>("/validateAll", {});
+        setStatus(result.status === "ok" ? "全部流程校验通过" : diagnosticText(result), result.status === "ok" ? "success" : "error");
     } catch (error) {
         setStatus(toError(error).message, "error");
+    } finally {
+        loading.value = false;
     }
 }
 
@@ -506,7 +508,7 @@ onBeforeUnmount(cleanupEditor);
                 </template>
                 <div class="path">{{ target?.path || (createMode ? text.newHint : '') }}</div>
                 <section class="recent"><h2>{{ text.recent }}</h2><button v-for="item in recentFiles" :key="item.path" :title="item.path" @click="loadFile(item)">{{ item.scope.commissionName }} · {{ item.scope.locationDir }}</button><span v-if="!recentFiles.length">{{ commonText.empty }}</span></section>
-                <div class="side-actions"><button :disabled="!targetComplete || loading" @click="validateProcess">{{ text.validate }}</button><button class="primary" :disabled="!canSave" @click="saveProcess">{{ commonText.save }}</button></div>
+                <div class="side-actions"><button :disabled="loading" @click="validateAllProcesses">{{ text.validateAll }}</button><button class="primary" :disabled="!canSave" @click="saveProcess">{{ commonText.save }}</button></div>
             </aside>
 
             <main class="steps-pane">

@@ -23,7 +23,7 @@ export async function mockProcessEditorRequest(url: string, data: unknown): Prom
     if (url === "/init") return initial;
     if (url === "/target") return { status: "ok", scope: request.scope ?? scope, path: "process/蒙德/NPC/示例委托/城外/process.json", exists: true, branches: [], subProcessOptions: [{ value: "sub-process.json", label: "sub-process.json" }] };
     if (url === "/load") return { status: "ok", scope, path: "process/蒙德/NPC/示例委托/城外/process.json", exists: true, branches: [], recentFiles: [], content: "[]" };
-    if (url === "/validate") return { status: "ok", errors: [], warnings: [] };
+    if (url === "/validateAll") return { status: "ok", errors: [], warnings: [] };
     if (url === "/save") return { status: "ok", scope: request.scope ?? scope, path: "process/蒙德/NPC/示例委托/城外/process.json", content: request.content ?? "[]", warnings: [] };
     if (url === "/recordPath") return { status: "saved", fileName: "recorded.json", scope: request.scope ?? scope };
     if (url === "/openSubprocess") return { status: "ok", path: "process/蒙德/NPC/示例委托/城外/sub-process.json", reference: "sub-process.json", exists: true, content: "[]", subProcessOptions: [] };

@@ -7,6 +7,7 @@ import { parseLocationDir } from "../utils/location-dir.js";
 import { openPathRecorder } from "./path-recorder.js";
 import { PATHS } from "../config/index.js";
 import { loadAllBranchConfigs } from "../loaders/branch-config.js";
+import { validateAllProcesses } from "../loaders/validate-processes.js";
 
 // Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
 const HTML_PATH = "web/process-editor/index.html";
@@ -570,6 +571,14 @@ export async function openProcessEditor(registry) {
                         processors: metadata(registry),
                         roles: roleOptions(),
                         recentFiles: readRecentFiles(),
+                    });
+                } else if (message.url === "/validateAll") {
+                    // 全量静态校验返回的问题数量，用于同步编辑器状态栏。
+                    const errors = await validateAllProcesses(registry);
+                    respond(windowId, message.requestId, {
+                        status: errors > 0 ? "error" : "ok",
+                        errors: errors > 0 ? [`共发现 ${errors} 处问题，详见 BetterGI 日志`] : [],
+                        warnings: [],
                     });
                 } else if (message.url === "/target") {
                     const scope = message.data?.create ? resolveNewScope(message.data?.scope) : message.data?.scope;

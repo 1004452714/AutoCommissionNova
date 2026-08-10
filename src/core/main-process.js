@@ -11,19 +11,20 @@ import { scanCommissionScopes } from "../loaders/process-scope.js";
 
 /**
  * 委托识别主函数
+ * @param {Array} [commissionScopes] - 可复用的流程范围快照；不传时扫描一次流程目录
  * @returns {Promise<Array>} 识别到的委托列表；失败时返回 []
  */
-export async function identification() {
+export async function identification(commissionScopes) {
     try {
         log.info("开始执行委托识别");
 
         await genshin.returnMainUi();
 
-        const commissionScopes = scanCommissionScopes().list;
+        const scopes = commissionScopes ?? scanCommissionScopes().list;
 
-        const supportedCommissions = await loadSupportedCommissions(commissionScopes);
+        const supportedCommissions = await loadSupportedCommissions(scopes);
 
-        await initCommissionReferenceData(supportedCommissions, commissionScopes);
+        await initCommissionReferenceData(supportedCommissions, scopes);
 
         await enterCommissionScreen();
 
@@ -63,10 +64,11 @@ export async function prepareForCommission() {
 /**
  * 主流程执行函数
  * @param {Object} stepRegistry - 步骤处理器注册表
+ * @param {Array} [commissionScopes] - 启动阶段生成的流程范围快照
  */
-export async function executeMainProcess(stepRegistry) {
+export async function executeMainProcess(stepRegistry, commissionScopes) {
     try {
-        await identification();
+        await identification(commissionScopes);
 
         await prepareForCommission();
 
