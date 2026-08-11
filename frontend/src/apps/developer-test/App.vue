@@ -133,27 +133,27 @@ onMounted(loadOptions);
         </header>
         <form class="form" @submit.prevent="runTest">
             <div class="field-grid">
-                <label>{{ text.mode }}
-                    <UiSelect v-model="form.mode" :options="options.modes.map((mode) => ({ value: mode, label: mode }))" :aria-label="text.mode" width="field" :max-width="320" @change="reconcileCascades('mode')" />
-                </label>
-                <label>{{ text.testCase }}
-                    <UiSelect v-model="form.caseName" :options="options.cases.map((item) => ({ value: item, label: item }))" :aria-label="text.testCase" :disabled="!isCaseMode" width="field" :max-width="320" />
-                </label>
-                <label>{{ text.country }}
-                    <UiSelect v-model="form.country" :options="countries.map((item) => ({ value: item, label: item }))" :aria-label="text.country" :disabled="isCaseMode" width="field" :max-width="320" @change="reconcileCascades('country')" />
-                </label>
-                <label>{{ text.commission }}
-                    <UiSelect v-model="form.commissionName" :options="commissions.map((item) => ({ value: item, label: item }))" :aria-label="text.commission" :disabled="isCaseMode" width="field" :max-width="320" @change="reconcileCascades('commission')" />
-                </label>
-                <label>{{ text.location }}
-                    <UiSelect v-model="form.location" :options="locations.map((item) => ({ value: item, label: item }))" :aria-label="text.location" :disabled="isCaseMode" width="field" :max-width="320" @change="reconcileCascades('location')" />
-                </label>
-                <label>{{ text.processFile }}
-                    <UiSelect v-model="form.processFile" :options="processFiles.map((item) => ({ value: item, label: item }))" :aria-label="text.processFile" :disabled="isCaseMode" width="field" :max-width="320" />
-                </label>
-                <label class="wide">{{ text.branchCondition }}
-                    <textarea v-model="form.branchCondition" class="control" :disabled="!isCaseMode" :placeholder="text.branchPlaceholder"></textarea>
-                </label>
+                <div class="field-row"><span class="field-label">{{ text.mode }}</span>
+                    <UiSelect v-model="form.mode" :options="options.modes.map((mode) => ({ value: mode, label: mode }))" :aria-label="text.mode" width="table" @change="reconcileCascades('mode')" />
+                </div>
+                <div class="field-row"><span class="field-label">{{ text.testCase }}</span>
+                    <UiSelect v-model="form.caseName" :options="options.cases.map((item) => ({ value: item, label: item }))" :aria-label="text.testCase" :disabled="!isCaseMode" width="table" />
+                </div>
+                <div class="field-row"><span class="field-label">{{ text.country }}</span>
+                    <UiSelect v-model="form.country" :options="countries.map((item) => ({ value: item, label: item }))" :aria-label="text.country" :disabled="isCaseMode" width="table" @change="reconcileCascades('country')" />
+                </div>
+                <div class="field-row"><span class="field-label">{{ text.commission }}</span>
+                    <UiSelect v-model="form.commissionName" :options="commissions.map((item) => ({ value: item, label: item }))" :aria-label="text.commission" :disabled="isCaseMode" width="table" @change="reconcileCascades('commission')" />
+                </div>
+                <div class="field-row"><span class="field-label">{{ text.location }}</span>
+                    <UiSelect v-model="form.location" :options="locations.map((item) => ({ value: item, label: item }))" :aria-label="text.location" :disabled="isCaseMode" width="table" @change="reconcileCascades('location')" />
+                </div>
+                <div class="field-row"><span class="field-label">{{ text.processFile }}</span>
+                    <UiSelect v-model="form.processFile" :options="processFiles.map((item) => ({ value: item, label: item }))" :aria-label="text.processFile" :disabled="isCaseMode" width="table" />
+                </div>
+                <div class="field-row wide"><span class="field-label">{{ text.branchCondition }}</span>
+                    <textarea v-model="form.branchCondition" class="control" :aria-label="text.branchCondition" :disabled="!isCaseMode" :placeholder="text.branchPlaceholder"></textarea>
+                </div>
             </div>
             <footer class="panel-footer">
                 <div role="status" :class="{ 'status-error': hasError }">{{ statusText }}</div>
@@ -173,11 +173,13 @@ onMounted(loadOptions);
 h1 { margin:0; font-size:21px; }
 p { margin:4px 0 0; color:var(--color-text-muted); font-size:13px; }
 .form { padding:20px 24px 0; }
-.field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,320px)); gap:16px; }
-label { display:grid; gap:6px; color:#cfd6df; font-size:13px; }
-label.wide { grid-column:1 / -1; }
+.field-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.field-row { min-width:0; display:grid; grid-template-columns:72px minmax(0,1fr); align-items:center; gap:10px; }
+.field-label { color:#cfd6df; font-size:13px; text-align:right; white-space:nowrap; }
+.field-row.wide { grid-column:1 / -1; align-items:start; }
+.field-row.wide .field-label { padding-top:8px; }
 textarea { min-height:84px; }
 .panel-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:20px; padding:16px 0 20px; color:var(--color-text-muted); }
 .actions { display:flex; gap:8px; }
-@media (max-width:620px) { .field-grid { grid-template-columns:1fr; } label.wide { grid-column:auto; } .panel-footer { align-items:flex-end; flex-direction:column; } }
+@media (max-width:620px) { .field-grid { grid-template-columns:1fr; } .field-row.wide { grid-column:auto; } .panel-footer { align-items:flex-end; flex-direction:column; } }
 </style>

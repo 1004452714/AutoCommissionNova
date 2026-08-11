@@ -5,6 +5,7 @@ import PathRecorder from "@/apps/path-recorder/App.vue";
 import StepDataEditor from "@/apps/process-editor/StepDataEditor.vue";
 import StepInspector from "@/apps/process-editor/StepInspector.vue";
 import CommissionConfig from "@/apps/commission-config/App.vue";
+import DeveloperTest from "@/apps/developer-test/App.vue";
 import { DEFAULT_SETTINGS, createPoint } from "@/apps/path-recorder/model";
 import type { HtmlMaskHost } from "@/shared/bridge/html-mask";
 import type { ProcessEditorInit, ProcessScope } from "@/apps/process-editor/types";
@@ -646,8 +647,8 @@ describe("path recorder workflows", () => {
 });
 
 describe("commission config battle list", () => {
-    it("opens developer testing when test is entered as a new UID", async () => {
-        // test 不创建账号文件，仅由新增输入触发开发者测试协议。
+    it("opens developer testing by double-clicking the title", async () => {
+        // 开发者入口只绑定标题双击，UID 输入始终保持数字文本框。
         const payload = { uids: ["123"], selectedUid: "123", currentUid: "123", global: { skipSafeTeleport: true }, branches: {}, party: { global: {}, scopesByCommission: {} } };
         const request = installHost(async (url) => url === "/loadConfig" ? payload : { status: "ok" });
         const wrapper = mount(CommissionConfig);
@@ -657,10 +658,17 @@ describe("commission config battle list", () => {
         expect(wrapper.find(".workarea-global .sidebar").exists()).toBe(false);
         expect(wrapper.find(".account-row").exists()).toBe(true);
         expect(wrapper.text()).not.toContain("删除");
-        await wrapper.find(".account-row input").setValue("test");
-        const addButton = wrapper.findAll("button").find((button) => button.text() === "打开开发者测试");
-        await addButton?.trigger("click");
+        const uidInput = wrapper.find<HTMLInputElement>(".account-row input");
+        expect(uidInput.attributes("type")).toBe("text");
+        expect(uidInput.attributes("inputmode")).toBe("numeric");
+        await uidInput.setValue("test123");
+        expect(uidInput.element.value).toBe("123");
+        expect(wrapper.find(".account-row > button").text()).toBe("新增 UID");
+        await wrapper.find(".toggle-row .switch").trigger("click");
+        await wrapper.find(".app-identity h1").trigger("dblclick");
         await flushPromises();
+        const calls = request.mock.calls.map(([url]) => url);
+        expect(calls.indexOf("/saveConfig")).toBeLessThan(calls.indexOf("/openDeveloperTest"));
         expect(request).toHaveBeenCalledWith("/openDeveloperTest", {});
         wrapper.unmount();
     });
@@ -714,6 +722,30 @@ describe("commission config battle list", () => {
         expect(openHeader.text()).toContain("NPC");
         expect(openGroup?.textContent).toContain("多地点委托");
         expect(openGroup?.textContent).toContain("2");
+        wrapper.unmount();
+    });
+});
+
+describe("developer test form", () => {
+    it("keeps labels inline without extending select click targets", async () => {
+        // 普通容器不会像原生 label 一样把外围点击转发给下拉按钮。
+        installHost(async (url) => url === "/loadTestOptions" ? {
+            modes: ["case", "basic", "npc"],
+            cases: ["测试用例"],
+            scopes: [{ mode: "basic", country: "蒙德", commissionName: "示例委托", location: "城外", processFiles: ["process.json"] }],
+        } : { status: "ok" });
+        const wrapper = mount(DeveloperTest, { attachTo: document.body });
+        await flushPromises();
+
+        const rows = wrapper.findAll(".field-row");
+        expect(rows).toHaveLength(7);
+        expect(rows[0].element.tagName).toBe("DIV");
+        expect(rows[0].find("label").exists()).toBe(false);
+        await rows[0].find(".field-label").trigger("click");
+        expect(document.querySelector(".ui-select__menu")).toBeNull();
+        await rows[0].find(".ui-select__trigger").trigger("click");
+        await flushPromises();
+        expect(document.querySelector(".ui-select__menu")).not.toBeNull();
         wrapper.unmount();
     });
 });

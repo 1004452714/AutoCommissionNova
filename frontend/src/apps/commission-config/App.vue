@@ -45,6 +45,14 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let saveQueue: Promise<void> = Promise.resolve();
 // 宿主消息卸载函数由订阅适配器返回。
 let unsubscribe = (): void => undefined;
+// 用户活动按固定间隔通知宿主，宿主负责最终关闭计时。
+const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "pointermove", "keydown", "input", "wheel", "touchstart"];
+const activityThrottleMs = 5_000;
+let lastActivitySentAt = 0;
+// 首次操作前在右上角关闭按钮中展示宿主倒计时。
+const idleRemainingSeconds = ref(30);
+const idleActive = ref(true);
+let activityPending = false;
 // 策略选择器是否覆盖当前工作区。
 const strategyOpen = ref(false);
 // 策略目录读取状态。
@@ -200,25 +208,25 @@ function branchProgress(name: string): string {
     return `${branch.completed.filter((id) => ids.includes(id)).length}/${ids.length}`;
 }
 
-// 将新增 UID 输入限制为数字或开发者测试字面值。
+// 将新增 UID 输入限制为数字，文本控件避免浏览器显示数值步进按钮。
 function updateNewUid(event: Event): void {
     const raw = (event.target as HTMLInputElement).value.trim();
-    newUid.value = /^[a-z]+$/i.test(raw) ? raw.toLowerCase() : raw.replace(/\D/g, "");
+    newUid.value = raw.replace(/\D/g, "");
 }
 
-// 新建数字 UID 档案，test 则保持开发者测试入口兼容行为。
-async function addUid(): Promise<void> {
-    if (newUid.value === "test") {
-        closing.value = true;
-        try {
-            await requestHtmlMask<ConfigOperationResult>("/openDeveloperTest", {});
-        } catch (error) {
-            saveState.value = "error";
-            saveText.value = toError(error).message;
-            closing.value = false;
-        }
-        return;
+// 双击标题时打开开发者测试面板。
+async function openDeveloperTest(): Promise<void> {
+    try {
+        await flushPendingSave();
+        await requestHtmlMask<ConfigOperationResult>("/openDeveloperTest", {});
+    } catch (error) {
+        saveState.value = "error";
+        saveText.value = toError(error).message;
     }
+}
+
+// 新建数字 UID 档案。
+async function addUid(): Promise<void> {
     if (!/^\d+$/.test(newUid.value)) return;
     try {
         await flushPendingSave();
@@ -398,16 +406,48 @@ function chooseStrategy(path: string): void {
     scheduleSave();
 }
 
+// 首次真实交互取消本次自动关闭；失败时保留倒计时供后续重试。
+function reportActivity(): void {
+    if (!idleActive.value || activityPending) return;
+    const now = Date.now();
+    if (now - lastActivitySentAt < activityThrottleMs) return;
+    lastActivitySentAt = now;
+    activityPending = true;
+    void requestHtmlMask<ConfigOperationResult>("/activity", {}, 2_000)
+        .then((result) => {
+            if (result.status === "ok") idleActive.value = false;
+        })
+        .catch(() => undefined)
+        .finally(() => {
+            activityPending = false;
+        });
+}
+
+function installActivityTracking(): void {
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, reportActivity, { passive: true }));
+}
+
+function removeActivityTracking(): void {
+    activityEvents.forEach((eventName) => window.removeEventListener(eventName, reportActivity));
+}
+
 // 卸载页面时移除宿主订阅并取消未触发的保存。
 function cleanupPage(): void {
     unsubscribe();
+    removeActivityTracking();
     if (saveTimer) clearTimeout(saveTimer);
 }
 
 // 读取组合配置并安装宿主推送处理器。
 async function initialize(): Promise<void> {
+    installActivityTracking();
     unsubscribe = subscribeHtmlMask((message) => {
         if (message.url === "/toggleVisibility") visible.value = (message.data as { visible?: boolean } | undefined)?.visible !== false;
+        if (message.url === "/idleCountdown") {
+            const payload = message.data as { active?: boolean; remainingSeconds?: number } | undefined;
+            idleRemainingSeconds.value = Math.max(0, Math.ceil(payload?.remainingSeconds ?? 0));
+            idleActive.value = payload?.active !== false;
+        }
     });
     try {
         config.value = normalizePayload(await requestHtmlMask<unknown>("/loadConfig", {}, 5000));
@@ -427,13 +467,13 @@ onBeforeUnmount(cleanupPage);
 <template>
     <div v-show="visible" class="shell workspace-frame">
         <header class="appbar">
-            <div class="app-identity"><span class="app-mark" aria-hidden="true">AC</span><div><h1>{{ text.title }}</h1><span :class="`save-${saveState}`" role="status" aria-live="polite">{{ saveText }}</span></div></div>
+            <div class="app-identity"><h1 @dblclick="openDeveloperTest">委托配置</h1></div>
             <nav class="tabs" role="tablist" :aria-label="text.title">
                 <button role="tab" :aria-selected="currentTab === 'global'" :class="{ active: currentTab === 'global' }" @click="setTab('global')">{{ text.global }}</button>
                 <button role="tab" :aria-selected="currentTab === 'battle'" :class="{ active: currentTab === 'battle' }" @click="setTab('battle')">{{ text.battle }}</button>
                 <button role="tab" :aria-selected="currentTab === 'branch'" :class="{ active: currentTab === 'branch' }" @click="setTab('branch')">{{ text.branch }}</button>
             </nav>
-            <button class="close-action" :disabled="closing" :title="text.close" @click="requestClose"><X :size="16" aria-hidden="true" /><span>{{ text.close }}</span></button>
+            <button class="close-action" :class="{ 'idle-active': idleActive }" :disabled="closing" :title="idleActive ? `${idleRemainingSeconds} 秒后继续` : text.close" @click="requestClose"><span>{{ idleActive ? `${idleRemainingSeconds} 秒后继续` : text.close }}</span></button>
         </header>
 
         <div class="workarea" :class="{ 'workarea-global': currentTab === 'global' }">
@@ -467,8 +507,8 @@ onBeforeUnmount(cleanupPage);
                     <h2>{{ text.uid }}</h2>
                     <div class="account-row">
                         <UiSelect :model-value="config.selectedUid" :options="config.uids.map((uid) => ({ value: uid, label: uid === config.currentUid ? `${uid}（当前游戏）` : uid }))" :aria-label="text.uid" width="content" :max-width="280" @change="switchAccount" />
-                        <input class="control" :value="newUid" :placeholder="text.uidPlaceholder" @input="updateNewUid" @keydown.enter="addUid">
-                        <button :disabled="!newUid" @click="addUid">{{ newUid === 'test' ? text.developerTest : text.addUid }}</button>
+                        <input class="control" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" :value="newUid" :placeholder="text.uidPlaceholder" @input="updateNewUid" @keydown.enter="addUid">
+                        <button :disabled="!newUid" @click="addUid">{{ text.addUid }}</button>
                     </div>
                 </article>
                 <article class="section toggle-row">
@@ -550,7 +590,7 @@ onBeforeUnmount(cleanupPage);
             </div>
         </div>
     </div>
-    <FocusGuard />
+    <FocusGuard v-if="visible" />
 </template>
 
 <style scoped>
@@ -592,7 +632,7 @@ h1,h2,h3,h4,p { margin:0; } h1 { font-size:20px; } h2 { font-size:18px; } h3 { f
 .shell { display:flex; flex-direction:column; width:100%; height:100%; border:1px solid var(--color-border); border-radius:8px; background:var(--color-workspace); box-shadow:var(--shadow-window); }
 .shell.workspace-frame { width:65vw; height:75vh; }
 .appbar { position:relative; z-index:2; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px; min-height:58px; padding:0 16px; border-bottom:1px solid var(--color-border); background:rgba(19,24,27,.96); }
-.app-identity { min-width:0; display:flex; align-items:center; gap:10px; }.app-identity>div { min-width:0; display:grid; gap:1px; }.app-identity h1 { overflow:hidden; color:var(--color-text); font-size:16px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }.app-identity span:not(.app-mark) { overflow:hidden; color:var(--color-text-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }.app-mark { display:grid; width:28px; height:28px; place-items:center; border:1px solid rgba(44,165,141,.55); border-radius:7px; background:var(--color-primary-soft); color:var(--color-primary-hover); font-size:10px; font-weight:700; letter-spacing:.04em; }
+.app-identity { min-width:0; display:flex; align-items:center; }.app-identity h1 { overflow:hidden; color:var(--color-text); font-size:16px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
 .tabs { position:static; display:flex; align-items:stretch; justify-content:center; gap:2px; height:58px; padding:0; }.tabs button { position:relative; min-width:88px; min-height:58px; padding:0 14px; border:0; border-radius:0; background:transparent; color:var(--color-text-muted); font-size:13px; white-space:nowrap; }.tabs button::after { position:absolute; right:14px; bottom:0; left:14px; height:2px; background:transparent; content:""; }.tabs button:hover:not(:disabled) { background:rgba(255,255,255,.035); color:var(--color-text); }.tabs button.active { background:transparent; color:var(--color-text); }.tabs button.active::after { background:var(--color-primary); }.tabs button[aria-selected="true"] { font-weight:650; }
 .close-action { justify-self:end; display:inline-flex; align-items:center; gap:7px; min-width:0; border-color:var(--color-border); background:transparent; color:var(--color-text-muted); }.close-action:hover:not(:disabled) { border-color:var(--color-error); background:rgba(238,114,114,.1); color:var(--color-error); }
 .workarea { min-height:0; flex:1; display:flex; overflow:hidden; }.workarea-global .workspace { width:100%; }.workarea-global .content { max-width:1080px; margin:0 auto; width:100%; }
@@ -602,5 +642,5 @@ h1,h2,h3,h4,p { margin:0; } h1 { font-size:20px; } h2 { font-size:18px; } h3 { f
 .segmented { padding:3px; border:1px solid var(--color-border); border-radius:6px; background:rgba(0,0,0,.12); }.segmented button { min-height:28px; border-color:transparent; background:transparent; color:var(--color-text-muted); }.segmented button.active { border-color:rgba(44,165,141,.45); background:var(--color-primary-soft); color:var(--color-primary-hover); }.strategy-field .inline-field { grid-template-columns:minmax(0,1fr) max-content max-content; }.strategy-field .inline-field button { min-width:0; padding:0 9px; }
 .scope-card { padding-top:14px; }.scope-card>header h3 { min-width:0; overflow:hidden; font-size:15px; text-overflow:ellipsis; white-space:nowrap; }.team-columns { border-color:var(--color-border); }.team-section { padding:14px 0; }.team-section>header h4 { color:var(--color-text-muted); font-size:12px; font-weight:600; }.branch-row { min-height:44px; }.branch-row>span { min-width:0; overflow:hidden; text-overflow:ellipsis; }.switch-line { min-width:76px; border-color:transparent; background:transparent; color:var(--color-text-muted); }.switch-line.completed { border-color:rgba(97,201,149,.35); background:rgba(97,201,149,.1); }
 .empty { padding:32px 16px; }.modal-backdrop { background:rgba(5,8,9,.72); }.modal { width:min(680px,calc(100vw - 32px)); max-height:min(640px,calc(100vh - 32px)); border-radius:8px; box-shadow:var(--shadow-popover); }.modal>header { min-height:52px; padding:0 16px; }.modal>header button { display:inline-flex; align-items:center; gap:6px; }.strategy-actions { flex-wrap:wrap; border-bottom:1px solid var(--color-border); }.strategy-actions span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.strategy-tree { padding:8px; }.strategy-tree button { min-height:34px; border-radius:4px; }.strategy-tree button:hover:not(:disabled) { background:var(--color-surface-hover); }
-@media (max-width:760px) { .shell.workspace-frame { width:calc(100vw - 12px); height:calc(100vh - 12px); }.appbar { grid-template-columns:minmax(0,1fr) auto; min-height:52px; padding:0 10px; }.app-identity { gap:7px; }.app-mark { width:24px; height:24px; }.app-identity h1 { font-size:14px; }.tabs { position:absolute; top:52px; right:8px; left:8px; height:42px; border-bottom:1px solid var(--color-border); background:var(--color-navigation); }.tabs button { min-width:0; min-height:42px; flex:1; padding:0 6px; font-size:12px; }.tabs button::after { right:8px; left:8px; }.close-action { width:34px; min-width:34px; height:32px; padding:0; }.close-action span { display:none; }.workarea { margin-top:42px; }.workarea:not(.workarea-global) { flex-direction:column; overflow:auto; }.sidebar { width:100%; min-width:0; height:34%; min-height:150px; flex:none; border-right:0; border-bottom:1px solid var(--color-border); }.commission-list { max-height:none; }.workspace { min-height:0; flex:1; }.content { padding:14px 12px 20px; }.workarea-global { margin-top:42px; }.workarea-global .content { padding-top:14px; }.account-row { grid-template-columns:1fr; }.account-row .ui-select { width:100%; max-width:none; }.form-grid,.role-grid { grid-template-columns:1fr; gap:12px; }.strategy-field .inline-field { grid-template-columns:1fr; }.strategy-field .inline-field button { width:100%; }.scope-card>header { gap:8px; }.scope-card>header h3 { font-size:14px; }.team-columns { grid-template-columns:1fr; }.team-section+ .team-section { padding-left:0; border-top:1px solid var(--color-border); border-left:0; }.team-section>header { align-items:flex-start; flex-direction:column; }.segmented { width:100%; }.segmented button { flex:1; }.modal { width:calc(100vw - 20px); max-height:calc(100vh - 20px); }.strategy-actions { align-items:flex-start; flex-direction:column; gap:8px; } }
+@media (max-width:760px) { .shell.workspace-frame { width:calc(100vw - 12px); height:calc(100vh - 12px); }.appbar { grid-template-columns:minmax(0,1fr) auto; min-height:52px; padding:0 10px; }.app-identity h1 { font-size:14px; }.tabs { position:absolute; top:52px; right:8px; left:8px; height:42px; border-bottom:1px solid var(--color-border); background:var(--color-navigation); }.tabs button { min-width:0; min-height:42px; flex:1; padding:0 6px; font-size:12px; }.tabs button::after { right:8px; left:8px; }.close-action:not(.idle-active) { width:34px; min-width:34px; height:32px; padding:0; }.close-action:not(.idle-active) span { display:none; }.close-action.idle-active { min-width:max-content; padding:0 8px; font-size:12px; }.workarea { margin-top:42px; }.workarea:not(.workarea-global) { flex-direction:column; overflow:auto; }.sidebar { width:100%; min-width:0; height:34%; min-height:150px; flex:none; border-right:0; border-bottom:1px solid var(--color-border); }.commission-list { max-height:none; }.workspace { min-height:0; flex:1; }.content { padding:14px 12px 20px; }.workarea-global { margin-top:42px; }.workarea-global .content { padding-top:14px; }.account-row { grid-template-columns:1fr; }.account-row .ui-select { width:100%; max-width:none; }.form-grid,.role-grid { grid-template-columns:1fr; gap:12px; }.strategy-field .inline-field { grid-template-columns:1fr; }.strategy-field .inline-field button { width:100%; }.scope-card>header { gap:8px; }.scope-card>header h3 { font-size:14px; }.team-columns { grid-template-columns:1fr; }.team-section+ .team-section { padding-left:0; border-top:1px solid var(--color-border); border-left:0; }.team-section>header { align-items:flex-start; flex-direction:column; }.segmented { width:100%; }.segmented button { flex:1; }.modal { width:calc(100vw - 20px); max-height:calc(100vh - 20px); }.strategy-actions { align-items:flex-start; flex-direction:column; gap:8px; } }
 </style>

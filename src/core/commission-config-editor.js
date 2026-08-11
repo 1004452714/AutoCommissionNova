@@ -22,6 +22,7 @@ import { PATHS } from "../config/index.js";
 // Vue 单文件产物由 BetterGI 直接通过 file:// 加载。
 const HTML_PATH = "web/commission-config/index.html";
 const WINDOW_TAG = "commission-config";
+const IDLE_TIMEOUT_MS = 30_000;
 
 function normalizeStrategyPath(path) {
     return String(path || "").replace(/\\/g, "/");
@@ -98,7 +99,6 @@ export async function openCommissionConfigEditor() {
         log.warn("打开委托配置面板失败: {0}", err.message);
         return;
     }
-
     htmlMask.setClickThrough(windowId, false);
     log.info("委托配置面板已打开,按 ~ 键切换显示,点击关闭按钮继续主流程");
 
@@ -108,9 +108,12 @@ export async function openCommissionConfigEditor() {
     if (!accountUid) {
         log.warn("无法确认当前UID，委托配置面板不会更新账号分支完成进度");
     }
+    const idleDeadlineAt = Date.now() + IDLE_TIMEOUT_MS;
 
     const hook = new KeyMouseHook();
     let isVisible = true;
+    let idleActive = true;
+    let lastCountdownSecond = null;
 
     hook.onKeyDown(function (keyCode) {
         if (keyCode !== "Oem3") return;
@@ -137,6 +140,24 @@ export async function openCommissionConfigEditor() {
             if (cancelToken.isCancellationRequested) {
                 htmlMask.close(windowId);
                 break;
+            }
+
+            if (idleActive) {
+                const remainingMs = idleDeadlineAt - Date.now();
+                if (remainingMs <= 0) {
+                    log.info("委托配置面板 30 秒无操作，已自动关闭并继续主流程");
+                    htmlMask.close(windowId);
+                    break;
+                }
+
+                const remainingSeconds = Math.ceil(remainingMs / 1000);
+                if (remainingSeconds !== lastCountdownSecond) {
+                    htmlMask.send(windowId, "/idleCountdown", JSON.stringify({
+                        active: true,
+                        remainingSeconds,
+                    }));
+                    lastCountdownSecond = remainingSeconds;
+                }
             }
 
             let raw;
@@ -167,7 +188,12 @@ export async function openCommissionConfigEditor() {
 
             if (!msg || !msg.url) continue;
 
-            if (msg.url === "/loadConfig") {
+            if (msg.url === "/activity") {
+                idleActive = false;
+                if (msg.requestId) {
+                    sendHtmlMaskResponse(windowId, "/activity", msg.requestId, { status: "ok" });
+                }
+            } else if (msg.url === "/loadConfig") {
                 try {
                     const requestedUid = normalizeUid(msg.data?.uid) || accountUid || listAccountUids()[0] || "";
                     if (!requestedUid || !listAccountUids().includes(requestedUid)) {
