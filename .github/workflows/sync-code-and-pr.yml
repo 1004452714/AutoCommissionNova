@@ -1,0 +1,495 @@
+name: 同步脚本并创建或更新 PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "操作"
+        required: true
+        type: choice
+        default: new_pr
+        options:
+          - new_pr
+          - update_pr
+      version:
+        description: "新版本号（new_pr 可选，格式 major.minor.patch）"
+        required: false
+        type: string
+      pr_target:
+        description: "PR 目标仓库"
+        required: true
+        type: choice
+        default: upstream
+        options:
+          - upstream
+          - fork
+  schedule:
+    # 每天北京时间 11:17 检查一次待发布 PR。
+    - cron: "17 3 * * *"
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: sync-script-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  # PR 标题、正文和同步提交信息中显示的脚本名称。
+  SCRIPT_NAME: AutoCommissionNova
+  
+  # 脚本使用的目录名称。
+  SCRIPT_DIRECTORY: AutoCommissionNova
+  
+  # 当前源码仓库用于发布、升版和打 tag 的分支。
+  SOURCE_BRANCH: main
+  
+  # bettergi-scripts-list 中新建或更新 PR 所针对的基准分支。
+  TARGET_BASE_BRANCH: main
+  
+  # fork 自动创建的分支前缀，会在末尾追加版本号。
+  SYNC_BRANCH_PREFIX: sync-auto-commission-nova-v
+
+  # 允许同步到脚本仓库的文件和目录，每行一个仓库相对路径；空行和 # 注释会被忽略。
+  SYNC_PATHS: |
+    main.js
+    manifest.json
+    settings.json
+    README.md
+    config/
+    Data/
+    process/
+    src/
+    web/
+  
+  # 当前源码仓库所有者，由 GitHub Actions 上下文自动获取，无需修改。
+  SOURCE_OWNER: ${{ github.repository_owner }}
+  
+  # 当前作者名下的 bettergi-scripts-list fork，由仓库所有者自动拼接。
+  TARGET_FORK: ${{ github.repository_owner }}/bettergi-scripts-list
+  
+  # PR 的固定上游仓库。
+  TARGET_UPSTREAM: babalae/bettergi-scripts-list
+  
+  # 上游仓库存放 JavaScript 脚本的根目录。
+  TARGET_ROOT: repo/js
+
+jobs:
+  sync-and-pr:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出发布分支
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_BRANCH }}
+          fetch-depth: 0
+
+      - name: 配置 Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 计算版本与同步分支
+        id: release
+        shell: bash
+        env:
+          OPERATION: ${{ inputs.operation }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SCRIPT_NAME" ]; then
+            echo "SCRIPT_NAME 不能为空" >&2
+            exit 1
+          fi
+          if [ -z "$SCRIPT_DIRECTORY" ] || [ "$SCRIPT_DIRECTORY" = "." ] || [ "$SCRIPT_DIRECTORY" = ".." ] || [[ "$SCRIPT_DIRECTORY" == *[\\/]* ]]; then
+            echo "SCRIPT_DIRECTORY 不能留空或包含路径分隔符: $SCRIPT_DIRECTORY" >&2
+            exit 1
+          fi
+          if [ -z "$SOURCE_BRANCH" ] || [ -z "$TARGET_BASE_BRANCH" ] || [ -z "$SYNC_BRANCH_PREFIX" ]; then
+            echo "SOURCE_BRANCH、TARGET_BASE_BRANCH 和 SYNC_BRANCH_PREFIX 不能为空" >&2
+            exit 1
+          fi
+          CURRENT_VERSION="$(jq -r '.version' manifest.json)"
+          if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "manifest.json 版本号无效: $CURRENT_VERSION" >&2
+            exit 1
+          fi
+
+          if [ "$OPERATION" = "update_pr" ]; then
+            if [ -n "$REQUESTED_VERSION" ]; then
+              echo "update_pr 不允许填写 version" >&2
+              exit 1
+            fi
+            NEW_VERSION="$CURRENT_VERSION"
+          else
+            if [ -n "$REQUESTED_VERSION" ]; then
+              if [[ ! "$REQUESTED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "version 必须是 major.minor.patch" >&2
+                exit 1
+              fi
+              if [ "$(printf '%s\n' "$CURRENT_VERSION" "$REQUESTED_VERSION" | sort -V | head -n 1)" != "$CURRENT_VERSION" ]; then
+                echo "指定版本不能低于当前版本" >&2
+                exit 1
+              fi
+              NEW_VERSION="$REQUESTED_VERSION"
+            else
+              IFS=. read -r major minor patch <<< "$CURRENT_VERSION"
+              NEW_VERSION="$major.$minor.$((patch + 1))"
+            fi
+          fi
+
+          BRANCH="$SYNC_BRANCH_PREFIX$NEW_VERSION"
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: 预检目标分支与 PR
+        shell: bash
+        env:
+          OPERATION: ${{ inputs.operation }}
+          BRANCH: ${{ steps.release.outputs.branch }}
+          PR_TARGET: ${{ inputs.pr_target }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET_REPO="$TARGET_UPSTREAM"
+          [ "$PR_TARGET" = "fork" ] && TARGET_REPO="$TARGET_FORK"
+          HEAD_QUERY="$SOURCE_OWNER:$BRANCH"
+          PRS="$(curl -fsSL -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$TARGET_REPO/pulls?state=open&head=${HEAD_QUERY//:/%3A}&per_page=10")"
+          PR_COUNT="$(jq 'length' <<< "$PRS")"
+          BRANCH_EXISTS=false
+          if git ls-remote --exit-code "https://github.com/$TARGET_FORK.git" "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            BRANCH_EXISTS=true
+          fi
+
+          if [ "$OPERATION" = "new_pr" ]; then
+            VARIABLE_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE")"
+            if [ "$VARIABLE_STATUS" = "200" ]; then
+              echo "仍有待合并发布，不能创建新的发布 PR" >&2
+              exit 1
+            fi
+            if [ "$VARIABLE_STATUS" != "404" ]; then
+              echo "读取待发布状态失败，HTTP $VARIABLE_STATUS" >&2
+              exit 1
+            fi
+            if [ "$PR_COUNT" -gt 0 ]; then
+              echo "开放 PR 已存在，请使用 update_pr" >&2
+              exit 1
+            fi
+          else
+            if [ "$BRANCH_EXISTS" != "true" ] || [ "$PR_COUNT" -ne 1 ]; then
+              echo "未找到唯一的同步分支和开放 PR: $TARGET_REPO / $HEAD_QUERY" >&2
+              exit 1
+            fi
+          fi
+
+      - name: 在本地更新并提交版本
+        if: inputs.operation == 'new_pr'
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION="$(jq -r '.version' manifest.json)"
+          if [ "$CURRENT_VERSION" != "$VERSION" ]; then
+            jq --arg version "$VERSION" '.version = $version' manifest.json > manifest.json.tmp
+            mv manifest.json.tmp manifest.json
+            git add manifest.json
+            git commit -m "Bump version to $VERSION"
+          fi
+
+      - name: 检出目标 fork
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TARGET_FORK }}
+          ref: ${{ env.TARGET_BASE_BRANCH }}
+          path: fork
+          fetch-depth: 0
+          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 准备目标分支
+        shell: bash
+        env:
+          OPERATION: ${{ inputs.operation }}
+          BRANCH: ${{ steps.release.outputs.branch }}
+          TARGET_FORK: ${{ env.TARGET_FORK }}
+          TARGET_UPSTREAM: ${{ env.TARGET_UPSTREAM }}
+          PR_TARGET: ${{ inputs.pr_target }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          TARGET_REPO="$TARGET_UPSTREAM"
+          [ "$PR_TARGET" = "fork" ] && TARGET_REPO="$TARGET_FORK"
+          HEAD_QUERY="$SOURCE_OWNER:$BRANCH"
+          PRS="$(curl -fsSL -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$TARGET_REPO/pulls?state=open&head=${HEAD_QUERY//:/%3A}&per_page=10")"
+          PR_COUNT="$(jq 'length' <<< "$PRS")"
+
+          cd fork
+          git remote add upstream "https://github.com/$TARGET_UPSTREAM.git"
+          git fetch upstream "$TARGET_BASE_BRANCH"
+          if [ "$OPERATION" = "new_pr" ]; then
+            if [ "$PR_COUNT" -gt 0 ]; then
+              echo "开放 PR 已存在，请使用 update_pr" >&2
+              exit 1
+            fi
+            if git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
+              git fetch origin "$BRANCH"
+              git checkout -B "$BRANCH" "origin/$BRANCH"
+              echo "复用上次失败留下的同步分支: $BRANCH"
+            else
+              git checkout -b "$BRANCH" "upstream/$TARGET_BASE_BRANCH"
+            fi
+          else
+            if [ "$PR_COUNT" -ne 1 ]; then
+              echo "未找到唯一的开放 PR: $TARGET_REPO / $HEAD_QUERY" >&2
+              exit 1
+            fi
+            git fetch origin "$BRANCH"
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+          fi
+          echo "$TARGET_REPO" > ../.sync-target-repo
+          echo "$PR_COUNT" > ../.sync-pr-count
+
+      - name: 同步发布文件
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_PATH="$TARGET_ROOT/$SCRIPT_DIRECTORY"
+          RELEASE_DIR="$(mktemp -d)"
+          SYNC_COUNT=0
+          while IFS= read -r path; do
+            path="${path%$'\r'}"
+            path="${path#"${path%%[![:space:]]*}"}"
+            path="${path%"${path##*[![:space:]]}"}"
+            if [ -z "$path" ] || [[ "$path" == \#* ]]; then
+              continue
+            fi
+            if [[ "$path" = /* || "$path" = "." || "$path" = ".." || "$path" = ../* || "$path" = */../* || "$path" = */.. ]]; then
+              echo "SYNC_PATHS 只能包含仓库内相对路径: $path" >&2
+              exit 1
+            fi
+            if [ ! -e "$path" ]; then
+              echo "SYNC_PATHS 中的路径不存在: $path" >&2
+              exit 1
+            fi
+            rsync -aR "$path" "$RELEASE_DIR/"
+            SYNC_COUNT=$((SYNC_COUNT + 1))
+          done <<< "$SYNC_PATHS"
+          if [ "$SYNC_COUNT" -eq 0 ]; then
+            echo "SYNC_PATHS 至少需要配置一个文件或目录" >&2
+            exit 1
+          fi
+          mkdir -p "fork/$TARGET_PATH"
+          rsync -a --delete "$RELEASE_DIR/" "fork/$TARGET_PATH/"
+
+      - name: 提交并推送同步分支
+        id: push
+        shell: bash
+        env:
+          BRANCH: ${{ steps.release.outputs.branch }}
+        run: |
+          set -euo pipefail
+          TARGET_PATH="$TARGET_ROOT/$SCRIPT_DIRECTORY"
+          cd fork
+          git add -A "$TARGET_PATH"
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            if git diff --quiet "upstream/$TARGET_BASE_BRANCH"...HEAD -- "$TARGET_PATH"; then
+              echo "pr_diff=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "pr_diff=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "target_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "同步 $SCRIPT_NAME ${{ steps.release.outputs.version }}"
+          git push origin "$BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "pr_diff=true" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: 确认新 PR 存在同步差异
+        if: inputs.operation == 'new_pr' && steps.push.outputs.pr_diff != 'true'
+        run: |
+          echo "同步分支与上游基准分支没有差异，未推送源仓库版本；请检查 SYNC_PATHS" >&2
+          exit 1
+
+      - name: 推送源仓库版本
+        if: inputs.operation == 'new_pr' && steps.push.outputs.pr_diff == 'true'
+        run: git push origin "HEAD:$SOURCE_BRANCH"
+
+      - name: 创建新 PR
+        if: inputs.operation == 'new_pr' && steps.push.outputs.pr_diff == 'true'
+        shell: bash
+        env:
+          BRANCH: ${{ steps.release.outputs.branch }}
+          VERSION: ${{ steps.release.outputs.version }}
+          PR_TARGET: ${{ inputs.pr_target }}
+          TARGET_FORK: ${{ env.TARGET_FORK }}
+          TARGET_UPSTREAM: ${{ env.TARGET_UPSTREAM }}
+          TARGET_BASE_BRANCH: ${{ env.TARGET_BASE_BRANCH }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET_REPO="$TARGET_UPSTREAM"
+          HEAD="$SOURCE_OWNER:$BRANCH"
+          [ "$PR_TARGET" = "fork" ] && TARGET_REPO="$TARGET_FORK" && HEAD="$BRANCH"
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          BODY="同步 $SCRIPT_NAME $VERSION。源仓库：${{ github.server_url }}/${{ github.repository }}"
+          PR_RESPONSE="$(curl -fsSL -X POST -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$TARGET_REPO/pulls" \
+            -d "$(jq -n --arg title "$SCRIPT_NAME $VERSION" --arg body "$BODY" --arg head "$HEAD" --arg base "$TARGET_BASE_BRANCH" '{title:$title,body:$body,head:$head,base:$base}')" \
+          )"
+          PR_NUMBER="$(jq -r '.number' <<< "$PR_RESPONSE")"
+          PR_URL="$(jq -r '.html_url' <<< "$PR_RESPONSE")"
+          TARGET_SHA="${{ steps.push.outputs.target_sha }}"
+          STATE="$(jq -cn --arg target_repo "$TARGET_REPO" --argjson pr_number "$PR_NUMBER" --arg version "$VERSION" --arg source_sha "$SOURCE_SHA" --arg target_sha "$TARGET_SHA" --arg branch "$BRANCH" '{target_repo:$target_repo,pr_number:$pr_number,version:$version,source_sha:$source_sha,target_sha:$target_sha,branch:$branch}')"
+          VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
+          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
+          if [ "$STATUS" = "200" ]; then
+            curl -fsSL -X PATCH -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" \
+              -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
+          elif [ "$STATUS" = "404" ]; then
+            curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+              -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
+          else
+            echo "读取待发布状态失败，HTTP $STATUS" >&2
+            exit 1
+          fi
+          echo "$PR_URL"
+
+      - name: 输出已有 PR
+        if: inputs.operation == 'update_pr'
+        shell: bash
+        env:
+          TARGET_REPO: ${{ steps.release.outputs.branch }}
+          PR_TARGET: ${{ inputs.pr_target }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TARGET_REPO_VALUE="$(cat .sync-target-repo)"
+          HEAD="${{ env.SOURCE_OWNER }}:${{ steps.release.outputs.branch }}"
+          PR_RESPONSE="$(curl -fsSL -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$TARGET_REPO_VALUE/pulls?state=open&head=${HEAD//:/%3A}&per_page=10" \
+          )"
+          PR_NUMBER="$(jq -r '.[0].number' <<< "$PR_RESPONSE")"
+          PR_URL="$(jq -r '.[0].html_url' <<< "$PR_RESPONSE")"
+          VERSION="${{ steps.release.outputs.version }}"
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          TARGET_SHA="${{ steps.push.outputs.target_sha }}"
+          BRANCH="${{ steps.release.outputs.branch }}"
+          STATE="$(jq -cn --arg target_repo "$TARGET_REPO_VALUE" --argjson pr_number "$PR_NUMBER" --arg version "$VERSION" --arg source_sha "$SOURCE_SHA" --arg target_sha "$TARGET_SHA" --arg branch "$BRANCH" '{target_repo:$target_repo,pr_number:$pr_number,version:$version,source_sha:$source_sha,target_sha:$target_sha,branch:$branch}')"
+          VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
+          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
+          if [ "$STATUS" = "200" ]; then
+            curl -fsSL -X PATCH -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" \
+              -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
+          elif [ "$STATUS" = "404" ]; then
+            curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
+              -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
+          else
+            echo "读取待发布状态失败，HTTP $STATUS" >&2
+            exit 1
+          fi
+          echo "$PR_URL"
+
+  monitor-merged-pr:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 读取待发布状态
+        id: pending
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
+          STATUS="$(curl -sS -o variable.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
+          if [ "$STATUS" = "404" ]; then
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "当前没有待合并发布"
+            exit 0
+          fi
+          if [ "$STATUS" != "200" ]; then
+            cat variable.json >&2
+            exit 1
+          fi
+          STATE="$(jq -r '.value' variable.json)"
+          echo "active=true" >> "$GITHUB_OUTPUT"
+          echo "target_repo=$(jq -r '.target_repo' <<< "$STATE")" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$(jq -r '.pr_number' <<< "$STATE")" >> "$GITHUB_OUTPUT"
+          echo "version=$(jq -r '.version' <<< "$STATE")" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$(jq -r '.source_sha' <<< "$STATE")" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$(jq -r '.target_sha' <<< "$STATE")" >> "$GITHUB_OUTPUT"
+          echo "branch=$(jq -r '.branch' <<< "$STATE")" >> "$GITHUB_OUTPUT"
+
+      - name: 检出源码仓库
+        if: steps.pending.outputs.active == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_BRANCH }}
+          fetch-depth: 0
+
+      - name: 检查 PR 并创建 tag
+        if: steps.pending.outputs.active == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          TARGET_REPO: ${{ steps.pending.outputs.target_repo }}
+          PR_NUMBER: ${{ steps.pending.outputs.pr_number }}
+          VERSION: ${{ steps.pending.outputs.version }}
+          SOURCE_SHA: ${{ steps.pending.outputs.source_sha }}
+          TARGET_SHA: ${{ steps.pending.outputs.target_sha }}
+          BRANCH: ${{ steps.pending.outputs.branch }}
+        run: |
+          set -euo pipefail
+          PR="$(curl -fsSL -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/$TARGET_REPO/pulls/$PR_NUMBER")"
+          STATE="$(jq -r '.state' <<< "$PR")"
+          MERGED_AT="$(jq -r '.merged_at // empty' <<< "$PR")"
+          PR_HEAD_SHA="$(jq -r '.head.sha' <<< "$PR")"
+          VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
+          if [ "$STATE" = "closed" ] && [ -z "$MERGED_AT" ]; then
+            echo "PR 已关闭但未合并，清除待发布状态"
+            ENCODED_BRANCH="$(jq -rn --arg value "$BRANCH" '$value | @uri')"
+            curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/$TARGET_FORK/git/refs/heads/$ENCODED_BRANCH" >/dev/null
+            curl -fsSL -X DELETE -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
+            echo "源仓库版本提交会保留但不会创建 tag；下次发布将使用后续版本"
+            exit 0
+          fi
+          if [ -z "$MERGED_AT" ]; then
+            echo "PR 尚未合并，等待下次检查"
+            exit 0
+          fi
+          if [ "$PR_HEAD_SHA" != "$TARGET_SHA" ]; then
+            echo "PR 分支包含未由同步工作流记录的提交: expected=$TARGET_SHA actual=$PR_HEAD_SHA" >&2
+            echo "请先将修改回写源仓库并运行 update_pr" >&2
+            exit 1
+          fi
+          if ! git cat-file -e "$SOURCE_SHA^{commit}"; then
+            echo "记录的源码提交不存在: $SOURCE_SHA" >&2
+            exit 1
+          fi
+          TAG="v$VERSION"
+          if git show-ref --tags --verify --quiet "refs/tags/$TAG"; then
+            if [ "$(git rev-list -n 1 "$TAG")" != "$SOURCE_SHA" ]; then
+              echo "tag $TAG 已存在但未指向记录的源码提交" >&2
+              exit 1
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG" "$SOURCE_SHA"
+            git push origin "$TAG"
+          fi
+          curl -fsSL -X DELETE -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
+          echo "已为合并 PR 创建 $TAG 并停止跟踪"
