@@ -27,18 +27,10 @@ export function sanitizeNote(note: unknown): string {
     return (documentNode.body.textContent ?? "").replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
-// 规范化 UID 列表并兼容开发者测试字面值。
+// 规范化指定 UID 档案的全局运行设置。
 export function normalizeGlobalConfig(value: unknown): GlobalConfig {
-    // 原始对象兼容历史单 uid 字段。
     const source = record(value);
-    // 原始 UID 候选只接受数组或字符串。
-    const rawUids = Array.isArray(source.uids) ? source.uids : (typeof source.uid === "string" ? [source.uid] : []);
-    // 清洗结果去除重复、空值和 UID 非数字字符。
-    const uids = Array.from(new Set(rawUids.map((item) => {
-        const raw = String(item ?? "").trim();
-        return raw.toLowerCase() === "test" ? "test" : raw.replace(/\D/g, "");
-    }).filter(Boolean)));
-    return { uids: uids.length ? uids : [""], skipSafeTeleport: source.skipSafeTeleport === true };
+    return { skipSafeTeleport: source.skipSafeTeleport === true };
 }
 
 // 规范化四角色映射。
@@ -141,6 +133,9 @@ export function normalizePayload(value: unknown): CommissionConfigPayload {
         (Array.isArray(scopes) ? scopes : []).map((scope) => normalizeScope(scope, name)).sort((a, b) => a.label.localeCompare(b.label, "zh-CN")),
     ]));
     return {
+        uids: Array.isArray(source.uids) ? source.uids.filter((uid): uid is string => typeof uid === "string" && /^\d+$/.test(uid)) : [],
+        selectedUid: typeof source.selectedUid === "string" ? source.selectedUid : "",
+        currentUid: typeof source.currentUid === "string" ? source.currentUid : "",
         global: normalizeGlobalConfig(source.global),
         branches,
         party: { global: normalizeGlobalParty(partySource.global), scopesByCommission },

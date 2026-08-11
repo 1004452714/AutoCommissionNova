@@ -1,6 +1,5 @@
 // 全局运行配置。
 export interface GlobalConfig {
-    uids: string[];
     skipSafeTeleport: boolean;
 }
 
@@ -50,6 +49,9 @@ export interface GlobalPartyConfig {
 
 // 配置页一次加载和保存的组合视图。
 export interface CommissionConfigPayload {
+    uids: string[];
+    selectedUid: string;
+    currentUid: string;
     global: GlobalConfig;
     branches: Record<string, BranchConfig>;
     party: {
@@ -98,4 +100,10 @@ export interface BattleListGroup {
 export interface ConfigOperationResult {
     status: "ok" | "error";
     message?: string;
+}
+
+// 新建账号档案后返回最新的可选 UID 列表。
+export interface AccountOperationResult extends ConfigOperationResult {
+    uid?: string;
+    uids?: string[];
 }

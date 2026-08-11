@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { requestHtmlMask, toError } from "@/shared/bridge/html-mask";
 import UiSelect from "@/shared/components/UiSelect.vue";
+import FocusGuard from "@/shared/components/FocusGuard.vue";
 import { copy } from "@/shared/i18n/zh-CN";
 import type { OperationResult, TestConfig, TestOptions } from "@/apps/developer-test/types";
 
@@ -163,6 +164,7 @@ onMounted(loadOptions);
             </footer>
         </form>
     </main>
+    <FocusGuard />
 </template>
 
 <style scoped>

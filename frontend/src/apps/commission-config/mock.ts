@@ -4,7 +4,10 @@ import { DEFAULT_STRATEGY } from "@/apps/commission-config/model";
 
 // Mock 覆盖全局、成就分支和地点队伍三类视图。
 const payload: CommissionConfigPayload = {
-    global: { uids: ["100000001"], skipSafeTeleport: false },
+    uids: ["100000001"],
+    selectedUid: "100000001",
+    currentUid: "100000001",
+    global: { skipSafeTeleport: false },
     branches: {
         示例委托: {
             type: "achievement",

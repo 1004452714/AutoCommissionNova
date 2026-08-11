@@ -13,6 +13,7 @@ export const copy = {
         empty: "暂无数据",
         select: "请选择",
         noMatches: "无匹配项",
+        clickToContinue: "点击继续",
     },
     commissionConfig: {
         title: "委托配置工具",
@@ -27,6 +28,7 @@ export const copy = {
         searchBranch: "搜索分支配置委托",
         uid: "账号 UID",
         addUid: "新增 UID",
+        uidPlaceholder: "输入数字 UID，或输入 test",
         developerTest: "打开开发者测试",
         safeTeleport: "跳过传送七天神像",
         enabled: "已开启",

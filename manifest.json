@@ -20,8 +20,7 @@
     "main": "main.js",
     "library": [],
     "saved_files": [
-        "Data/user-config.json",
-        "Data/account-state.json",
+        "Data/user-config/",
         "Data/path-recorder-settings.json",
         "Data/process-editor-recents.json",
         "pathing/"
