@@ -34,7 +34,7 @@ async function verifyOutput(pageName) {
     if (/(?:src|href)=["']https?:\/\//i.test(source) || /url\(\s*["']?https?:\/\//i.test(source)) {
         throw new Error(`${pageName} 产物包含远程资源引用`);
     }
-    await writeFile(htmlPath, source.replace(/\r?\n/g, "\r\n").replace(/(?:\r\n)*$/, "\r\n"), "utf8");
+    await writeFile(htmlPath, source.replace(/\r*\n/g, "\r\n").replace(/(?:\r\n)*$/, "\r\n"), "utf8");
 }
 
 // 清理旧产物后顺序构建四个互不依赖的单文件入口。
