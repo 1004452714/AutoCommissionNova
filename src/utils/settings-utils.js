@@ -9,6 +9,10 @@
 const DEFAULT_SETTING = {
     runMode: "运行自动每日委托",
     showConfigEditor: true,
+    team: "",
+    elementTeam: "",
+    prepare: false,
+    skipRecognition: false,
 };
 
 let cachedSetting = null;
@@ -26,6 +30,11 @@ export function getSetting() {
                 : "运行自动每日委托",
             // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
             showConfigEditor: settings.showConfigEditor !== false,
+            // AutoCommission 0.98.x 兼容字段，仅供首次迁移使用。
+            team: typeof settings.team === "string" ? settings.team.trim() : "",
+            elementTeam: typeof settings.elementTeam === "string" ? settings.elementTeam.trim() : "",
+            prepare: settings.prepare === true,
+            skipRecognition: settings.skipRecognition === true,
         };
         log.debug("setting:{index}", cachedSetting);
         return cachedSetting;

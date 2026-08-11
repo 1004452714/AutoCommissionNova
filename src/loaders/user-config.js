@@ -1,6 +1,6 @@
 import { PATHS } from "../config/index.js";
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 function isPlainObject(value) {
     return value && typeof value === "object" && !Array.isArray(value);
@@ -9,6 +9,7 @@ function isPlainObject(value) {
 function emptyConfig() {
     return {
         schemaVersion: SCHEMA_VERSION,
+        migrations: { autoCommission098: false },
         uids: [],
         skipSafeTeleport: false,
         party: { global: {}, scopes: {} },
@@ -17,9 +18,13 @@ function emptyConfig() {
 
 function normalize(config) {
     const source = isPlainObject(config) ? config : {};
+    const migrations = isPlainObject(source.migrations) ? source.migrations : {};
     const party = isPlainObject(source.party) ? source.party : {};
     return {
         schemaVersion: SCHEMA_VERSION,
+        migrations: {
+            autoCommission098: migrations.autoCommission098 === true,
+        },
         uids: Array.isArray(source.uids) ? source.uids : [],
         skipSafeTeleport: source.skipSafeTeleport === true,
         party: {
