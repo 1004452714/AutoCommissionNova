@@ -32,7 +32,7 @@ export async function checkVersion() {
 
         const response = await http.request(
             "GET",
-            "https://cnb.cool/bettergi/bettergi-scripts-list/-/git/raw/release/repo/js/AutoCommission/manifest.json"
+            "https://cnb.cool/bettergi/bettergi-scripts-list/-/git/raw/release/repo/js/AutoCommissionNova/manifest.json"
         );
         const latestVersion = JSON.parse(response.body).version;
 
