@@ -40,6 +40,10 @@ const saveText = ref<string>(copy.common.loading);
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 // 宿主消息卸载函数由订阅适配器返回。
 let unsubscribe = (): void => undefined;
+// 浏览器侧交互按固定间隔通知宿主，供 30 秒无操作自动关闭计时。
+const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "pointermove", "keydown", "input", "wheel", "touchstart"];
+const activityThrottleMs = 5_000;
+let lastActivitySentAt = 0;
 // 策略选择器是否覆盖当前工作区。
 const strategyOpen = ref(false);
 // 策略目录读取状态。
@@ -361,14 +365,32 @@ function chooseStrategy(path: string): void {
     scheduleSave();
 }
 
+// 将真实键鼠活动节流上报，避免高频 pointermove 淹没 htmlMask 消息队列。
+function reportActivity(): void {
+    const now = Date.now();
+    if (now - lastActivitySentAt < activityThrottleMs) return;
+    lastActivitySentAt = now;
+    void requestHtmlMask<ConfigOperationResult>("/activity", {}, 2_000).catch(() => undefined);
+}
+
+function installActivityTracking(): void {
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, reportActivity, { passive: true }));
+}
+
+function removeActivityTracking(): void {
+    activityEvents.forEach((eventName) => window.removeEventListener(eventName, reportActivity));
+}
+
 // 卸载页面时移除宿主订阅并取消未触发的保存。
 function cleanupPage(): void {
     unsubscribe();
+    removeActivityTracking();
     if (saveTimer) clearTimeout(saveTimer);
 }
 
 // 读取组合配置并安装宿主推送处理器。
 async function initialize(): Promise<void> {
+    installActivityTracking();
     unsubscribe = subscribeHtmlMask((message) => {
         if (message.url === "/toggleVisibility") visible.value = (message.data as { visible?: boolean } | undefined)?.visible !== false;
     });
