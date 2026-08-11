@@ -152,7 +152,6 @@ jobs:
           BRANCH: ${{ steps.release.outputs.branch }}
           PR_TARGET: ${{ inputs.pr_target }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TARGET_REPO="$TARGET_UPSTREAM"
@@ -166,7 +165,7 @@ jobs:
           fi
 
           if [ "$OPERATION" = "new_pr" ]; then
-            VARIABLE_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE")"
+            VARIABLE_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE")"
             if [ "$VARIABLE_STATUS" = "200" ]; then
               echo "仍有待合并发布，不能创建新的发布 PR" >&2
               exit 1
@@ -332,7 +331,6 @@ jobs:
           TARGET_UPSTREAM: ${{ env.TARGET_UPSTREAM }}
           TARGET_BASE_BRANCH: ${{ env.TARGET_BASE_BRANCH }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TARGET_REPO="$TARGET_UPSTREAM"
@@ -349,12 +347,12 @@ jobs:
           TARGET_SHA="${{ steps.push.outputs.target_sha }}"
           STATE="$(jq -cn --arg target_repo "$TARGET_REPO" --argjson pr_number "$PR_NUMBER" --arg version "$VERSION" --arg source_sha "$SOURCE_SHA" --arg target_sha "$TARGET_SHA" --arg branch "$BRANCH" '{target_repo:$target_repo,pr_number:$pr_number,version:$version,source_sha:$source_sha,target_sha:$target_sha,branch:$branch}')"
           VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
-          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
+          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
           if [ "$STATUS" = "200" ]; then
-            curl -fsSL -X PATCH -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" \
+            curl -fsSL -X PATCH -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" \
               -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
           elif [ "$STATUS" = "404" ]; then
-            curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            curl -fsSL -X POST -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
               "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
               -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
           else
@@ -370,7 +368,6 @@ jobs:
           TARGET_REPO: ${{ steps.release.outputs.branch }}
           PR_TARGET: ${{ inputs.pr_target }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           TARGET_REPO_VALUE="$(cat .sync-target-repo)"
@@ -386,12 +383,12 @@ jobs:
           BRANCH="${{ steps.release.outputs.branch }}"
           STATE="$(jq -cn --arg target_repo "$TARGET_REPO_VALUE" --argjson pr_number "$PR_NUMBER" --arg version "$VERSION" --arg source_sha "$SOURCE_SHA" --arg target_sha "$TARGET_SHA" --arg branch "$BRANCH" '{target_repo:$target_repo,pr_number:$pr_number,version:$version,source_sha:$source_sha,target_sha:$target_sha,branch:$branch}')"
           VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
-          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
+          STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
           if [ "$STATUS" = "200" ]; then
-            curl -fsSL -X PATCH -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" \
+            curl -fsSL -X PATCH -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" \
               -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
           elif [ "$STATUS" = "404" ]; then
-            curl -fsSL -X POST -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            curl -fsSL -X POST -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
               "https://api.github.com/repos/${{ github.repository }}/actions/variables" \
               -d "$(jq -n --arg name PENDING_SCRIPT_RELEASE --arg value "$STATE" '{name:$name,value:$value}')" >/dev/null
           else
@@ -408,11 +405,11 @@ jobs:
         id: pending
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
           set -euo pipefail
           VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
-          STATUS="$(curl -sS -o variable.json -w '%{http_code}' -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
+          STATUS="$(curl -sS -o variable.json -w '%{http_code}' -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
           if [ "$STATUS" = "404" ]; then
             echo "active=false" >> "$GITHUB_OUTPUT"
             echo "当前没有待合并发布"
@@ -442,7 +439,6 @@ jobs:
         if: steps.pending.outputs.active == 'true'
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
           TARGET_REPO: ${{ steps.pending.outputs.target_repo }}
           PR_NUMBER: ${{ steps.pending.outputs.pr_number }}
@@ -462,7 +458,7 @@ jobs:
             ENCODED_BRANCH="$(jq -rn --arg value "$BRANCH" '$value | @uri')"
             curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
               "https://api.github.com/repos/$TARGET_FORK/git/refs/heads/$ENCODED_BRANCH" >/dev/null
-            curl -fsSL -X DELETE -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
+            curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
             echo "源仓库版本提交会保留但不会创建 tag；下次发布将使用后续版本"
             exit 0
           fi
@@ -491,5 +487,5 @@ jobs:
             git tag "$TAG" "$SOURCE_SHA"
             git push origin "$TAG"
           fi
-          curl -fsSL -X DELETE -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
+          curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
           echo "已为合并 PR 创建 $TAG 并停止跟踪"
