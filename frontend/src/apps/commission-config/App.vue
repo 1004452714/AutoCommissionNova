@@ -42,7 +42,11 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let unsubscribe = (): void => undefined;
 // 浏览器侧交互按固定间隔通知宿主，供 30 秒无操作自动关闭计时。
 const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "pointermove", "keydown", "input", "wheel", "touchstart"];
+const idleTimeoutMs = 30_000;
 const activityThrottleMs = 5_000;
+const idleSecondsRemaining = ref(idleTimeoutMs / 1000);
+let idleDeadlineAt = Date.now() + idleTimeoutMs;
+let idleCountdownTimer: ReturnType<typeof setInterval> | undefined;
 let lastActivitySentAt = 0;
 // 策略选择器是否覆盖当前工作区。
 const strategyOpen = ref(false);
@@ -365,8 +369,19 @@ function chooseStrategy(path: string): void {
     scheduleSave();
 }
 
+// 本地倒计时即时响应用户活动，宿主仍负责最终关闭判定。
+function resetIdleCountdown(): void {
+    idleDeadlineAt = Date.now() + idleTimeoutMs;
+    idleSecondsRemaining.value = idleTimeoutMs / 1000;
+}
+
+function updateIdleCountdown(): void {
+    idleSecondsRemaining.value = Math.max(0, Math.ceil((idleDeadlineAt - Date.now()) / 1000));
+}
+
 // 将真实键鼠活动节流上报，避免高频 pointermove 淹没 htmlMask 消息队列。
 function reportActivity(): void {
+    resetIdleCountdown();
     const now = Date.now();
     if (now - lastActivitySentAt < activityThrottleMs) return;
     lastActivitySentAt = now;
@@ -374,6 +389,8 @@ function reportActivity(): void {
 }
 
 function installActivityTracking(): void {
+    resetIdleCountdown();
+    idleCountdownTimer = setInterval(updateIdleCountdown, 250);
     activityEvents.forEach((eventName) => window.addEventListener(eventName, reportActivity, { passive: true }));
 }
 
@@ -385,6 +402,7 @@ function removeActivityTracking(): void {
 function cleanupPage(): void {
     unsubscribe();
     removeActivityTracking();
+    if (idleCountdownTimer) clearInterval(idleCountdownTimer);
     if (saveTimer) clearTimeout(saveTimer);
 }
 
@@ -444,7 +462,7 @@ onBeforeUnmount(cleanupPage);
         <main class="workspace">
             <header class="topbar">
                 <div><h1>{{ text.title }}</h1><span :class="`save-${saveState}`">{{ saveText }}</span></div>
-                <button class="primary" :disabled="closing" @click="requestClose">{{ text.close }}</button>
+                <div class="topbar-actions"><span class="idle-countdown">{{ idleSecondsRemaining }}秒后自动关闭</span><button class="primary" :disabled="closing" @click="requestClose">{{ text.close }}</button></div>
             </header>
 
             <section v-if="currentTab === 'global'" class="content form-content">
@@ -552,6 +570,7 @@ onBeforeUnmount(cleanupPage);
 .workspace { min-width:0; flex:1; display:flex; flex-direction:column; }
 .topbar { height:62px; flex:none; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:0 20px; border-bottom:1px solid var(--color-border); }
 .topbar>div { display:flex; align-items:baseline; gap:14px; }
+.topbar .topbar-actions { align-items:center; }.idle-countdown { color:var(--color-warning); font-size:14px; white-space:nowrap; }
 h1,h2,h3,h4,p { margin:0; } h1 { font-size:20px; } h2 { font-size:18px; } h3 { font-size:16px; } h4 { font-size:14px; }
 .save-saving { color:var(--color-warning); }.save-saved { color:var(--color-success); }.save-error { color:var(--color-error); }
 .content { min-height:0; flex:1; overflow:auto; padding:16px 20px 24px; }
