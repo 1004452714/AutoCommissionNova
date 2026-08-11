@@ -1,22 +1,27 @@
 :root {
     color-scheme: dark;
     --color-page: transparent;
-    --color-workspace: #141920;
-    --color-surface: #181d24;
-    --color-surface-raised: #202630;
-    --color-navigation: #141920;
-    --color-border: #313a47;
-    --color-border-strong: #4a5768;
-    --color-text: #edf2f7;
-    --color-text-muted: #9aa7b7;
-    --color-primary: #4d8dff;
-    --color-primary-hover: #66a0ff;
-    --color-success: #66d29b;
-    --color-warning: #f0c36a;
-    --color-error: #ff7474;
+    --color-workspace: #111518;
+    --color-surface: #171c1f;
+    --color-surface-raised: #202629;
+    --color-surface-hover: #293033;
+    --color-navigation: #13181b;
+    --color-border: #30383b;
+    --color-border-strong: #4a575a;
+    --color-text: #edf2f1;
+    --color-text-muted: #98a5a4;
+    --color-primary: #2ca58d;
+    --color-primary-hover: #38b99e;
+    --color-primary-soft: rgba(44, 165, 141, 0.16);
+    --color-success: #61c995;
+    --color-warning: #e1b760;
+    --color-error: #ee7272;
+    --color-focus: #67d4bd;
     --radius-control: 6px;
     --radius-panel: 8px;
-    --control-height: 36px;
+    --control-height: 34px;
+    --shadow-popover: 0 16px 38px rgba(0, 0, 0, 0.48);
+    --shadow-window: 0 18px 52px rgba(0, 0, 0, 0.56);
     --font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
     --workspace-width: 67.708333vw;
     --workspace-height: 74.074074vh;
@@ -57,6 +62,13 @@ button,
     color: var(--color-text);
 }
 
+button,
+input,
+select,
+textarea {
+    transition: border-color 180ms, background-color 180ms, color 180ms, box-shadow 180ms, opacity 180ms;
+}
+
 select.control {
     appearance: none;
     padding-right: 34px;
@@ -95,12 +107,11 @@ select.control optgroup {
 button {
     padding: 0 12px;
     cursor: pointer;
-    transition: border-color 180ms, background-color 180ms, color 180ms, transform 120ms;
 }
 
 button:hover:not(:disabled) {
     border-color: var(--color-border-strong);
-    background: #29313d;
+    background: var(--color-surface-hover);
 }
 
 button:active:not(:disabled) {
@@ -108,7 +119,10 @@ button:active:not(:disabled) {
 }
 
 button:disabled,
-.control:disabled {
+.control:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
     cursor: not-allowed;
     opacity: 0.45;
 }
@@ -121,6 +135,10 @@ button.primary {
 
 button.primary:hover:not(:disabled) {
     background: var(--color-primary-hover);
+}
+
+button.primary:active:not(:disabled) {
+    background: #238a76;
 }
 
 button.danger {
@@ -136,13 +154,89 @@ textarea {
     outline: none;
 }
 
+input:hover:not(:disabled),
+textarea:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
 textarea {
     resize: vertical;
 }
 
 :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--color-focus);
     outline-offset: 2px;
+}
+
+input[type="checkbox"] {
+    appearance: none;
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 4px;
+    background: var(--color-surface-raised);
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+input[type="checkbox"]:checked {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    box-shadow: inset 0 0 0 3px var(--color-primary), inset 0 0 0 5px #fff;
+}
+
+.drag,
+.drag-handle {
+    color: var(--color-text-muted);
+    cursor: grab;
+}
+
+.drag:active,
+.drag-handle:active {
+    color: var(--color-primary-hover);
+    cursor: grabbing;
+}
+
+.pagination,
+.ui-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: var(--control-height);
+}
+
+.pagination button,
+.ui-pagination button {
+    min-width: 32px;
+    padding: 0 8px;
+}
+
+.pagination button[aria-current="page"],
+.ui-pagination button[aria-current="page"] {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-hover);
+}
+
+.is-loading,
+[aria-busy="true"] {
+    cursor: progress;
+}
+
+.empty-state {
+    color: var(--color-text-muted);
+    text-align: center;
 }
 
 .status-error {

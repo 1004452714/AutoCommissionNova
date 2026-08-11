@@ -3,11 +3,12 @@ import { convertStepType, defaultStep, diagnosticText, parseOptionalJson } from 
 import { DEFAULT_SETTINGS, changePointAction, clonePoints, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints, timeControlValue } from "@/apps/path-recorder/model";
 
 describe("commission config model", () => {
-    it("normalizes uid and legacy branch payloads", () => {
-        expect(normalizeGlobalConfig({ uids: [" 123-45 ", "test", "12345"] })).toEqual({ uids: ["12345", "test"], skipSafeTeleport: false });
+    it("normalizes account settings and legacy branch payloads", () => {
+        expect(normalizeGlobalConfig({ skipSafeTeleport: true })).toEqual({ skipSafeTeleport: true });
         // 旧组合格式整体作为分支映射处理。
         const payload = normalizePayload({ 示例: { descriptions: { a: "分支" }, conditions: {}, completed: [] } });
         expect(payload.branches.示例.descriptions.a).toBe("分支");
+        expect(payload.uids).toEqual([]);
         expect(normalizeStrategyValue("folder/demo.txt")).toBe("folder/demo");
     });
 

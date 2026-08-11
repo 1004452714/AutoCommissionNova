@@ -322,7 +322,7 @@ describe("process editor workflows", () => {
         expect(selectors.slice(0, 4).map((selector) => (selector.element as HTMLButtonElement).textContent?.trim())).toEqual(["请选择", "请选择", "请选择", "请选择"]);
         expect(selectors[1].attributes("disabled")).toBeDefined();
         expect(wrapper.find(".sidebar>button").attributes("disabled")).toBeDefined();
-        expect(wrapper.find(".side-actions button").attributes("disabled")).toBeDefined();
+        expect(wrapper.find(".side-actions button.primary").attributes("disabled")).toBeDefined();
         expect(request.mock.calls.some((call) => call[0] === "/target")).toBe(false);
         await wrapper.findAll(".mode-switch button")[1].trigger("click");
         expect(wrapper.findAll(".sidebar .scope-field")).toHaveLength(5);
@@ -646,27 +646,52 @@ describe("path recorder workflows", () => {
 });
 
 describe("commission config battle list", () => {
-    it("keeps the test UID entry hidden behind the add button", async () => {
-        // 字面值 test 仍显示普通新增文案，并由点击触发开发者测试协议。
-        const payload = { global: { uids: ["test"], skipSafeTeleport: true }, branches: {}, party: { global: {}, scopesByCommission: {} } };
+    it("opens developer testing when test is entered as a new UID", async () => {
+        // test 不创建账号文件，仅由新增输入触发开发者测试协议。
+        const payload = { uids: ["123"], selectedUid: "123", currentUid: "123", global: { skipSafeTeleport: true }, branches: {}, party: { global: {}, scopesByCommission: {} } };
         const request = installHost(async (url) => url === "/loadConfig" ? payload : { status: "ok" });
         const wrapper = mount(CommissionConfig);
         await flushPromises();
-        const addButton = wrapper.findAll("button").find((button) => button.text() === "新增 UID");
-        expect(addButton).toBeDefined();
         expect(wrapper.text()).toContain("跳过传送七天神像");
-        expect(wrapper.find(".uid-grid").exists()).toBe(true);
-        expect(wrapper.find(".uid-field button[aria-label='删除'] svg").exists()).toBe(true);
+        expect(wrapper.findAll(".appbar .tabs [role='tab']")).toHaveLength(3);
+        expect(wrapper.find(".workarea-global .sidebar").exists()).toBe(false);
+        expect(wrapper.find(".account-row").exists()).toBe(true);
+        expect(wrapper.text()).not.toContain("删除");
+        await wrapper.find(".account-row input").setValue("test");
+        const addButton = wrapper.findAll("button").find((button) => button.text() === "打开开发者测试");
         await addButton?.trigger("click");
         await flushPromises();
         expect(request).toHaveBeenCalledWith("/openDeveloperTest", {});
-        expect(wrapper.text()).toContain("新增 UID");
+        wrapper.unmount();
+    });
+
+    it("saves the previous UID before loading another account", async () => {
+        // 两个账号拥有独立加载响应，切换动作必须先提交当前账号内容。
+        const payload = (uid: string, skipSafeTeleport: boolean) => ({
+            uids: ["123", "456"], selectedUid: uid, currentUid: "123",
+            global: { skipSafeTeleport }, branches: {}, party: { global: {}, scopesByCommission: {} },
+        });
+        const request = installHost(async (url, data) => {
+            const requestData = data as { uid?: string };
+            if (url === "/loadConfig") return requestData.uid === "456" ? payload("456", false) : payload("123", true);
+            return { status: "ok" };
+        });
+        const wrapper = mount(CommissionConfig);
+        await flushPromises();
+        await wrapper.find(".toggle-row .switch").trigger("click");
+        await chooseUiOption(wrapper.find(".account-row .ui-select"), "456");
+        const calls = request.mock.calls.map(([url, data]) => ({ url, data: data as { uid?: string } }));
+        const saveIndex = calls.findIndex((call) => call.url === "/saveConfig" && call.data.uid === "123");
+        const loadIndex = calls.findIndex((call) => call.url === "/loadConfig" && call.data.uid === "456");
+        expect(saveIndex).toBeGreaterThan(-1);
+        expect(loadIndex).toBeGreaterThan(saveIndex);
+        expect(wrapper.text()).toContain("456");
         wrapper.unmount();
     });
 
     it("renders grouped counts and opens the first search result", async () => {
         // 组合配置包含 NPC 多地点委托和 Basic 委托。
-        const payload = { global: { uids: ["123"], skipSafeTeleport: false }, branches: {}, party: { global: {}, scopesByCommission: {
+        const payload = { uids: ["123"], selectedUid: "123", currentUid: "123", global: { skipSafeTeleport: false }, branches: {}, party: { global: {}, scopesByCommission: {
             多地点委托: [{ country: "璃月", typeDir: "NPC", locationDir: "甲" }, { country: "璃月", typeDir: "NPC", locationDir: "乙" }],
             基础委托: [{ country: "蒙德", typeDir: "Basic", locationDir: "城外" }],
         } } };

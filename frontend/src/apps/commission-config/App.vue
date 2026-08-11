@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { Trash2 } from "@lucide/vue";
+import { ChevronRight, FolderOpen, MapPin, RotateCcw, X } from "@lucide/vue";
 import { requestHtmlMask, subscribeHtmlMask, toError } from "@/shared/bridge/html-mask";
 import UiSelect from "@/shared/components/UiSelect.vue";
+import FocusGuard from "@/shared/components/FocusGuard.vue";
 import { copy } from "@/shared/i18n/zh-CN";
 import { DEFAULT_STRATEGY, ROLE_SLOTS, buildBattleGroups, filterBattleScopes, globalConfigForSave, normalizePayload, normalizeStrategyValue } from "@/apps/commission-config/model";
-import type { BranchConfig, CommissionConfigPayload, ConfigOperationResult, PartyScope, StrategyEntry, StrategyNode, TeamConfig } from "@/apps/commission-config/types";
+import type { AccountOperationResult, BranchConfig, CommissionConfigPayload, ConfigOperationResult, PartyScope, StrategyEntry, StrategyNode, TeamConfig } from "@/apps/commission-config/types";
 
 // 页面文案由共享中文文案表提供。
 const text = copy.commissionConfig;
@@ -13,6 +14,8 @@ const text = copy.commissionConfig;
 const commonText = copy.common;
 // 初始化前使用完整的空配置，避免模板访问空对象。
 const config = ref<CommissionConfigPayload>(normalizePayload({}));
+// 新账号输入只接受数字 UID 或开发者测试关键字。
+const newUid = ref("");
 // 当前一级视图决定侧栏和详情内容。
 const currentTab = ref<"global" | "battle" | "branch">("global");
 // 当前委托名称在战斗和分支视图间独立校正。
@@ -38,6 +41,8 @@ const saveState = ref<"" | "saving" | "saved" | "error">("");
 const saveText = ref<string>(copy.common.loading);
 // 自动保存定时器合并连续输入。
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+// 保存队列保证切换账号时先完成前一个账号的写入。
+let saveQueue: Promise<void> = Promise.resolve();
 // 宿主消息卸载函数由订阅适配器返回。
 let unsubscribe = (): void => undefined;
 // 策略选择器是否覆盖当前工作区。
@@ -195,16 +200,15 @@ function branchProgress(name: string): string {
     return `${branch.completed.filter((id) => ids.includes(id)).length}/${ids.length}`;
 }
 
-// 将 UID 输入限制为数字或开发者测试字面值。
-function updateUid(index: number, event: Event): void {
+// 将新增 UID 输入限制为数字或开发者测试字面值。
+function updateNewUid(event: Event): void {
     const raw = (event.target as HTMLInputElement).value.trim();
-    config.value.global.uids[index] = /^[a-z]+$/i.test(raw) ? raw.toLowerCase() : raw.replace(/\D/g, "");
-    scheduleSave();
+    newUid.value = /^[a-z]+$/i.test(raw) ? raw.toLowerCase() : raw.replace(/\D/g, "");
 }
 
-// 新增 UID 行，存在 test 时改为打开开发者测试页。
+// 新建数字 UID 档案，test 则保持开发者测试入口兼容行为。
 async function addUid(): Promise<void> {
-    if (config.value.global.uids.some((uid) => uid.toLowerCase() === "test")) {
+    if (newUid.value === "test") {
         closing.value = true;
         try {
             await requestHtmlMask<ConfigOperationResult>("/openDeveloperTest", {});
@@ -215,15 +219,46 @@ async function addUid(): Promise<void> {
         }
         return;
     }
-    config.value.global.uids.push("");
-    scheduleSave();
+    if (!/^\d+$/.test(newUid.value)) return;
+    try {
+        await flushPendingSave();
+        const result = await requestHtmlMask<AccountOperationResult, { uid: string }>("/createAccount", { uid: newUid.value }, 5000);
+        if (result.status !== "ok" || !result.uid) throw new Error(result.message || "新增 UID 失败");
+        config.value.uids = result.uids ?? config.value.uids;
+        newUid.value = "";
+        await switchAccount(result.uid);
+    } catch (error) {
+        saveState.value = "error";
+        saveText.value = toError(error).message;
+    }
 }
 
-// 删除指定 UID 并保留至少一个可编辑行。
-function removeUid(index: number): void {
-    config.value.global.uids.splice(index, 1);
-    if (!config.value.global.uids.length) config.value.global.uids.push("");
-    scheduleSave();
+// 保存当前账号后加载目标 UID 的完整独立视图。
+async function switchAccount(uid: string): Promise<void> {
+    if (!uid || uid === config.value.selectedUid) return;
+    await flushPendingSave();
+    saveState.value = "saving";
+    saveText.value = copy.common.loading;
+    try {
+        config.value = normalizePayload(await requestHtmlMask<unknown, { uid: string }>("/loadConfig", { uid }, 5000));
+        saveState.value = "saved";
+        saveText.value = text.loaded;
+        setTab(currentTab.value);
+    } catch (error) {
+        saveState.value = "error";
+        saveText.value = toError(error, "切换 UID 失败").message;
+    }
+}
+
+// 立即清空定时器并等待保存队列完成。
+async function flushPendingSave(): Promise<void> {
+    if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = undefined;
+        await saveConfig();
+    } else {
+        await saveQueue;
+    }
 }
 
 // 合并连续编辑并在 300ms 后保存完整配置。
@@ -239,6 +274,8 @@ function scheduleSave(): void {
 
 // 将当前组合视图按原协议写回 BetterGI。
 async function saveConfig(): Promise<void> {
+    const uid = config.value.selectedUid;
+    if (!uid) return;
     saveState.value = "saving";
     saveText.value = text.saving;
     // 保存内容保持原有 global、branches、party 三段结构。
@@ -247,11 +284,15 @@ async function saveConfig(): Promise<void> {
         branches: config.value.branches,
         party: config.value.party,
     }, null, 4);
-    try {
-        const result = await requestHtmlMask<ConfigOperationResult, { content: string }>("/saveConfig", { content }, 5000);
+    const operation = async (): Promise<void> => {
+        const result = await requestHtmlMask<ConfigOperationResult, { uid: string; content: string }>("/saveConfig", { uid, content }, 5000);
         if (result.status !== "ok") throw new Error(result.message || "保存失败");
         saveState.value = "saved";
         saveText.value = text.saved;
+    };
+    saveQueue = saveQueue.then(operation, operation);
+    try {
+        await saveQueue;
     } catch (error) {
         saveState.value = "error";
         saveText.value = `保存失败：${toError(error).message}`;
@@ -262,11 +303,7 @@ async function saveConfig(): Promise<void> {
 async function requestClose(): Promise<void> {
     if (closing.value) return;
     closing.value = true;
-    if (saveTimer) {
-        clearTimeout(saveTimer);
-        saveTimer = undefined;
-        await saveConfig();
-    }
+    await flushPendingSave();
     try {
         await requestHtmlMask<ConfigOperationResult>("/close", {}, 5000);
     } catch (error) {
@@ -389,15 +426,20 @@ onBeforeUnmount(cleanupPage);
 
 <template>
     <div v-show="visible" class="shell workspace-frame">
-        <aside class="sidebar">
-            <div class="tabs" role="tablist">
-                <button :class="{ active: currentTab === 'global' }" @click="setTab('global')">{{ text.global }}</button>
-                <button :class="{ active: currentTab === 'battle' }" @click="setTab('battle')">{{ text.battle }}</button>
-                <button :class="{ active: currentTab === 'branch' }" @click="setTab('branch')">{{ text.branch }}</button>
-            </div>
-            <input v-if="currentTab !== 'global'" v-model.trim="searchTerm" class="control search" :placeholder="currentTab === 'battle' ? text.searchBattle : text.searchBranch">
+        <header class="appbar">
+            <div class="app-identity"><span class="app-mark" aria-hidden="true">AC</span><div><h1>{{ text.title }}</h1><span :class="`save-${saveState}`" role="status" aria-live="polite">{{ saveText }}</span></div></div>
+            <nav class="tabs" role="tablist" :aria-label="text.title">
+                <button role="tab" :aria-selected="currentTab === 'global'" :class="{ active: currentTab === 'global' }" @click="setTab('global')">{{ text.global }}</button>
+                <button role="tab" :aria-selected="currentTab === 'battle'" :class="{ active: currentTab === 'battle' }" @click="setTab('battle')">{{ text.battle }}</button>
+                <button role="tab" :aria-selected="currentTab === 'branch'" :class="{ active: currentTab === 'branch' }" @click="setTab('branch')">{{ text.branch }}</button>
+            </nav>
+            <button class="close-action" :disabled="closing" :title="text.close" @click="requestClose"><X :size="16" aria-hidden="true" /><span>{{ text.close }}</span></button>
+        </header>
+
+        <div class="workarea" :class="{ 'workarea-global': currentTab === 'global' }">
+        <aside v-if="currentTab !== 'global'" class="sidebar">
+            <input v-model.trim="searchTerm" class="control search" :placeholder="currentTab === 'battle' ? text.searchBattle : text.searchBranch">
             <div v-if="!loaded" class="empty">{{ commonText.loading }}</div>
-            <div v-else-if="currentTab === 'global'" class="empty">{{ text.global }}</div>
             <nav v-else-if="currentTab === 'branch'" class="commission-list" aria-label="分支委托列表">
                 <button v-for="name in filteredCommissions" :key="name" :class="{ active: selectedCommission === name }" @click="selectCommission(name)">
                     <span>{{ name }}</span><small>{{ branchProgress(name) }}</small>
@@ -406,35 +448,28 @@ onBeforeUnmount(cleanupPage);
             </nav>
             <nav v-else class="commission-list battle-list" aria-label="战斗委托列表">
                 <section v-for="country in battleGroups" :key="country.key" class="battle-country">
-                    <button class="country-header" :aria-expanded="battleCountryOpen(country.key)" @click="toggleBattleCountry(country.key)"><span><i>{{ battleCountryOpen(country.key) ? '▾' : '▸' }}</i>{{ country.title }}</span><small>{{ country.count }}</small></button>
+                    <button class="country-header" :aria-expanded="battleCountryOpen(country.key)" @click="toggleBattleCountry(country.key)"><span><ChevronRight :size="14" :class="{ 'is-open': battleCountryOpen(country.key) }" aria-hidden="true" />{{ country.title }}</span><small>{{ country.count }}</small></button>
                     <div v-show="battleCountryOpen(country.key)" class="country-groups">
                         <section v-for="group in country.groups" :key="group.key" class="battle-group">
-                            <button class="group-header" :aria-expanded="battleTypeOpen(country.key, group.key)" @click="toggleBattleType(group.key)"><span><i>{{ battleTypeOpen(country.key, group.key) ? '▾' : '▸' }}</i>{{ group.title }}</span><small>{{ group.items.length }}</small></button>
+                            <button class="group-header" :aria-expanded="battleTypeOpen(country.key, group.key)" @click="toggleBattleType(group.key)"><span><ChevronRight :size="14" :class="{ 'is-open': battleTypeOpen(country.key, group.key) }" aria-hidden="true" />{{ group.title }}</span><small>{{ group.items.length }}</small></button>
                             <div v-show="battleTypeOpen(country.key, group.key)" class="group-items"><button v-for="item in group.items" :key="`${group.key}-${item.name}`" :class="{ active: battleCommissionSelected(item.name, country.title, group.title) }" @click="selectCommission(item.name, country.title, group.title)"><span>{{ item.name }}</span><small v-if="item.progress">{{ item.progress }}</small></button></div>
                         </section>
                     </div>
                 </section>
                 <div v-if="!filteredBattleCount" class="empty">{{ commonText.empty }}</div>
             </nav>
-            <footer class="side-footer">{{ currentTab === 'global' ? 'Data/user-config.json' : currentTab === 'battle' ? `共 ${filteredBattleCount} 个 · Data/user-config.json` : 'config/branches' }}</footer>
+            <footer class="side-footer"><span>{{ currentTab === 'branch' ? 'config/branches' : `Data/user-config/${config.selectedUid || '<uid>'}.json` }}</span></footer>
         </aside>
 
         <main class="workspace">
-            <header class="topbar">
-                <div><h1>{{ text.title }}</h1><span :class="`save-${saveState}`">{{ saveText }}</span></div>
-                <button class="primary" :disabled="closing" @click="requestClose">{{ text.close }}</button>
-            </header>
-
             <section v-if="currentTab === 'global'" class="content form-content">
                 <article class="section">
                     <h2>{{ text.uid }}</h2>
-                    <div class="uid-grid">
-                        <div v-for="(uid, index) in config.global.uids" :key="index" class="uid-field">
-                            <input class="control" :value="uid" @input="updateUid(index, $event)">
-                            <button class="danger icon" :title="commonText.delete" :aria-label="commonText.delete" @click="removeUid(index)"><Trash2 :size="17" aria-hidden="true" /></button>
-                        </div>
+                    <div class="account-row">
+                        <UiSelect :model-value="config.selectedUid" :options="config.uids.map((uid) => ({ value: uid, label: uid === config.currentUid ? `${uid}（当前游戏）` : uid }))" :aria-label="text.uid" width="content" :max-width="280" @change="switchAccount" />
+                        <input class="control" :value="newUid" :placeholder="text.uidPlaceholder" @input="updateNewUid" @keydown.enter="addUid">
+                        <button :disabled="!newUid" @click="addUid">{{ newUid === 'test' ? text.developerTest : text.addUid }}</button>
                     </div>
-                    <button @click="addUid">{{ text.addUid }}</button>
                 </article>
                 <article class="section toggle-row">
                     <div><h2>{{ text.safeTeleport }}</h2><span>{{ config.global.skipSafeTeleport ? text.enabled : text.disabled }}</span></div>
@@ -448,7 +483,7 @@ onBeforeUnmount(cleanupPage);
                         <label>{{ text.roleParty }}（战斗）<input v-model="config.party.global.customBattleTeamName" class="control" @input="scheduleSave"></label>
                         <label>{{ text.roleParty }}（采集）<input v-model="config.party.global.customElementTeamName" class="control" @input="scheduleSave"></label>
                         <label class="wide">{{ text.strategy }}
-                            <div class="inline-field"><input v-model="config.party.global.battleStrategy" class="control" @input="scheduleSave"><button @click="openStrategy(config.party.global, 'battleStrategy')">{{ text.selectStrategy }}</button><button @click="config.party.global.battleStrategy = DEFAULT_STRATEGY; scheduleSave()">{{ text.useDefault }}</button></div>
+                            <div class="inline-field"><input v-model="config.party.global.battleStrategy" class="control" @input="scheduleSave"><button @click="openStrategy(config.party.global, 'battleStrategy')"><FolderOpen :size="15" aria-hidden="true" />{{ text.selectStrategy }}</button><button @click="config.party.global.battleStrategy = DEFAULT_STRATEGY; scheduleSave()"><RotateCcw :size="15" aria-hidden="true" />{{ text.useDefault }}</button></div>
                         </label>
                     </div>
                 </article>
@@ -478,7 +513,7 @@ onBeforeUnmount(cleanupPage);
                 <template v-else-if="selectedScopes.length">
                     <header class="detail-header"><h2>{{ selectedCommission }}</h2></header>
                     <article v-for="scope in selectedScopes" :key="scope.key" class="section scope-card">
-                        <header><h3>{{ scopeTitle(scope) }}</h3><button @click="locateScope(scope)">{{ text.locate }}</button></header>
+                        <header><h3>{{ scopeTitle(scope) }}</h3><button class="inline-action" @click="locateScope(scope)"><MapPin :size="15" aria-hidden="true" />{{ text.locate }}</button></header>
                         <div class="team-columns">
                             <div v-for="kind in (['battle', 'collect'] as const)" :key="kind" class="team-section">
                                 <header><h4>{{ kind === 'battle' ? '战斗配置' : '元素采集配置' }}</h4><div class="segmented"><button :class="{ active: scope.config[kind].mode === 'global' }" @click="scope.config[kind].mode = 'global'; scheduleSave()">{{ text.inheritGlobal }}</button><button :class="{ active: scope.config[kind].mode === 'custom' }" @click="scope.config[kind].mode = 'custom'; scheduleSave()">{{ text.custom }}</button></div></header>
@@ -489,7 +524,7 @@ onBeforeUnmount(cleanupPage);
                                         <label class="wide">{{ text.roleParty }}<input v-model="scope.config[kind].customTeamName" class="control" maxlength="10" @input="scheduleSave"></label>
                                         <label v-for="slot in ROLE_SLOTS" :key="slot">{{ text.role }} {{ slot }}<input v-model="scope.config[kind].roles[slot]" class="control" maxlength="6" @input="scheduleSave"></label>
                                     </div>
-                                    <label v-if="kind === 'battle'" class="strategy-field">{{ text.strategy }}<div class="inline-field"><input v-model="scope.config.battle.strategy" class="control" maxlength="20" @input="scheduleSave"><button @click="openStrategy(scope.config.battle, 'strategy')">{{ text.selectStrategy }}</button><button @click="scope.config.battle.strategy = DEFAULT_STRATEGY; scheduleSave()">{{ text.useDefault }}</button></div></label>
+                                    <label v-if="kind === 'battle'" class="strategy-field">{{ text.strategy }}<div class="inline-field"><input v-model="scope.config.battle.strategy" class="control" maxlength="20" @input="scheduleSave"><button @click="openStrategy(scope.config.battle, 'strategy')"><FolderOpen :size="15" aria-hidden="true" />{{ text.selectStrategy }}</button><button @click="scope.config.battle.strategy = DEFAULT_STRATEGY; scheduleSave()"><RotateCcw :size="15" aria-hidden="true" />{{ text.useDefault }}</button></div></label>
                                 </template>
                             </div>
                         </div>
@@ -499,10 +534,11 @@ onBeforeUnmount(cleanupPage);
             </section>
         </main>
     </div>
+    </div>
 
     <div v-if="visible && strategyOpen" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="选择策略" @click.self="strategyOpen = false">
         <div class="modal">
-            <header><h2>{{ text.selectStrategy }}</h2><button @click="strategyOpen = false">{{ commonText.close }}</button></header>
+            <header><h2>{{ text.selectStrategy }}</h2><button :title="commonText.close" @click="strategyOpen = false"><X :size="16" aria-hidden="true" /><span>{{ commonText.close }}</span></button></header>
             <div class="strategy-actions"><button class="primary" @click="chooseStrategy(DEFAULT_STRATEGY)">{{ text.useDefault }}</button><span>{{ text.currentValue }}：{{ strategySelected }}</span></div>
             <div v-if="strategyError" class="status-error">{{ strategyError }}</div>
             <div v-else-if="strategyLoading" class="empty">{{ text.loadingStrategy }}</div>
@@ -514,6 +550,7 @@ onBeforeUnmount(cleanupPage);
             </div>
         </div>
     </div>
+    <FocusGuard />
 </template>
 
 <style scoped>
@@ -536,7 +573,7 @@ h1,h2,h3,h4,p { margin:0; } h1 { font-size:20px; } h2 { font-size:18px; } h3 { f
 .form-content { display:grid; align-content:start; gap:12px; }
 .section { margin-bottom:12px; padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-panel); background:var(--color-surface); }
 .section h2 { margin-bottom:12px; }
-.inline-field { display:flex; align-items:center; gap:8px; margin-bottom:8px; }.inline-field .control { flex:1; }.uid-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:10px; }.uid-field { display:grid; grid-template-columns:minmax(0,1fr) 36px; gap:6px; }
+.inline-field { display:flex; align-items:center; gap:8px; margin-bottom:8px; }.inline-field .control { flex:1; }.account-row { display:grid; grid-template-columns:max-content minmax(180px,1fr) max-content; align-items:center; gap:8px; }
 .icon { width:36px; padding:0; }
 .toggle-row { display:flex; align-items:center; justify-content:space-between; }.toggle-row span { color:var(--color-text-muted); }
 .switch { width:44px; min-height:24px; height:24px; padding:2px; border-radius:12px; }.switch::before { content:""; display:block; width:18px; height:18px; border-radius:50%; background:#aab4c0; transition:transform 180ms; }.switch.on { background:var(--color-primary); }.switch.on::before { transform:translateX(18px); background:white; }
@@ -547,7 +584,23 @@ h1,h2,h3,h4,p { margin:0; } h1 { font-size:20px; } h2 { font-size:18px; } h3 { f
 .segmented { display:flex; gap:4px; }.segmented button { min-height:32px; }.segmented.compact { justify-self:start; }
 .empty { padding:24px 12px; color:var(--color-text-muted); text-align:center; }.detail-empty { display:grid; min-height:100%; place-items:center; }
 .modal-backdrop { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.62); }.modal { width:min(720px,88vw); max-height:78vh; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-panel); background:var(--color-surface); box-shadow:0 20px 60px rgba(0,0,0,.55); }.modal>header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--color-border); }.strategy-actions { display:flex; align-items:center; gap:12px; padding:12px 16px; }.strategy-actions span { color:var(--color-text-muted); }.strategy-tree { min-height:0; overflow:auto; padding:0 8px 12px; }.strategy-tree button { width:100%; display:flex; gap:8px; align-items:center; border-color:transparent; background:transparent; text-align:left; }.strategy-tree button.selected { color:var(--color-primary-hover); background:rgba(77,141,255,.15); }
-@media (max-width:1100px) { .uid-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.team-columns { grid-template-columns:1fr; }.team-section+ .team-section { padding-left:0; border-top:1px solid var(--color-border); border-left:0; } }
+@media (max-width:1100px) { .team-columns { grid-template-columns:1fr; }.team-section+ .team-section { padding-left:0; border-top:1px solid var(--color-border); border-left:0; } }
 @media (max-width:959px) { .shell { width:96vw; height:94vh; }.sidebar { width:210px; } }
-@media (max-width:760px) { .uid-grid { grid-template-columns:1fr; }.form-grid,.role-grid { grid-template-columns:1fr; }.wide { grid-column:auto; }.topbar { padding:0 12px; }.content { padding:12px; }.strategy-field .inline-field { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:760px) { .account-row { grid-template-columns:1fr; }.form-grid,.role-grid { grid-template-columns:1fr; }.wide { grid-column:auto; }.topbar { padding:0 12px; }.content { padding:12px; }.strategy-field .inline-field { grid-template-columns:minmax(0,1fr); } }
+
+/* 窗口级应用栏与窄窗口工作区覆盖旧版侧栏标签布局。 */
+.shell { display:flex; flex-direction:column; width:100%; height:100%; border:1px solid var(--color-border); border-radius:8px; background:var(--color-workspace); box-shadow:var(--shadow-window); }
+.shell.workspace-frame { width:65vw; height:75vh; }
+.appbar { position:relative; z-index:2; display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:16px; min-height:58px; padding:0 16px; border-bottom:1px solid var(--color-border); background:rgba(19,24,27,.96); }
+.app-identity { min-width:0; display:flex; align-items:center; gap:10px; }.app-identity>div { min-width:0; display:grid; gap:1px; }.app-identity h1 { overflow:hidden; color:var(--color-text); font-size:16px; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }.app-identity span:not(.app-mark) { overflow:hidden; color:var(--color-text-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }.app-mark { display:grid; width:28px; height:28px; place-items:center; border:1px solid rgba(44,165,141,.55); border-radius:7px; background:var(--color-primary-soft); color:var(--color-primary-hover); font-size:10px; font-weight:700; letter-spacing:.04em; }
+.tabs { position:static; display:flex; align-items:stretch; justify-content:center; gap:2px; height:58px; padding:0; }.tabs button { position:relative; min-width:88px; min-height:58px; padding:0 14px; border:0; border-radius:0; background:transparent; color:var(--color-text-muted); font-size:13px; white-space:nowrap; }.tabs button::after { position:absolute; right:14px; bottom:0; left:14px; height:2px; background:transparent; content:""; }.tabs button:hover:not(:disabled) { background:rgba(255,255,255,.035); color:var(--color-text); }.tabs button.active { background:transparent; color:var(--color-text); }.tabs button.active::after { background:var(--color-primary); }.tabs button[aria-selected="true"] { font-weight:650; }
+.close-action { justify-self:end; display:inline-flex; align-items:center; gap:7px; min-width:0; border-color:var(--color-border); background:transparent; color:var(--color-text-muted); }.close-action:hover:not(:disabled) { border-color:var(--color-error); background:rgba(238,114,114,.1); color:var(--color-error); }
+.workarea { min-height:0; flex:1; display:flex; overflow:hidden; }.workarea-global .workspace { width:100%; }.workarea-global .content { max-width:1080px; margin:0 auto; width:100%; }
+.sidebar { width:250px; min-width:220px; background:var(--color-navigation); border-right:1px solid var(--color-border); }.sidebar .search { margin:12px 12px 8px; width:calc(100% - 24px); }.commission-list { padding:4px 10px 12px; }.commission-list button { min-height:34px; border-color:transparent; }.commission-list button:hover:not(:disabled) { background:var(--color-surface-hover); }.commission-list button.active { border-color:rgba(44,165,141,.5); background:var(--color-primary-soft); color:var(--color-text); }.commission-list small,.country-header small,.group-header small,.group-items small { border-radius:4px; background:rgba(255,255,255,.07); color:var(--color-text-muted); }.country-header span,.group-header span { min-width:0; }.country-header svg,.group-header svg { flex:none; color:var(--color-text-muted); transition:transform 180ms; }.country-header svg.is-open,.group-header svg.is-open { transform:rotate(90deg); color:var(--color-primary-hover); }.side-footer { display:flex; min-height:38px; align-items:center; padding:8px 12px; }
+.workspace { min-width:0; min-height:0; flex:1; display:flex; flex-direction:column; }.content { padding:20px 24px 28px; }.section { margin-bottom:12px; padding:16px 18px; border-color:var(--color-border); background:var(--color-surface); }.section h2 { color:var(--color-text); font-size:15px; letter-spacing:.01em; }.detail-header { padding:2px 0 14px; border-bottom:1px solid var(--color-border); }.detail-header h2 { font-size:18px; }.detail-header p { max-width:720px; }
+.account-row { grid-template-columns:minmax(150px,max-content) minmax(150px,1fr) max-content; }.account-row>button,.inline-action,.inline-field>button { display:inline-flex; align-items:center; justify-content:center; gap:6px; }.toggle-row { min-height:66px; }.toggle-row h2 { margin:0 0 2px; }.form-grid { gap:16px; }.form-grid label,.role-grid label { color:var(--color-text-muted); font-size:12px; }.form-grid .control,.role-grid .control { margin-top:1px; }
+.segmented { padding:3px; border:1px solid var(--color-border); border-radius:6px; background:rgba(0,0,0,.12); }.segmented button { min-height:28px; border-color:transparent; background:transparent; color:var(--color-text-muted); }.segmented button.active { border-color:rgba(44,165,141,.45); background:var(--color-primary-soft); color:var(--color-primary-hover); }.strategy-field .inline-field { grid-template-columns:minmax(0,1fr) max-content max-content; }.strategy-field .inline-field button { min-width:0; padding:0 9px; }
+.scope-card { padding-top:14px; }.scope-card>header h3 { min-width:0; overflow:hidden; font-size:15px; text-overflow:ellipsis; white-space:nowrap; }.team-columns { border-color:var(--color-border); }.team-section { padding:14px 0; }.team-section>header h4 { color:var(--color-text-muted); font-size:12px; font-weight:600; }.branch-row { min-height:44px; }.branch-row>span { min-width:0; overflow:hidden; text-overflow:ellipsis; }.switch-line { min-width:76px; border-color:transparent; background:transparent; color:var(--color-text-muted); }.switch-line.completed { border-color:rgba(97,201,149,.35); background:rgba(97,201,149,.1); }
+.empty { padding:32px 16px; }.modal-backdrop { background:rgba(5,8,9,.72); }.modal { width:min(680px,calc(100vw - 32px)); max-height:min(640px,calc(100vh - 32px)); border-radius:8px; box-shadow:var(--shadow-popover); }.modal>header { min-height:52px; padding:0 16px; }.modal>header button { display:inline-flex; align-items:center; gap:6px; }.strategy-actions { flex-wrap:wrap; border-bottom:1px solid var(--color-border); }.strategy-actions span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.strategy-tree { padding:8px; }.strategy-tree button { min-height:34px; border-radius:4px; }.strategy-tree button:hover:not(:disabled) { background:var(--color-surface-hover); }
+@media (max-width:760px) { .shell.workspace-frame { width:calc(100vw - 12px); height:calc(100vh - 12px); }.appbar { grid-template-columns:minmax(0,1fr) auto; min-height:52px; padding:0 10px; }.app-identity { gap:7px; }.app-mark { width:24px; height:24px; }.app-identity h1 { font-size:14px; }.tabs { position:absolute; top:52px; right:8px; left:8px; height:42px; border-bottom:1px solid var(--color-border); background:var(--color-navigation); }.tabs button { min-width:0; min-height:42px; flex:1; padding:0 6px; font-size:12px; }.tabs button::after { right:8px; left:8px; }.close-action { width:34px; min-width:34px; height:32px; padding:0; }.close-action span { display:none; }.workarea { margin-top:42px; }.workarea:not(.workarea-global) { flex-direction:column; overflow:auto; }.sidebar { width:100%; min-width:0; height:34%; min-height:150px; flex:none; border-right:0; border-bottom:1px solid var(--color-border); }.commission-list { max-height:none; }.workspace { min-height:0; flex:1; }.content { padding:14px 12px 20px; }.workarea-global { margin-top:42px; }.workarea-global .content { padding-top:14px; }.account-row { grid-template-columns:1fr; }.account-row .ui-select { width:100%; max-width:none; }.form-grid,.role-grid { grid-template-columns:1fr; gap:12px; }.strategy-field .inline-field { grid-template-columns:1fr; }.strategy-field .inline-field button { width:100%; }.scope-card>header { gap:8px; }.scope-card>header h3 { font-size:14px; }.team-columns { grid-template-columns:1fr; }.team-section+ .team-section { padding-left:0; border-top:1px solid var(--color-border); border-left:0; }.team-section>header { align-items:flex-start; flex-direction:column; }.segmented { width:100%; }.segmented button { flex:1; }.modal { width:calc(100vw - 20px); max-height:calc(100vh - 20px); }.strategy-actions { align-items:flex-start; flex-direction:column; gap:8px; } }
 </style>

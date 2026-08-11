@@ -3,6 +3,7 @@ import { Copy, Play, RefreshCw, Search, Trash2 } from "@lucide/vue";
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, toRaw } from "vue";
 import { requestHtmlMask, subscribeHtmlMask, toError } from "@/shared/bridge/html-mask";
 import UiSelect from "@/shared/components/UiSelect.vue";
+import FocusGuard from "@/shared/components/FocusGuard.vue";
 import { copy } from "@/shared/i18n/zh-CN";
 import { ACTION_GROUPS, DEFAULT_SETTINGS, MOVE_MODES, PARAMETER_ACTIONS, POINT_TYPES, actionParameterHint, changePointAction, clonePoints, combatCompletions, createPoint, duplicatePoint, reconcileRouteAuthors, renumberPoints, timeControlValue } from "@/apps/path-recorder/model";
 import type { CombatSyntax, PathPoint, RecorderResult, RecorderSettings, RecorderState, RouteAuthor } from "@/apps/path-recorder/types";
@@ -945,6 +946,7 @@ onBeforeUnmount(cleanupRecorder);
     <div v-if="confirmAction" class="modal-backdrop" data-interactive-surface role="dialog" aria-modal="true" :aria-label="confirmAction === 'clear' ? text.clearTitle : text.discardTitle" @focusin="handleInteractionFocus" @focusout="handleInteractionBlur">
         <div class="small-modal"><h2>{{ confirmAction === 'clear' ? text.clearTitle : text.discardTitle }}</h2><p>{{ confirmAction === 'clear' ? text.clearMessage : text.discardMessage }}</p><footer><button @click="cancelConfirmation">{{ commonText.cancel }}</button><button class="primary" @click="acceptConfirmation">{{ commonText.confirm }}</button></footer></div>
     </div>
+    <FocusGuard />
 </template>
 
 <style scoped>
