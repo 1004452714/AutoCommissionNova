@@ -7,7 +7,7 @@
  *   schemaVersion: 2,
  *   activeUid: "当前最近一次使用的 UID",
  *   accounts: {
- *     [uid]: { uid, timestamp, scriptVersion, bgiVersion, commissions }
+ *     [uid]: { uid, timestamp, scriptVersion, bgiVersion, commissions, branchCompleted }
  *   }
  * }
  *
@@ -332,13 +332,13 @@ export async function saveCommissionsData(commissions) {
         });
 
         data.activeUid = uid;
-        data.accounts[uid] = {
+        Object.assign(account, {
             uid,
             timestamp: new Date().toISOString(),
             scriptVersion: SCRIPT_VERSION,
             bgiVersion: getVersion(),
             commissions: merged,
-        };
+        });
 
         writeCommissionsData(data);
         log.debug("委托数据保存完成: {uid}", uid);

@@ -37,10 +37,10 @@ concurrency:
 
 env:
   # PR 标题、正文和同步提交信息中显示的脚本名称。
-  SCRIPT_NAME: AutoCommissionNova
+  SCRIPT_NAME: AutoCommission
   
   # 脚本使用的目录名称。
-  SCRIPT_DIRECTORY: AutoCommissionNova
+  SCRIPT_DIRECTORY: AutoCommission
   
   # 当前源码仓库用于发布、升版和打 tag 的分支。
   SOURCE_BRANCH: main

@@ -11,6 +11,7 @@ import { openProcessEditor } from "./src/core/process-editor.js";
 import { openPathRecorder } from "./src/core/path-recorder.js";
 import { releaseAllTemplates } from "./src/vision/index.js";
 import { scanCommissionScopes } from "./src/loaders/process-scope.js";
+import { migrateLegacyAutoCommissionSettings } from "./src/migrations/legacy-settings-migration.js";
 
 registerAllProcessors(stepRegistry);
 registerAllProbes();
@@ -34,6 +35,8 @@ registerAllProbes();
             log.info("地图路径录制器已关闭");
             return;
         }
+
+        await migrateLegacyAutoCommissionSettings(setting);
 
         //根据设置决定是否打开分支配置面板,阻塞至用户关闭
         let developerTestConfig = null;
