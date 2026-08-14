@@ -29,6 +29,12 @@
         "type": "键鼠脚本",
         "data": "拍照.json"
     },
+  {
+  "type": "自动任务",
+  "data": {
+    "action": "enable",
+    "taskType": "AutoPick"
+  },
     {
         "type": "追踪委托",
         "data": {
@@ -36,6 +42,14 @@
             "iconType": "Base"
         },
         "note": "采摘嘟嘟莲"
+    },
+    {
+        "type": "自动任务",
+        "data": {
+            "action": "enable",
+            "taskType": "AutoSkip"
+        },
+        "note": "开启自动剧情"
     },
     {
         "type": "地图追踪",
@@ -46,6 +60,12 @@
         "type": "键鼠脚本",
         "data": "拍照.json"
     },
+      {
+  "type": "自动任务",
+  "data": {
+    "action": "enable",
+    "taskType": "AutoPick"
+  },
     {
         "type": "追踪委托",
         "data": {
@@ -53,6 +73,14 @@
             "iconType": "Base"
         },
         "note": "采摘小灯草"
+    },
+    {
+        "type": "自动任务",
+        "data": {
+            "action": "enable",
+            "taskType": "AutoSkip"
+        },
+        "note": "开启自动剧情"
     },
     {
         "type": "地图追踪",
@@ -63,6 +91,12 @@
         "type": "键鼠脚本",
         "data": "拍照.json"
     },
+      {
+  "type": "自动任务",
+  "data": {
+    "action": "enable",
+    "taskType": "AutoPick"
+  },
     {
         "type": "追踪委托",
         "data": {
@@ -70,6 +104,14 @@
             "iconType": "Base"
         },
         "note": "采摘塞西莉亚花"
+    },
+    {
+        "type": "自动任务",
+        "data": {
+            "action": "enable",
+            "taskType": "AutoSkip"
+        },
+        "note": "开启自动剧情"
     },
     {
         "type": "地图追踪",
