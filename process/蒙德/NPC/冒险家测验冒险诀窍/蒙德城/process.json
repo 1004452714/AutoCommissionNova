@@ -29,12 +29,13 @@
         "type": "键鼠脚本",
         "data": "拍照.json"
     },
-  {
-  "type": "自动任务",
-  "data": {
-    "action": "enable",
-    "taskType": "AutoPick"
-  },
+    {
+        "type": "自动任务",
+        "data": {
+            "action": "enable",
+            "taskType": "AutoPick"
+        }
+    },
     {
         "type": "追踪委托",
         "data": {
@@ -60,12 +61,13 @@
         "type": "键鼠脚本",
         "data": "拍照.json"
     },
-      {
-  "type": "自动任务",
-  "data": {
-    "action": "enable",
-    "taskType": "AutoPick"
-  },
+    {
+        "type": "自动任务",
+        "data": {
+            "action": "enable",
+            "taskType": "AutoPick"
+        }
+    },
     {
         "type": "追踪委托",
         "data": {
@@ -91,12 +93,13 @@
         "type": "键鼠脚本",
         "data": "拍照.json"
     },
-      {
-  "type": "自动任务",
-  "data": {
-    "action": "enable",
-    "taskType": "AutoPick"
-  },
+    {
+        "type": "自动任务",
+        "data": {
+            "action": "enable",
+            "taskType": "AutoPick"
+        }
+    },
     {
         "type": "追踪委托",
         "data": {
