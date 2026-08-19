@@ -173,6 +173,8 @@ export const copy = {
         discardMessage: "当前录制结果尚未保存，确定关闭吗？",
         clearTitle: "清除全部点位",
         clearMessage: "确定清除当前全部点位吗？",
+        overwriteTitle: "覆盖路径文件",
+        overwriteMessage: "同名路径文件已存在，确定覆盖吗？",
     },
     developerTest: {
         title: "开发者流程测试",

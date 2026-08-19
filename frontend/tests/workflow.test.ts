@@ -61,6 +61,43 @@ async function chooseUiOption(control: DOMWrapper<Element>, value: string): Prom
 }
 
 describe("process editor workflows", () => {
+    it("does not show a focus guard after the process editor loses focus", async () => {
+        // 流程编辑器失焦不再要求额外点击才能继续操作。
+        installHost(async (url) => url === "/init" ? processInit : { status: "ok" });
+        const wrapper = mount(ProcessEditor, { attachTo: document.body });
+        await flushPromises();
+        window.dispatchEvent(new Event("blur"));
+        await flushPromises();
+        expect(wrapper.find(".focus-guard").exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it("keeps the exact new location directory for target detection and saving", async () => {
+        // 带序号地点目录必须原样发送给后端，不能被自动归一化为基础地点名。
+        const exactScope = { country: "挪德卡莱", typeDir: "Basic" as const, commissionName: "测试委托", locationDir: "伦波岛-1" };
+        const request = installHost(async (url, data) => {
+            if (url === "/init") return processInit;
+            if (url === "/target") return { status: "ok", scope: exactScope, path: "process/挪德卡莱/Basic/测试委托/伦波岛-1/process.json", exists: false, branches: [] };
+            if (url === "/save") return { status: "ok", scope: exactScope, path: "process/挪德卡莱/Basic/测试委托/伦波岛-1/process.json", content: "[]", warnings: [], data };
+            return { status: "ok" };
+        });
+        const wrapper = mount(ProcessEditor);
+        await flushPromises();
+        await wrapper.findAll(".mode-switch button")[1].trigger("click");
+        await flushPromises();
+        const fields = wrapper.findAll(".sidebar .scope-field");
+        await fields[0].find("input").setValue(exactScope.country);
+        await chooseUiOption(fields[1].find(".ui-select"), exactScope.typeDir);
+        await fields[2].find("input").setValue(exactScope.commissionName);
+        await fields[3].find("input").setValue(exactScope.locationDir);
+        await flushPromises();
+        expect(request.mock.calls.filter((call) => call[0] === "/target").at(-1)?.[1]).toMatchObject({ scope: exactScope });
+        await wrapper.find(".side-actions .primary").trigger("click");
+        await flushPromises();
+        expect(request.mock.calls.find((call) => call[0] === "/save")?.[1]).toMatchObject({ scope: exactScope });
+        wrapper.unmount();
+    });
+
     it("renders localized field labels and only adds declared data", async () => {
         // 对象步骤同时包含中文标签、弱化原始键和委托描述提示。
         const objectWrapper = mount(StepInspector, { props: {
@@ -377,6 +414,28 @@ describe("process editor workflows", () => {
 });
 
 describe("path recorder workflows", () => {
+    it("saves the UI file name and confirms before overwriting a different file", async () => {
+        // 首次响应要求覆盖确认，确认后的重试必须保留页面填写的文件名。
+        const request = installHost(async (url, data) => {
+            if (url === "/init") return recorderState("stopped");
+            if (url === "/points") return { status: "ok", phase: "stopped" };
+            if (url === "/save" && !(data as { overwrite?: boolean }).overwrite) return { status: "confirm_overwrite", path: "custom.json", fileName: "custom.json" };
+            if (url === "/save") return { status: "ok", path: "custom.json", fileName: "custom.json" };
+            return { status: "ok" };
+        });
+        const wrapper = mount(PathRecorder);
+        await flushPromises();
+        await wrapper.find<HTMLInputElement>(".file-field input").setValue("custom.json");
+        await wrapper.find(".footer .primary").trigger("click");
+        await flushPromises();
+        expect(request.mock.calls.find((call) => call[0] === "/save")?.[1]).toMatchObject({ fileName: "custom.json", overwrite: false });
+        expect(wrapper.find("[role=dialog]").text()).toContain("覆盖路径文件");
+        await wrapper.find("[role=dialog] .primary").trigger("click");
+        await flushPromises();
+        expect(request.mock.calls.filter((call) => call[0] === "/save").at(-1)?.[1]).toMatchObject({ fileName: "custom.json", overwrite: true });
+        wrapper.unmount();
+    });
+
     it("flushes points before finish and save, then calls done", async () => {
         // 请求桩记录所有宿主协议调用。
         const request = installHost(async (url) => {

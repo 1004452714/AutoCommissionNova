@@ -71,7 +71,7 @@ export interface RecorderState {
 
 // 录制器通用操作响应。
 export interface RecorderResult {
-    status: "ok" | "error" | "saved";
+    status: "ok" | "error" | "saved" | "confirm_overwrite";
     message?: string;
     path?: string;
     fileName?: string;

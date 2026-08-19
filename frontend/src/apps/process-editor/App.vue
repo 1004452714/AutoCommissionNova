@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, toRaw } from "vue"
 import { requestHtmlMask, subscribeHtmlMask, toError } from "@/shared/bridge/html-mask";
 import { copy } from "@/shared/i18n/zh-CN";
 import UiSelect from "@/shared/components/UiSelect.vue";
-import FocusGuard from "@/shared/components/FocusGuard.vue";
 import StepInspector from "@/apps/process-editor/StepInspector.vue";
 import StepTypeMenu from "@/apps/process-editor/StepTypeMenu.vue";
 import { cloneProcessValue, convertStepType, defaultStep, diagnosticText, editableRecord } from "@/apps/process-editor/model";
@@ -537,7 +536,6 @@ onBeforeUnmount(cleanupEditor);
     <div v-if="confirmOpen" class="modal-backdrop" role="dialog" aria-modal="true" :aria-label="text.discardTitle">
         <div class="modal"><h2>{{ text.discardTitle }}</h2><p>{{ text.discardMessage }}</p><div><button @click="resolveConfirmation(false)">{{ commonText.cancel }}</button><button class="primary" @click="resolveConfirmation(true)">{{ commonText.confirm }}</button></div></div>
     </div>
-    <FocusGuard />
 </template>
 
 <style scoped>

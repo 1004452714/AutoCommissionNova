@@ -71,8 +71,8 @@ let syncedPointsRevision = 0;
 const bindingField = ref<"addKey" | "finishKey" | "toggleKey" | "">("");
 // 坐标弹窗支持新增和编辑两种模式。
 const coordinateDialog = reactive({ open: false, index: -1, x: "", y: "", error: "" });
-// 关闭确认弹窗只处理未保存退出。
-const confirmAction = ref<"" | "close" | "clear">("");
+// 确认弹窗处理未保存退出、清空点位和同名文件覆盖。
+const confirmAction = ref<"" | "close" | "clear" | "overwrite">("");
 // 拖放点位源索引。
 const dragIndex = ref(-1);
 // 宿主提供的简易策略语法用于参数提示和键盘补全。
@@ -460,16 +460,22 @@ async function runFromPoint(index: number): Promise<void> {
     }
 }
 
-// 保存路径文件和当前路线元数据。
-async function saveRoute(): Promise<void> {
+// 保存路径文件和当前路线元数据，并按确认结果显式允许覆盖。
+async function saveRoute(overwrite = false): Promise<void> {
     if (!canSave.value) return;
     try {
         await flushPoints();
         const result = await requestHtmlMask<RecorderResult>("/save", {
             points: points.value, fileName: fileName.value,
-            authors: routeAuthors.value, mapMatchMethod: routeMapMatchMethod.value,
+            authors: routeAuthors.value, mapMatchMethod: routeMapMatchMethod.value, overwrite,
         });
         if (result.status === "error") throw new Error(result.message || "保存失败");
+        if (result.status === "confirm_overwrite") {
+            confirmAction.value = "overwrite";
+            await nextTick();
+            await syncInteractionLock();
+            return;
+        }
         if (result.fileName) fileName.value = result.fileName;
         phase.value = "saved";
         saved.value = true;
@@ -728,12 +734,13 @@ async function requestClose(force = false): Promise<void> {
     }
 }
 
-// 执行确认弹窗当前绑定的清空或关闭动作。
+// 执行确认弹窗当前绑定的清空、关闭或覆盖动作。
 async function acceptConfirmation(): Promise<void> {
     const action = confirmAction.value;
     confirmAction.value = "";
     if (action === "clear") await clearPoints();
     if (action === "close") await requestClose(true);
+    if (action === "overwrite") await saveRoute(true);
     await syncInteractionLock();
 }
 
@@ -925,7 +932,7 @@ onBeforeUnmount(cleanupRecorder);
                 <div v-if="!points.length" class="empty">{{ text.noPoints }}</div>
             </div>
         </main>
-        <footer class="footer"><div :class="`status-${statusKind}`" role="status">{{ statusText }}</div><button class="primary" :disabled="!canSave" @click="saveRoute">{{ text.save }}</button></footer>
+        <footer class="footer"><div :class="`status-${statusKind}`" role="status">{{ statusText }}</div><button class="primary" :disabled="!canSave" @click="saveRoute()">{{ text.save }}</button></footer>
     </div>
 
     <div v-if="settingsOpen" class="modal-backdrop" data-interactive-surface role="dialog" aria-modal="true" :aria-label="text.settings" @focusin="handleInteractionFocus" @focusout="handleInteractionBlur">
@@ -943,8 +950,8 @@ onBeforeUnmount(cleanupRecorder);
         <div class="small-modal"><h2>{{ coordinateDialog.index >= 0 ? '编辑坐标' : text.coordinate }}</h2><div class="coordinate-fields"><label>{{ text.coordinateX }}<input v-model="coordinateDialog.x" class="control" type="number" step="0.0001"></label><label>{{ text.coordinateY }}<input v-model="coordinateDialog.y" class="control" type="number" step="0.0001"></label></div><p class="status-error">{{ coordinateDialog.error }}</p><footer><button @click="closeCoordinate">{{ commonText.cancel }}</button><button class="primary" @click="applyCoordinate">{{ commonText.confirm }}</button></footer></div>
     </div>
 
-    <div v-if="confirmAction" class="modal-backdrop" data-interactive-surface role="dialog" aria-modal="true" :aria-label="confirmAction === 'clear' ? text.clearTitle : text.discardTitle" @focusin="handleInteractionFocus" @focusout="handleInteractionBlur">
-        <div class="small-modal"><h2>{{ confirmAction === 'clear' ? text.clearTitle : text.discardTitle }}</h2><p>{{ confirmAction === 'clear' ? text.clearMessage : text.discardMessage }}</p><footer><button @click="cancelConfirmation">{{ commonText.cancel }}</button><button class="primary" @click="acceptConfirmation">{{ commonText.confirm }}</button></footer></div>
+    <div v-if="confirmAction" class="modal-backdrop" data-interactive-surface role="dialog" aria-modal="true" :aria-label="confirmAction === 'clear' ? text.clearTitle : confirmAction === 'overwrite' ? text.overwriteTitle : text.discardTitle" @focusin="handleInteractionFocus" @focusout="handleInteractionBlur">
+        <div class="small-modal"><h2>{{ confirmAction === 'clear' ? text.clearTitle : confirmAction === 'overwrite' ? text.overwriteTitle : text.discardTitle }}</h2><p>{{ confirmAction === 'clear' ? text.clearMessage : confirmAction === 'overwrite' ? text.overwriteMessage : text.discardMessage }}</p><footer><button @click="cancelConfirmation">{{ commonText.cancel }}</button><button class="primary" @click="acceptConfirmation">{{ commonText.confirm }}</button></footer></div>
     </div>
     <FocusGuard />
 </template>
