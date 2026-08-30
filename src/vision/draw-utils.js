@@ -4,16 +4,11 @@ export async function drawBox(show, result, delay = 200, pen) {
 }
 
 export async function drawAndClearBox(result, delay = 200, pen) {
-    const capture = captureGameRegion();
+    const drawRegion = new Region(result.x, result.y, result.width, result.height);
     try {
-        const drawRegion = capture.DeriveCrop(result.x, result.y, result.width, result.height);
-        try {
-            drawRegion.DrawSelf("icon", pen || new Pen(Color.Red, 2));
-            await sleep(delay);
-        } finally {
-            drawRegion.dispose();
-        }
+        drawRegion.DrawSelf("icon", pen || new Pen(Color.Red, 2));
+        await sleep(delay);
     } finally {
-        capture.dispose();
+        drawRegion.dispose();
     }
 }
