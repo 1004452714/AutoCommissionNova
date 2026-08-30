@@ -7,7 +7,7 @@ const payload: CommissionConfigPayload = {
     uids: ["100000001"],
     selectedUid: "100000001",
     currentUid: "100000001",
-    global: { skipSafeTeleport: false },
+    global: { skipSafeTeleport: false, checkEncounterPoints: false },
     branches: {
         示例委托: {
             type: "achievement",

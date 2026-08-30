@@ -1,6 +1,7 @@
-// 全局运行配置。
+// 当前 UID 的运行配置。
 export interface GlobalConfig {
     skipSafeTeleport: boolean;
+    checkEncounterPoints: boolean;
 }
 
 // 单个委托的分支配置。

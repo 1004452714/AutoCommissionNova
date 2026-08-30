@@ -515,6 +515,10 @@ onBeforeUnmount(cleanupPage);
                     <div><h2>{{ text.safeTeleport }}</h2><span>{{ config.global.skipSafeTeleport ? text.enabled : text.disabled }}</span></div>
                     <button class="switch" :class="{ on: config.global.skipSafeTeleport }" role="switch" :aria-checked="config.global.skipSafeTeleport" @click="config.global.skipSafeTeleport = !config.global.skipSafeTeleport; scheduleSave()"></button>
                 </article>
+                <article class="section toggle-row">
+                    <div><h2>历练点足够时跳过执行</h2><span>{{ config.global.checkEncounterPoints ? text.enabled : text.disabled }}</span></div>
+                    <button class="switch" :class="{ on: config.global.checkEncounterPoints }" role="switch" :aria-checked="config.global.checkEncounterPoints" @click="config.global.checkEncounterPoints = !config.global.checkEncounterPoints; scheduleSave()"></button>
+                </article>
                 <article class="section">
                     <h2>{{ text.globalParty }}</h2>
                     <div class="form-grid">

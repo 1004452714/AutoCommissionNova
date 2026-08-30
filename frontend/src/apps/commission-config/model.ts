@@ -30,7 +30,7 @@ export function sanitizeNote(note: unknown): string {
 // 规范化指定 UID 档案的全局运行设置。
 export function normalizeGlobalConfig(value: unknown): GlobalConfig {
     const source = record(value);
-    return { skipSafeTeleport: source.skipSafeTeleport === true };
+    return { skipSafeTeleport: source.skipSafeTeleport === true, checkEncounterPoints: source.checkEncounterPoints === true };
 }
 
 // 规范化四角色映射。

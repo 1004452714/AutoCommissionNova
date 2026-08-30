@@ -9,7 +9,6 @@
 const DEFAULT_SETTING = {
     runMode: "运行自动每日委托",
     showConfigEditor: true,
-    checkLongTermTrainingPoints: true,
 };
 
 let cachedSetting = null;
@@ -27,7 +26,6 @@ export function getSetting() {
                 : "运行自动每日委托",
             // 未设置时默认显示(与 settings.json 中的 default: true 保持一致)
             showConfigEditor: settings.showConfigEditor !== false,
-            checkLongTermTrainingPoints: settings.checkLongTermTrainingPoints !== false,
         };
         log.debug("setting:{index}", cachedSetting);
         return cachedSetting;
