@@ -12,13 +12,14 @@ import { openPathRecorder } from "./src/core/path-recorder.js";
 import { releaseAllTemplates } from "./src/vision/index.js";
 import { scanCommissionScopes } from "./src/loaders/process-scope.js";
 import { initializeCurrentAccount } from "./src/utils/account-utils.js";
+import {LongTermTrainingPointsMain} from "./src/utils/campaignArea";
 
 registerAllProcessors(stepRegistry);
 registerAllProbes();
 
 (async function () {
     try {
-        setGameMetrics(1920, 1080, genshin.ScreenDpiScale); 
+        setGameMetrics(1920, 1080, genshin.ScreenDpiScale);
         //检查版本
         await checkVersion();
         // 获取界面设置
@@ -34,6 +35,15 @@ registerAllProbes();
             await openPathRecorder();
             log.info("地图路径录制器已关闭");
             return;
+        }
+
+        if (setting.checkLongTermTrainingPoints){
+            const hasEnoughPoints = await LongTermTrainingPointsMain();
+            const pointMsg = hasEnoughPoints ? "充足" : "不足";
+            const action = hasEnoughPoints ? "跳过" : "开始";
+
+            log.info("长效历练点数{pointMsg}，{action}执行任务", pointMsg, action);
+            if (hasEnoughPoints) return;
         }
 
         //根据设置决定是否打开分支配置面板,阻塞至用户关闭
