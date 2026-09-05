@@ -953,7 +953,7 @@ onBeforeUnmount(cleanupRecorder);
     <div v-if="confirmAction" class="modal-backdrop" data-interactive-surface role="dialog" aria-modal="true" :aria-label="confirmAction === 'clear' ? text.clearTitle : confirmAction === 'overwrite' ? text.overwriteTitle : text.discardTitle" @focusin="handleInteractionFocus" @focusout="handleInteractionBlur">
         <div class="small-modal"><h2>{{ confirmAction === 'clear' ? text.clearTitle : confirmAction === 'overwrite' ? text.overwriteTitle : text.discardTitle }}</h2><p>{{ confirmAction === 'clear' ? text.clearMessage : confirmAction === 'overwrite' ? text.overwriteMessage : text.discardMessage }}</p><footer><button @click="cancelConfirmation">{{ commonText.cancel }}</button><button class="primary" @click="acceptConfirmation">{{ commonText.confirm }}</button></footer></div>
     </div>
-    <FocusGuard />
+    <FocusGuard v-if="displayMode === 'normal'" />
 </template>
 
 <style scoped>
