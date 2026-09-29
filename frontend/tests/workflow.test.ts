@@ -4,11 +4,12 @@ import ProcessEditor from "@/apps/process-editor/App.vue";
 import PathRecorder from "@/apps/path-recorder/App.vue";
 import StepDataEditor from "@/apps/process-editor/StepDataEditor.vue";
 import StepInspector from "@/apps/process-editor/StepInspector.vue";
+import StepTypeMenu from "@/apps/process-editor/StepTypeMenu.vue";
 import CommissionConfig from "@/apps/commission-config/App.vue";
 import DeveloperTest from "@/apps/developer-test/App.vue";
 import { DEFAULT_SETTINGS, createPoint } from "@/apps/path-recorder/model";
 import type { HtmlMaskHost } from "@/shared/bridge/html-mask";
-import type { ProcessEditorInit, ProcessScope } from "@/apps/process-editor/types";
+import type { ProcessEditorInit, ProcessorMeta, ProcessScope } from "@/apps/process-editor/types";
 
 // 测试流程范围覆盖最近文件和地图录制目标。
 const processScope: ProcessScope = { country: "璃月", typeDir: "NPC", commissionName: "测试委托", locationDir: "地点" };
@@ -60,13 +61,26 @@ async function chooseUiOption(control: DOMWrapper<Element>, value: string): Prom
     await flushPromises();
 }
 
+// 点击分段控件中的目标选项，覆盖新建弹窗的国家与类型选择。
+async function chooseSegment(field: DOMWrapper<Element>, value: string): Promise<void> {
+    const segment = field.findAll(".ui-segmented button").find((button) => button.text() === value);
+    if (!segment) throw new Error(`未找到分段选项：${value}`);
+    await segment.trigger("click");
+    await flushPromises();
+}
+
 describe("process editor workflows", () => {
-    it("does not show a focus guard after the process editor loses focus", async () => {
-        // 流程编辑器失焦不再要求额外点击才能继续操作。
+    it("shows the focus guard after the process editor loses focus", async () => {
+        // 与其余遮罩页一致：失焦后先点击保护层恢复交互，首开不显示。
         installHost(async (url) => url === "/init" ? processInit : { status: "ok" });
         const wrapper = mount(ProcessEditor, { attachTo: document.body });
         await flushPromises();
+        expect(wrapper.find(".focus-guard").exists()).toBe(false);
         window.dispatchEvent(new Event("blur"));
+        await flushPromises();
+        expect(wrapper.find(".focus-guard").exists()).toBe(true);
+        // 保护层消费首次点击后消失，交互恢复正常。
+        await wrapper.find(".focus-guard").trigger("click");
         await flushPromises();
         expect(wrapper.find(".focus-guard").exists()).toBe(false);
         wrapper.unmount();
@@ -83,16 +97,21 @@ describe("process editor workflows", () => {
         });
         const wrapper = mount(ProcessEditor);
         await flushPromises();
-        await wrapper.findAll(".mode-switch button")[1].trigger("click");
+        // 通过新建弹窗填写完整范围并确认进入新建模式。
+        await wrapper.findAll(".side-mode-actions button")[1].trigger("click");
         await flushPromises();
-        const fields = wrapper.findAll(".sidebar .scope-field");
-        await fields[0].find("input").setValue(exactScope.country);
-        await chooseUiOption(fields[1].find(".ui-select"), exactScope.typeDir);
+        const fields = wrapper.findAll(".create-dialog .scope-field");
+        // 国家与类型为分段控件，选中后恰好保留一个激活分段。
+        await chooseSegment(fields[0], exactScope.country);
+        await chooseSegment(fields[1], exactScope.typeDir);
+        expect(fields[1].findAll(".ui-segmented button.active")).toHaveLength(1);
         await fields[2].find("input").setValue(exactScope.commissionName);
         await fields[3].find("input").setValue(exactScope.locationDir);
         await flushPromises();
+        await wrapper.find(".create-dialog footer .primary").trigger("click");
+        await flushPromises();
         expect(request.mock.calls.filter((call) => call[0] === "/target").at(-1)?.[1]).toMatchObject({ scope: exactScope });
-        await wrapper.find(".side-actions .primary").trigger("click");
+        await wrapper.find(".step-toolbar .primary").trigger("click");
         await flushPromises();
         expect(request.mock.calls.find((call) => call[0] === "/save")?.[1]).toMatchObject({ scope: exactScope });
         wrapper.unmount();
@@ -268,13 +287,26 @@ describe("process editor workflows", () => {
         const subprocessSpec = processInit.processors.find(processor => processor.type === "执行子流程")!.dataSpec;
         const fieldWrapper = mount(StepDataEditor, { props: {
             modelValue: { path: "nested/child.json" }, spec: subprocessSpec, stepType: "执行子流程",
-            processors: processInit.processors, roles: [], branches: [], subProcessOptions: [{ value: "nested/child.json", label: "nested/child.json" }],
+            processors: processInit.processors, roles: [], branches: [], subProcessOptions: [{ value: "nested/child.json", label: "nested/child.json" }, { value: "subprocess.json", label: "subprocess.json" }],
         } });
         expect(fieldWrapper.find("button.primary").text()).toBe("编辑子流程");
         await fieldWrapper.find("button.primary").trigger("click");
         expect(fieldWrapper.emitted("editSubprocess")?.[0]).toEqual(["nested/child.json"]);
         await fieldWrapper.setProps({ modelValue: { path: "nested/new.json" } });
         expect(fieldWrapper.find("button.primary").text()).toBe("新建子流程");
+        await fieldWrapper.find("button.primary").trigger("click");
+        expect(fieldWrapper.emitted("editSubprocess")?.[1]).toEqual(["nested/new.json"]);
+        // 空路径时按钮保持可用，点击交给页面自动编号创建。
+        await fieldWrapper.setProps({ modelValue: {} });
+        expect(fieldWrapper.find("button.primary").text()).toBe("新建子流程");
+        expect(fieldWrapper.find("button.primary").attributes("disabled")).toBeUndefined();
+        await fieldWrapper.find("button.primary").trigger("click");
+        expect(fieldWrapper.emitted("createSubprocess")).toHaveLength(1);
+        // 以 process.json 结尾的合法文件名（如 subprocess.json）不被主流程排除规则误伤，归一化后命中候选。
+        await fieldWrapper.setProps({ modelValue: { path: "./subprocess.json" } });
+        expect(fieldWrapper.find("button.primary").text()).toBe("编辑子流程");
+        await fieldWrapper.find("button.primary").trigger("click");
+        expect(fieldWrapper.emitted("editSubprocess")?.[2]).toEqual(["subprocess.json"]);
         fieldWrapper.unmount();
 
         // 用户分支内的地图追踪继续获得路径候选并向页面转发录制请求。
@@ -300,21 +332,72 @@ describe("process editor workflows", () => {
         });
         const page = mount(ProcessEditor);
         await flushPromises();
-        const selects = page.findAll(".sidebar .ui-select");
-        await chooseUiOption(selects[0], processScope.country);
-        await chooseUiOption(selects[1], processScope.typeDir);
-        await chooseUiOption(selects[2], processScope.commissionName);
-        await chooseUiOption(selects[3], processScope.locationDir);
-        await page.find(".scope-action").trigger("click");
+        await page.find(".recent-list button").trigger("click");
         await flushPromises();
         await page.find(".step").trigger("click");
         await page.find(".inspector button.primary").trigger("click");
         await flushPromises();
         expect(request).toHaveBeenCalledWith("/openSubprocess", expect.objectContaining({ reference: "child.json" }));
-        expect(page.find(".back-button").exists()).toBe(true);
-        await page.find(".back-button").trigger("click");
+        expect(page.find(".subprocess-return").exists()).toBe(true);
+        expect(page.find(".step-toolbar button.primary").text()).toBe("保存子流程");
+        await page.find(".subprocess-return").trigger("click");
         expect(page.findAll(".step")).toHaveLength(1);
         page.unmount();
+    });
+
+    it("creates the next numbered subprocess from an empty path", async () => {
+        // 空路径的执行子流程步骤一键创建 subprocess-X.json 并进入编辑。
+        const request = installHost(async (url) => {
+            if (url === "/init") return processInit;
+            if (url === "/target") return { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [], subProcessOptions: [{ value: "subprocess-1.json", label: "subprocess-1.json" }] };
+            if (url === "/load") return { status: "ok", scope: processScope, path: "process/process.json", content: JSON.stringify([{ type: "执行子流程", data: { path: "" } }]), recentFiles: [], branches: [] };
+            if (url === "/nextSubprocess") return { status: "ok", name: "subprocess-2.json" };
+            if (url === "/openSubprocess") return { status: "ok", path: "process/subprocess-2.json", reference: "subprocess-2.json", exists: false, content: "[]", subProcessOptions: [] };
+            return { status: "ok" };
+        });
+        const wrapper = mount(ProcessEditor);
+        await flushPromises();
+        await wrapper.find(".recent-list button").trigger("click");
+        await flushPromises();
+        await wrapper.find(".step").trigger("click");
+        const createButton = wrapper.find(".inspector button.primary");
+        expect(createButton.text()).toBe("新建子流程");
+        expect(createButton.attributes("disabled")).toBeUndefined();
+        await createButton.trigger("click");
+        await flushPromises();
+        expect(request).toHaveBeenCalledWith("/nextSubprocess", expect.objectContaining({ scope: processScope }));
+        expect(request).toHaveBeenCalledWith("/openSubprocess", expect.objectContaining({ reference: "subprocess-2.json" }));
+        expect(wrapper.find(".subprocess-return").exists()).toBe(true);
+        expect(wrapper.find(".step-toolbar button.primary").text()).toBe("保存子流程");
+        wrapper.unmount();
+    });
+
+    it("rolls back the subprocess binding when entering the subprocess fails", async () => {
+        // 进入子流程编辑失败时，主流程不得残留指向不存在文件的引用，也不得误标脏。
+        const request = installHost(async (url) => {
+            if (url === "/init") return processInit;
+            if (url === "/target") return { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [], subProcessOptions: [] };
+            if (url === "/load") return { status: "ok", scope: processScope, path: "process/process.json", content: JSON.stringify([{ type: "执行子流程", data: { path: "" } }]), recentFiles: [], branches: [] };
+            if (url === "/nextSubprocess") return { status: "ok", name: "subprocess-2.json" };
+            if (url === "/openSubprocess") return { status: "error", message: "不能打开当前流程或上级流程" };
+            return { status: "ok" };
+        });
+        const wrapper = mount(ProcessEditor);
+        await flushPromises();
+        await wrapper.find(".recent-list button").trigger("click");
+        await flushPromises();
+        await wrapper.find(".step").trigger("click");
+        await wrapper.find(".inspector button.primary").trigger("click");
+        await flushPromises();
+        expect(request).toHaveBeenCalledWith("/nextSubprocess", expect.anything());
+        // 未进入子流程编辑：无返回按钮，步骤引用回滚为空，按钮文案保持“新建子流程”。
+        expect(wrapper.find(".subprocess-return").exists()).toBe(false);
+        expect(wrapper.find(".inspector button.primary").text()).toBe("新建子流程");
+        expect(wrapper.find(".status").text()).toContain("不能打开当前流程或上级流程");
+        // 未标脏：关闭编辑器不弹未保存确认。
+        await wrapper.find(".topbar button").trigger("click");
+        expect(wrapper.find("[role=dialog]").exists()).toBe(false);
+        wrapper.unmount();
     });
 
     it("opens a recent file from create mode and protects immediate edits", async () => {
@@ -326,15 +409,24 @@ describe("process editor workflows", () => {
             if (url === "/close") return { status: "ok" };
             return { status: "ok", data };
         });
-        // 页面从新增模式点击最近文件。
+        // 页面先进入新建模式，再点击最近文件回到现有流程。
         const wrapper = mount(ProcessEditor);
         await flushPromises();
-        await wrapper.findAll(".mode-switch button")[1].trigger("click");
+        await wrapper.findAll(".side-mode-actions button")[1].trigger("click");
         await flushPromises();
-        await wrapper.find(".recent button").trigger("click");
+        const fields = wrapper.findAll(".create-dialog .scope-field");
+        await chooseSegment(fields[0], processScope.country);
+        await chooseSegment(fields[1], processScope.typeDir);
+        await fields[2].find("input").setValue(processScope.commissionName);
+        await fields[3].find("input").setValue(processScope.locationDir);
         await flushPromises();
-        expect(wrapper.findAll(".mode-switch button")[0].classes()).toContain("active");
+        await wrapper.find(".create-dialog footer .primary").trigger("click");
+        await flushPromises();
+        await wrapper.find(".recent-list button").trigger("click");
+        await flushPromises();
         expect(request.mock.calls.find((call) => call[0] === "/load")?.[1]).toMatchObject({ fileName: "branch.json", scope: processScope });
+        // 加载后的现有流程允许直接保存。
+        expect(wrapper.find(".step-toolbar button.primary").attributes("disabled")).toBeUndefined();
 
         // 详情输入直接标脏，关闭时必须弹出未保存确认。
         await wrapper.find(".step").trigger("click");
@@ -348,22 +440,146 @@ describe("process editor workflows", () => {
         wrapper.unmount();
     });
 
-    it("keeps the existing process cascade blank until the user chooses it", async () => {
-        // 初始化只提供候选，不应主动探测或选中第一个现有流程。
+    it("refreshes recents from saves and clears the list on demand", async () => {
+        // 保存响应回传最近列表，清除按钮调用 /clearRecents 并清空侧栏。
+        const recentItem = { scope: processScope, fileName: "process.json", path: "process/process.json" };
+        const request = installHost(async (url) => {
+            if (url === "/init") return processInit;
+            if (url === "/target") return { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [] };
+            if (url === "/load") return { status: "ok", scope: processScope, path: "process/process.json", content: "[]", recentFiles: [], branches: [] };
+            if (url === "/save") return { status: "ok", path: "process/process.json", content: "[]", warnings: [], recentFiles: [recentItem] };
+            if (url === "/clearRecents") return { status: "ok", recentFiles: [] };
+            return { status: "ok" };
+        });
+        const wrapper = mount(ProcessEditor);
+        await flushPromises();
+        await wrapper.find(".recent-list button").trigger("click");
+        await flushPromises();
+        // 保存后侧栏立即展示后端回传的最近列表（含最近新建）。
+        expect(wrapper.find(".recent-list button").exists()).toBe(false);
+        await wrapper.find(".step-toolbar button.primary").trigger("click");
+        await flushPromises();
+        expect(wrapper.find(".recent-list button").text()).toContain("测试委托");
+        // 清除按钮把最近列表清空并同步状态。
+        await wrapper.find(".recent-clear").trigger("click");
+        await flushPromises();
+        expect(request.mock.calls.some((call) => call[0] === "/clearRecents")).toBe(true);
+        expect(wrapper.find(".recent-list button").exists()).toBe(false);
+        expect(wrapper.find(".recent-clear").attributes("disabled")).toBeDefined();
+        wrapper.unmount();
+    });
+
+    it("adds the map tracking step directly from the add menu", async () => {
+        // 单条目分类在添加菜单中提升为一级直加项，悬停时也不再展开二级步骤列。
+        const processors: ProcessorMeta[] = [
+            { type: "等待", category: "流程控制", dataSpec: { kind: "number", label: "等待毫秒", default: 1000 } },
+            { type: "执行子流程", category: "流程控制", dataSpec: { kind: "object", fields: { path: { type: "string", label: "子流程文件", required: true } } } },
+            { type: "地图追踪", category: "路径与定位", dataSpec: { kind: "string", label: "路径文件" } },
+        ];
+        const wrapper = mount(StepTypeMenu, { props: { processors, variant: "add", ariaLabel: "添加步骤" } });
+        await wrapper.find("[role=combobox]").trigger("click");
+        await flushPromises();
+        const entries = Array.from(document.querySelectorAll<HTMLElement>(".step-type-popover .step-type-categories [role=menuitem]"));
+        expect(entries.map((entry) => entry.textContent)).toEqual(["流程控制", "地图追踪"]);
+        // 多条目分类默认展开二级步骤列。
+        expect(document.querySelector(".step-type-popover .step-type-items")).not.toBeNull();
+        const direct = entries.find((entry) => entry.textContent === "地图追踪")!;
+        expect(direct.getAttribute("aria-haspopup")).toBeNull();
+        expect(direct.querySelector("svg")).toBeNull();
+        // 悬停直加项后二级列整体消失，不会重复出现地图追踪。
+        direct.dispatchEvent(new Event("mouseenter"));
+        await flushPromises();
+        expect(document.querySelector(".step-type-popover .step-type-items")).toBeNull();
+        direct.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        await flushPromises();
+        expect(wrapper.emitted("change")?.[0]).toEqual(["地图追踪"]);
+        wrapper.unmount();
+    });
+
+    it("hides menus and dialogs together when the host toggles visibility", async () => {
+        // ~ 隐藏遮罩时，传送弹层和文件弹窗必须随主界面一起消失。
+        installHost(async (url) => url === "/init" ? processInit : { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [] });
+        // isVisible 依赖真实计算样式，必须附加到 document。
+        const wrapper = mount(ProcessEditor, { attachTo: document.body });
+        await flushPromises();
+        await wrapper.find('[aria-label="添加步骤"]').trigger("click");
+        await flushPromises();
+        expect(document.querySelector(".step-type-popover")).not.toBeNull();
+        window.htmlMask?.onMessage?.({ url: "/toggleVisibility", data: { visible: false } });
+        await flushPromises();
+        expect(document.querySelector(".step-type-popover")).toBeNull();
+        expect(wrapper.find(".app").isVisible()).toBe(false);
+        // 恢复显示后打开文件弹窗，再次隐藏时弹窗同样不可见。
+        window.htmlMask?.onMessage?.({ url: "/toggleVisibility", data: { visible: true } });
+        await flushPromises();
+        await wrapper.findAll(".side-mode-actions button")[0].trigger("click");
+        await flushPromises();
+        expect(wrapper.find(".modal-backdrop").isVisible()).toBe(true);
+        window.htmlMask?.onMessage?.({ url: "/toggleVisibility", data: { visible: false } });
+        await flushPromises();
+        expect(wrapper.find(".modal-backdrop").isVisible()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it("defaults to a covered country and warns when the target file exists", async () => {
+        // 默认国家取第一个存在流程的国家；目标 process.json 已存在时提示并禁用确认。
+        const request = installHost(async (url, data) => {
+            if (url === "/init") return { scopes: [{ country: "璃月", typeDir: "NPC", commissionName: "已有委托", locationDir: "港" }], roles: [], recentFiles: [], processors: processInit.processors };
+            if (url === "/targetExists") {
+                const name = (data as { scope?: { commissionName?: string } }).scope?.commissionName ?? "";
+                // 模拟后端 safePart 校验：委托名含非法字符时返回错误。
+                if (name.includes("/")) return { status: "error", message: "委托名包含非法字符或为空" };
+                return { status: "ok", exists: name === "已有委托", path: "process/x/process.json" };
+            }
+            return { status: "ok" };
+        });
+        const wrapper = mount(ProcessEditor);
+        await flushPromises();
+        await wrapper.findAll(".side-mode-actions button")[1].trigger("click");
+        await flushPromises();
+        const fields = wrapper.findAll(".create-dialog .scope-field");
+        expect(fields[0].find(".ui-segmented button.active").text()).toBe("璃月");
+        await fields[2].find("input").setValue("已有委托");
+        await fields[3].find("input").setValue("港");
+        await new Promise((resolve) => setTimeout(resolve, 320));
+        await flushPromises();
+        expect(request.mock.calls.some((call) => call[0] === "/targetExists")).toBe(true);
+        expect(wrapper.find(".duplicate-hint").exists()).toBe(true);
+        expect(wrapper.find(".create-dialog footer .primary").attributes("disabled")).toBeDefined();
+        // 探测报错（委托名含非法字符）时同样禁用确认，并把原因透出到提示区。
+        await fields[2].find("input").setValue("非/法");
+        await new Promise((resolve) => setTimeout(resolve, 320));
+        await flushPromises();
+        expect(wrapper.find(".duplicate-hint").text()).toContain("非法");
+        expect(wrapper.find(".create-dialog footer .primary").attributes("disabled")).toBeDefined();
+        // 换成新委托后提示消失，确认恢复可用。
+        await fields[2].find("input").setValue("新委托");
+        await new Promise((resolve) => setTimeout(resolve, 320));
+        await flushPromises();
+        expect(wrapper.find(".duplicate-hint").exists()).toBe(false);
+        expect(wrapper.find(".create-dialog footer .primary").attributes("disabled")).toBeUndefined();
+        wrapper.unmount();
+    });
+
+    it("keeps the sidebar passive until the user opens a dialog", async () => {
+        // 初始化只提供候选，不应主动探测或选中现有流程。
         const request = installHost(async (url) => url === "/init" ? processInit : { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [] });
         const wrapper = mount(ProcessEditor);
         await flushPromises();
-        // 四级选择保持空值，下级控件依次禁用且打开按钮不可用。
-        const selectors = wrapper.findAll(".sidebar [role=combobox]");
-        expect(wrapper.findAll(".sidebar .scope-field")).toHaveLength(4);
-        expect(wrapper.findAll(".sidebar .scope-field").every((field) => field.element.tagName === "DIV")).toBe(true);
-        expect(selectors.slice(0, 4).map((selector) => (selector.element as HTMLButtonElement).textContent?.trim())).toEqual(["请选择", "请选择", "请选择", "请选择"]);
-        expect(selectors[1].attributes("disabled")).toBeDefined();
-        expect(wrapper.find(".sidebar>button").attributes("disabled")).toBeDefined();
-        expect(wrapper.find(".side-actions button.primary").attributes("disabled")).toBeDefined();
+        // 侧栏只有打开和新建两个入口，不提供级联选择；校验全部独占下一行。
+        expect(wrapper.findAll(".side-mode-actions button").map((button) => button.text())).toEqual(["打开", "新建"]);
+        expect(wrapper.find(".side-validate").text()).toBe("校验全部");
+        expect(wrapper.find(".sidebar .ui-select").exists()).toBe(false);
+        expect(wrapper.find(".step-toolbar button.primary").attributes("disabled")).toBeDefined();
         expect(request.mock.calls.some((call) => call[0] === "/target")).toBe(false);
-        await wrapper.findAll(".mode-switch button")[1].trigger("click");
-        expect(wrapper.findAll(".sidebar .scope-field")).toHaveLength(5);
+        // 打开新建弹窗在确认前不探测目标，取消后保持初始状态。
+        await wrapper.findAll(".side-mode-actions button")[1].trigger("click");
+        await flushPromises();
+        expect(wrapper.find(".create-dialog").exists()).toBe(true);
+        expect(request.mock.calls.some((call) => call[0] === "/target")).toBe(false);
+        await wrapper.find(".create-dialog footer button").trigger("click");
+        await flushPromises();
+        expect(wrapper.find(".create-dialog").exists()).toBe(false);
         wrapper.unmount();
     });
 
@@ -379,7 +595,7 @@ describe("process editor workflows", () => {
         // 选中地图步骤后从 data 区打开录制。
         const wrapper = mount(ProcessEditor);
         await flushPromises();
-        await wrapper.find(".recent button").trigger("click");
+        await wrapper.find(".recent-list button").trigger("click");
         await flushPromises();
         await wrapper.find(".step").trigger("click");
         await wrapper.find(".record-row button").trigger("click");
@@ -400,7 +616,7 @@ describe("process editor workflows", () => {
         // 选择哨塔步骤并点击第二个路径按钮。
         const wrapper = mount(ProcessEditor);
         await flushPromises();
-        await wrapper.find(".recent button").trigger("click");
+        await wrapper.find(".recent-list button").trigger("click");
         await flushPromises();
         await wrapper.find(".step").trigger("click");
         await wrapper.findAll(".data-field button.primary")[1].trigger("click");
