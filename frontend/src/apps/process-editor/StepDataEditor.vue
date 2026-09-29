@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
 // 数据编辑器静态文案来自共享中文文案表。
 const text = copy.processEditor;
 // 编辑器事件只提交结构化 data，并把路径录制请求交给页面处理。
-const emit = defineEmits<{ update: [value: unknown]; recordPath: [field?: string]; editSubprocess: [path: string] }>();
+const emit = defineEmits<{ update: [value: unknown]; recordPath: [field?: string]; editSubprocess: [path: string]; createSubprocess: [] }>();
 // 可选对象字段下拉的当前选择。
 const optionalField = ref("");
 // 角色重复状态就地提示，不阻断其他字段编辑。
@@ -34,6 +34,10 @@ const arrayDrafts = reactive<Record<string, string>>({});
 
 // 当前值的普通对象视图，非对象输入回落为空对象。
 const dataObject = computed(() => editableRecord(props.modelValue));
+// 归一化子流程引用（trim、反斜杠转斜杠、去 ./ 前缀），与后端归一化的候选比较。
+function subprocessReference(): string {
+    return String(dataObject.value.path ?? "").trim().replace(/\\/g, "/").replace(/^\.\/+/, "");
+}
 // 当前对象声明中应直接显示的字段，包含动态条件下的必填参数。
 const visibleFields = computed(() => filteredFields().filter(([name, field]) => field.required || field.alwaysVisible || isConditionallyRequired(name) || Object.hasOwn(dataObject.value, name)));
 // 当前对象声明中仍可添加的可选字段，动态必填项不进入下拉框。
@@ -291,7 +295,7 @@ function branchProcessor(key: string): ProcessorMeta | undefined {
                     <UiSelect v-else-if="field.options" :model-value="String(dataObject[name] ?? '')" :options="selectOptions(field)" :aria-label="fieldLabel(name, field)" width="content" :max-width="280" @change="updateObjectField(name, $event, field)" />
                     <input v-else class="control" :type="field.type === 'number' ? 'number' : 'text'" :min="field.min" :max="field.max" :step="field.integer ? 1 : 'any'" :value="dataObject[name] ?? ''" @input="updateObjectField(name, ($event.target as HTMLInputElement).value, field)">
                     <button v-if="stepType === '摧毁哨塔' && (name === 'path1' || name === 'path2')" class="primary mini" type="button" @click="emit('recordPath', name)">{{ pathOptions.some((option) => option.value === String(dataObject[name] ?? '')) ? text.editPath : text.recordPath }}</button>
-                    <button v-if="stepType === '执行子流程' && name === 'path'" class="primary mini" type="button" :disabled="!String(dataObject[name] ?? '').trim()" @click="emit('editSubprocess', String(dataObject[name] ?? ''))">{{ subProcessOptions.some((option) => option.value === String(dataObject[name] ?? '')) ? text.editSubprocess : text.createSubprocess }}</button>
+                    <button v-if="stepType === '执行子流程' && name === 'path'" class="primary mini" type="button" @click="subprocessReference() ? emit('editSubprocess', subprocessReference()) : emit('createSubprocess')">{{ subProcessOptions.some((option) => option.value === subprocessReference()) ? text.editSubprocess : text.createSubprocess }}</button>
                     <button v-if="!field.required && !field.alwaysVisible && !isConditionallyRequired(name)" class="danger mini" type="button" @click="removeObjectField(name)">{{ text.removeField }}</button>
                 </div>
             </section>
