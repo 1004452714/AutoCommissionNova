@@ -19,7 +19,6 @@ import { validateCompleteRoles } from "./party-config.js";
 import { probeRegistry } from "../probes/index.js";
 import { loadAllBranchConfigs } from "./branch-config.js";
 import { buildProcessBasePath, scanCommissionScopes } from "./process-scope.js";
-import { loadUserConfig } from "./user-config.js";
 
 const RETRY_MODES = new Set(["throw", "return-false", "all"]);
 
@@ -32,10 +31,13 @@ const RETRY_MODES = new Set(["throw", "return-false", "all"]);
 export async function validateAllProcesses(registry, commissionScopes) {
     log.info("开始静态校验流程文件...");
     const scopes = commissionScopes ?? scanCommissionScopes().list;
+    // 分支配置整个校验过程只读取一次：loadAllBranchConfigs 每次调用都会
+    // 重新扫描分支与账号目录并完整解析全部 JSON，放进 per-step 循环会放大成上千次重读。
+    const branchConfigs = loadAllBranchConfigs();
     let errors = 0;
-    errors += await validateNpcProcesses(registry, scopes);
-    errors += await validateBasicProcesses(registry, scopes);
-    errors += validateBranchConfig();
+    errors += await validateNpcProcesses(registry, scopes, branchConfigs);
+    errors += await validateBasicProcesses(registry, scopes, branchConfigs);
+    errors += validateBranchConfig(branchConfigs);
     errors += validatePartyConfig();
 
     if (errors > 0) {
@@ -155,7 +157,7 @@ function validateMacroFile(path, description) {
     return 0;
 }
 
-async function validateNpcProcesses(registry, scopes) {
+async function validateNpcProcesses(registry, scopes, branchConfigs) {
     let errors = 0;
 
     for (const scope of scopes) {
@@ -180,13 +182,14 @@ async function validateNpcProcesses(registry, scopes) {
             loaded.value,
             processDir,
             scope.commissionName,
+            branchConfigs,
             new Set([referenceKey(processPath)])
         );
     }
     return errors;
 }
 
-async function validateBasicProcesses(registry, scopes) {
+async function validateBasicProcesses(registry, scopes, branchConfigs) {
     let errors = 0;
 
     for (const scope of scopes) {
@@ -214,6 +217,7 @@ async function validateBasicProcesses(registry, scopes) {
             loaded.value,
             processDir,
             scope.commissionName,
+            branchConfigs,
             new Set([referenceKey(processPath)])
         );
     }
@@ -228,9 +232,10 @@ async function validateBasicProcesses(registry, scopes) {
  * @param {Array} steps - loader 返回的 step 数组
  * @param {string} resourceDir - 当前委托地点目录，所有资源引用均相对此目录解析
  * @param {string} commissionName - 当前委托名，用于分支配置校验
+ * @param {Object} branchConfigs - 本次校验一次性读入的分支配置快照
  * @param {Set<string>} stack - 当前递归栈中的流程路径，用于检测循环引用
  */
-async function validateProcessSteps(registry, processPath, steps, resourceDir, commissionName, stack = new Set()) {
+async function validateProcessSteps(registry, processPath, steps, resourceDir, commissionName, branchConfigs, stack = new Set()) {
     let errors = 0;
 
     async function validateReferencedProcess(reference, stepNumber, stepType, fieldName, guarded) {
@@ -274,6 +279,7 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
                 loaded.value,
                 resourceDir,
                 commissionName,
+                branchConfigs,
                 stack
             );
         } finally {
@@ -306,7 +312,7 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
 
         // 嵌套校验：用户分支选择 的 step.data[branchKey] 是嵌套 step 对象
         if (stepType === "用户分支选择" && step.data && typeof step.data === "object" && !Array.isArray(step.data)) {
-            const branchConfig = loadAllBranchConfigs()[commissionName];
+            const branchConfig = branchConfigs[commissionName];
             if (!branchConfig || !branchConfig.descriptions || typeof branchConfig.descriptions !== "object" ||
                 Array.isArray(branchConfig.descriptions)) {
                 log.debug("[{path}] 步骤 #{n} ({type}) 当前委托没有有效分支配置",
@@ -331,6 +337,7 @@ async function validateProcessSteps(registry, processPath, steps, resourceDir, c
                     [branchStep],
                     resourceDir,
                     commissionName,
+                    branchConfigs,
                     stack
                 );
             }
@@ -420,17 +427,16 @@ function validateCommonStepFields(processPath, stepNumber, step) {
  * 加载错误（目录不存在 / 单文件 JSON 解析失败）由 loadAllBranchConfigs 自行记录，
  * 此处只校验已成功解析的内容
  */
-function validateBranchConfig() {
-    const composite = loadAllBranchConfigs();
-    if (!composite || Object.keys(composite).length === 0) {
+function validateBranchConfig(branchConfigs) {
+    if (!branchConfigs || Object.keys(branchConfigs).length === 0) {
         log.debug("分支配置为空，跳过校验: {dir}", PATHS.BRANCHES_DIR);
         return 0;
     }
 
     let errors = 0;
     const registeredTypes = probeRegistry.types().join(", ");
-    for (const commissionName of Object.keys(composite)) {
-        const cfg = composite[commissionName];
+    for (const commissionName of Object.keys(branchConfigs)) {
+        const cfg = branchConfigs[commissionName];
         const filePath = PATHS.BRANCHES_DIR + "/" + commissionName + ".json";
         if (!cfg || typeof cfg !== "object") {
             log.debug("[{path}] 配置必须是对象", filePath);
