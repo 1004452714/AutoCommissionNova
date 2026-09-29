@@ -65,6 +65,21 @@ export interface ProcessEditorInit {
     recentFiles: RecentProcess[];
 }
 
+// process 目录浏览弹窗中的单个条目。
+export interface BrowseEntry {
+    name: string;
+    directory: boolean;
+    path: string;
+}
+
+// process 目录浏览响应。
+export interface BrowseResult {
+    status: "ok" | "error";
+    message?: string;
+    path: string;
+    entries: BrowseEntry[];
+}
+
 // 目标路径探测响应。
 export interface TargetResult {
     status: "ok" | "error";
@@ -75,6 +90,14 @@ export interface TargetResult {
     branches: Array<{ key: string; label: string }>;
     pathOptions?: Array<{ value: string; label: string }>;
     subProcessOptions?: Array<{ value: string; label: string }>;
+}
+
+// 轻量目标存在性探测响应：只判断固定入口文件是否已在磁盘上。
+export interface TargetExistsResult {
+    status: "ok" | "error";
+    message?: string;
+    exists: boolean;
+    path: string;
 }
 
 // 子流程打开响应同时提供当前文档范围内的新候选。
@@ -107,6 +130,15 @@ export interface SaveResult extends DiagnosticResult {
     path: string;
     content: string;
     scope: ProcessScope;
+    // 保存同时写入最近列表，后端回传最新列表供侧栏刷新。
+    recentFiles?: RecentProcess[];
+}
+
+// 清空最近流程列表的响应。
+export interface ClearRecentsResult {
+    status: "ok" | "error";
+    message?: string;
+    recentFiles: RecentProcess[];
 }
 
 // 路径录制器返回的流程步骤数据。

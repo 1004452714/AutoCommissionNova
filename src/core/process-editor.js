@@ -100,7 +100,7 @@ function isSubProcess(value) {
     return Array.isArray(value) && value.every(step => step && typeof step === "object" && !Array.isArray(step) && Object.hasOwn(step, "type"));
 }
 
-// 递归扫描当前委托目录中的合法子流程，并排除正在编辑的文档链。
+// 递归扫描当前委托目录中的合法子流程，并排除正在编辑的文档链与硬编码的主流程文件。
 function listSubProcessOptions(scope, excluded = []) {
     const root = processResourceDir(scope);
     const excludedKeys = new Set(excluded.map(value => normalizeReferenceValue(value).toLowerCase()));
@@ -111,6 +111,8 @@ function listSubProcessOptions(scope, excluded = []) {
             if (file.isFolder(entry)) visit(normalized);
             else if (/\.json$/i.test(normalized)) {
                 const relative = normalized.slice(root.length + 1);
+                // 主流程文件固定位于委托目录根且文件名硬编码为 process.json，仅精确排除这一个路径。
+                if (relative.toLowerCase() === "process.json") continue;
                 if (excludedKeys.has(relative.toLowerCase())) continue;
                 try {
                     if (isSubProcess(JSON.parse(file.readTextSync(normalized)))) result.push({ value: relative, label: relative });
@@ -176,6 +178,23 @@ function rememberRecentFile(scope, fileName) {
     return recent;
 }
 
+// 列出 process 根目录下指定子目录的条目，供打开弹窗浏览。
+function browseProcessDir(relative) {
+    const normalized = normalizeReferenceValue(relative).replace(/^\/+/, "");
+    const parts = normalized ? normalized.split("/") : [];
+    if (parts.some(part => part === "." || part === "..")) throw new Error("目录路径只能位于 process 目录内：" + relative);
+    const dir = ["process", ...parts].join("/");
+    if (!file.isFolder(dir)) throw new Error("目录不存在：" + dir);
+    const entries = [];
+    for (const entry of Array.from(file.readPathSync(dir) || [])) {
+        const entryPath = String(entry).replace(/\\/g, "/");
+        const name = entryPath.slice(entryPath.lastIndexOf("/") + 1);
+        if (!name) continue;
+        entries.push({ name, directory: file.isFolder(entryPath), path: [...parts, name].join("/") });
+    }
+    return { path: normalized, entries };
+}
+
 function resolveNewScope(scope) {
     const country = safePart(scope?.country, "国家");
     const typeDir = scope?.typeDir === "Basic" ? "Basic" : scope?.typeDir === "NPC" ? "NPC" : "";
@@ -212,10 +231,6 @@ function branchOptions(scope) {
     const descriptions = config?.descriptions;
     if (!descriptions || typeof descriptions !== "object" || Array.isArray(descriptions)) return [];
     return Object.keys(descriptions).map(key => ({ key, label: descriptions[key] || key }));
-}
-
-function editorScopes() {
-    return scanCommissionScopes().list.filter((scope) => file.isFile(buildPath(scope, "process.json")));
 }
 
 function orderedDeclaredObject(value, fields) {
@@ -397,6 +412,14 @@ function validateProcess(steps, registry, processPath, resourceDir, scope, diagn
     }
     if (steps.length === 0) warnings.push(label + "流程为空，没有可执行步骤");
 
+    // 分支候选按流程文档缓存一次：branchOptions 内部会全量重读分支与账号配置，
+    // 不能放在「用户分支选择」步骤的循环里反复调用。
+    let configuredBranchKeys;
+    function branchKeys() {
+        configuredBranchKeys ??= branchOptions(scope).map(item => item.key);
+        return configuredBranchKeys;
+    }
+
     function validateSubProcess(reference, prefix, guarded) {
         const path = resolveReference(resourceDir, reference, prefix, errors);
         if (!path) return;
@@ -477,7 +500,7 @@ function validateProcess(steps, registry, processPath, resourceDir, scope, diagn
             else {
                 const branches = Object.entries(step.data);
                 if (branches.length === 0) warnings.push(prefix + "没有配置任何分支步骤");
-                const configured = branchOptions(scope).map(item => item.key);
+                const configured = branchKeys();
                 if (!configured.length) errors.push(prefix + "当前委托没有分支配置，不能使用用户分支选择");
                 else {
                     const actual = branches.map(([key]) => key);
@@ -545,7 +568,8 @@ export async function openProcessEditor(registry) {
             try {
                 if (message.url === "/init") {
                     respond(windowId, message.requestId, {
-                        scopes: editorScopes(),
+                        // 全部扫描范围供新建弹窗推导地点候选，不再要求 process.json 已存在。
+                        scopes: scanCommissionScopes().list,
                         processors: metadata(registry),
                         roles: roleOptions(),
                         recentFiles: readRecentFiles(),
@@ -589,6 +613,9 @@ export async function openProcessEditor(registry) {
                         branches: branchOptions(message.data?.scope),
                         recentFiles,
                     });
+                } else if (message.url === "/browse") {
+                    const result = browseProcessDir(message.data?.path);
+                    respond(windowId, message.requestId, { status: "ok", path: result.path, entries: result.entries });
                 } else if (message.url === "/recordPath") {
                     const scope = message.data?.create ? resolveNewScope(message.data?.scope) : message.data?.scope;
                     const path = buildPath(scope, message.data?.fileName);
@@ -633,6 +660,21 @@ export async function openProcessEditor(registry) {
                         status: "ok", path, reference, exists, content,
                         subProcessOptions: listSubProcessOptions(scope, [...blocked, reference]),
                     });
+                } else if (message.url === "/targetExists") {
+                    // 轻量存在性探测：仅判断固定入口文件是否已在磁盘上，不做目录树扫描。
+                    const path = buildPath(message.data?.scope, message.data?.fileName || "process.json");
+                    respond(windowId, message.requestId, { status: "ok", exists: file.isFile(path), path });
+                } else if (message.url === "/nextSubprocess") {
+                    // 依据委托目录顶层已有的 subprocess-N.json（含无效文件）计算下一个可用序号。
+                    const root = processResourceDir(message.data?.scope);
+                    const used = new Set();
+                    for (const entry of Array.from(file.readPathSync(root) || [])) {
+                        const match = /(?:^|\/)subprocess-(\d+)\.json$/i.exec(String(entry).replace(/\\/g, "/"));
+                        if (match && file.isFile(entry)) used.add(Number(match[1]));
+                    }
+                    let next = 1;
+                    while (used.has(next)) next++;
+                    respond(windowId, message.requestId, { status: "ok", name: "subprocess-" + next + ".json" });
                 } else if (message.url === "/validateSubprocess" || message.url === "/saveSubprocess") {
                     let parsed;
                     try { parsed = JSON.parse(String(message.data?.content || "")); } catch (error) { throw new Error("JSON 格式错误：" + error.message); }
@@ -678,8 +720,18 @@ export async function openProcessEditor(registry) {
                         ensureParentDir(path);
                         const content = JSON.stringify(parsed.map(step => orderedStep(step, registry)), null, 4) + "\r\n";
                         if (!file.writeTextSync(path, content, false)) throw new Error("写入失败：" + path);
-                        respond(windowId, message.requestId, { status: "ok", path, content, scope, warnings: diagnostics.warnings });
+                        // 新建和打开共用最近列表，保存后同步回前端侧栏。
+                        const recentFiles = rememberRecentFile(scope, message.data?.fileName);
+                        respond(windowId, message.requestId, { status: "ok", path, content, scope, warnings: diagnostics.warnings, recentFiles });
                     }
+                } else if (message.url === "/clearRecents") {
+                    // 清空持久化的最近流程列表，返回空列表供侧栏立即刷新。
+                    try {
+                        if (!file.writeTextSync(RECENT_PATH, "[]\r\n", false)) throw new Error("写入失败：" + RECENT_PATH);
+                    } catch (error) {
+                        throw new Error("清除最近流程列表失败：" + error.message);
+                    }
+                    respond(windowId, message.requestId, { status: "ok", recentFiles: [] });
                 } else if (message.url === "/close") {
                     respond(windowId, message.requestId, { status: "ok" });
                     break;
