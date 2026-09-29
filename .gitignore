@@ -2,7 +2,8 @@
 .vscode/*
 .idea/*
 .trae/*
-.claude/
+.claude/*
+.zcode/*
 AGENTS.md
 CLAUDE.md
 
