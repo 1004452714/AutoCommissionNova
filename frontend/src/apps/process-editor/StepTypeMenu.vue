@@ -133,10 +133,13 @@ function openMenu(): void {
     categoryIndex.value = Math.max(0, groupIndex);
     itemIndex.value = Math.max(0, activeItems.value.findIndex((item) => item.type === props.modelValue));
     keyboardColumn.value = "item";
+    // 渲染前先定位：若 menuStyle 晚于首帧，弹层会先以无定位的静态流渲染在视口外。
+    positionMenu();
     open.value = true;
     nextTick(() => {
         positionMenu();
-        menuElement.value?.focus();
+        // preventScroll：聚焦视口外元素会触发程序化滚动，滚动会被下方捕获监听当作视口变化关闭菜单。
+        menuElement.value?.focus({ preventScroll: true });
     });
 }
 

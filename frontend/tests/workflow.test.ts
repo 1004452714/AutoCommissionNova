@@ -610,6 +610,21 @@ describe("process editor workflows", () => {
         wrapper.unmount();
     });
 
+    it("opens the add menu with focus scrolling suppressed", async () => {
+        // 首次打开时弹层已带定位，focus 不得触发程序化滚动（会被滚动监听误判为视口变化而关闭菜单）。
+        const processors: ProcessorMeta[] = [
+            { type: "地图追踪", category: "路径与定位", dataSpec: { kind: "string", label: "路径文件" } },
+        ];
+        const focusSpy = vi.spyOn(HTMLElement.prototype, "focus");
+        const wrapper = mount(StepTypeMenu, { props: { processors, variant: "add", ariaLabel: "添加步骤" } });
+        await wrapper.find("[role=combobox]").trigger("click");
+        await flushPromises();
+        expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+        expect(document.querySelector(".step-type-popover")).not.toBeNull();
+        focusSpy.mockRestore();
+        wrapper.unmount();
+    });
+
     it("keeps the sidebar passive until the user opens a dialog", async () => {
         // 初始化只提供候选，不应主动探测或选中现有流程。
         const request = installHost(async (url) => url === "/init" ? processInit : { status: "ok", scope: processScope, path: "process/process.json", exists: true, branches: [] });
