@@ -175,8 +175,13 @@ function deleteStep(index: number): void {
     markChanged();
 }
 
-// 记录 HTML5 拖放的源步骤。
+// 记录由拖拽手柄发起的 HTML5 拖放源步骤。
 function startDrag(index: number, event: DragEvent): void {
+    // 只有手柄可以发起排序，避免长按文本时把整行拖成虚影。
+    if (!(event.target as HTMLElement | null)?.classList.contains("drag")) {
+        event.preventDefault();
+        return;
+    }
     dragIndex.value = index;
     event.dataTransfer?.setData("text/plain", String(index));
     if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
@@ -526,8 +531,8 @@ onBeforeUnmount(cleanupEditor);
                     </div>
                 </div>
                 <div class="step-list">
-                    <article v-for="(step, index) in steps" :key="index" class="step" :class="{ selected: selectedIndex === index }" draggable="true" @dragstart="startDrag(index, $event)" @dragover.prevent @drop="dropStep(index, $event)" @click="selectStep(index)">
-                        <span class="drag" aria-hidden="true">⋮⋮</span><span class="index">{{ index + 1 }}</span><div class="step-summary"><strong>{{ step.type }}</strong><small>{{ step.note || step.desc || '' }}</small></div>
+                    <article v-for="(step, index) in steps" :key="index" class="step" :class="{ selected: selectedIndex === index }" @dragover.prevent @drop="dropStep(index, $event)" @click="selectStep(index)">
+                        <span class="drag" aria-hidden="true" draggable="true" @dragstart="startDrag(index, $event)">⋮⋮</span><span class="index">{{ index + 1 }}</span><div class="step-summary"><strong>{{ step.type }}</strong><small>{{ step.note || step.desc || '' }}</small></div>
                         <div class="step-actions"><button class="danger" :title="commonText.delete" :aria-label="commonText.delete" @click.stop="deleteStep(index)"><svg class="delete-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><path d="M5 11h5.5m0 0v29a1 1 0 0 0 1 1h25a1 1 0 0 0 1-1V11m-27 0H16m21.5 0H43m-5.5 0H32m-16 0V7h16v4m-16 0h16M20 18v15m8-15v15" /></svg></button></div>
                     </article>
                     <div v-if="!steps.length" class="empty">{{ text.noSteps }}</div>
@@ -554,8 +559,9 @@ onBeforeUnmount(cleanupEditor);
 <style scoped>
 .app { display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-panel); background:var(--color-workspace); box-shadow:0 14px 44px rgba(0,0,0,.5); }.app.locked { pointer-events:none; }
 .topbar { height:56px; flex:none; display:flex; align-items:center; gap:12px; padding:0 14px; border-bottom:1px solid var(--color-border); }.topbar h1 { margin:0; font-size:19px; }.document-path { max-width:260px; overflow:hidden; color:var(--color-text-muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }.hint { color:var(--color-text-muted); font-size:12px; }.status { min-width:0; flex:1; overflow:hidden; text-align:right; text-overflow:ellipsis; white-space:pre-line; }
-.layout { min-height:0; flex:1; display:grid; grid-template-columns:230px 420px minmax(0,1fr); }.sidebar,.inspector { min-height:0; overflow:auto; padding:12px; background:var(--color-navigation); }.sidebar { border-right:1px solid var(--color-border); }.inspector { border-left:1px solid var(--color-border); }.inspector label { display:grid; gap:5px; margin-bottom:10px; color:#cbd3dd; font-size:12px; }
-.side-mode-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; }.side-validate { display:block; width:100%; margin-bottom:2px; }.path { min-height:34px; margin:10px 0; color:var(--color-text-muted); font-size:12px; overflow-wrap:anywhere; }.recent { display:grid; gap:4px; padding-top:10px; border-top:1px solid var(--color-border); }.recent-header { display:flex; align-items:center; justify-content:space-between; }.recent h2 { margin:0; font-size:13px; }.recent-clear { min-height:26px; padding:0 10px; font-size:12px; }.recent-list button { overflow:hidden; background:transparent; text-align:left; text-overflow:ellipsis; white-space:nowrap; }.recent-list span { color:var(--color-text-muted); font-size:12px; }
+/* 路径与状态等只读文本需要支持复制，恢复文字选择。 */
+.document-path,.status { user-select:text; }.layout { min-height:0; flex:1; display:grid; grid-template-columns:230px 420px minmax(0,1fr); }.sidebar,.inspector { min-height:0; overflow:auto; padding:12px; background:var(--color-navigation); }.sidebar { border-right:1px solid var(--color-border); }.inspector { border-left:1px solid var(--color-border); }.inspector label { display:grid; gap:5px; margin-bottom:10px; color:#cbd3dd; font-size:12px; }
+.side-mode-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; }.side-validate { display:block; width:100%; margin-bottom:2px; }.path { min-height:34px; margin:10px 0; color:var(--color-text-muted); font-size:12px; overflow-wrap:anywhere; user-select:text; }.recent { display:grid; gap:4px; padding-top:10px; border-top:1px solid var(--color-border); }.recent-header { display:flex; align-items:center; justify-content:space-between; }.recent h2 { margin:0; font-size:13px; }.recent-clear { min-height:26px; padding:0 10px; font-size:12px; }.recent-list button { overflow:hidden; background:transparent; text-align:left; text-overflow:ellipsis; white-space:nowrap; }.recent-list span { color:var(--color-text-muted); font-size:12px; }
 .sidebar-locked { pointer-events:none; opacity:.58; }
 .steps-pane { min-width:0; min-height:0; display:flex; flex-direction:column; }.step-toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--color-border); }.toolbar-actions { display:flex; gap:8px; margin-left:auto; }.step-list { min-height:0; flex:1; overflow:auto; padding:10px 12px; }.step { display:flex; align-items:center; gap:8px; min-height:52px; margin-bottom:6px; padding:7px 8px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); cursor:pointer; }.step.selected { border-color:var(--color-primary); background:rgba(77,141,255,.12); }.drag { color:var(--color-text-muted); cursor:grab; }.index { width:26px; color:var(--color-text-muted); text-align:center; }.step-summary { min-width:0; flex:1; display:grid; }.step-summary small { overflow:hidden; color:var(--color-text-muted); text-overflow:ellipsis; white-space:nowrap; }.step-actions { display:flex; gap:3px; }.step-actions button { width:30px; min-height:30px; padding:0; display:grid; place-items:center; }.step-actions .delete-icon { width:17px; height:17px; }
 .inspector textarea { min-height:68px; }.code,pre { font-family:Consolas,monospace; font-size:12px; }

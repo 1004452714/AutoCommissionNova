@@ -53,6 +53,27 @@ textarea {
     font: inherit;
 }
 
+/* 遮罩内界面元素默认不参与文字选择，避免长按把整块界面拖出虚影。 */
+body {
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+/* 文本编辑区恢复正常的文字选择与光标行为。 */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+    user-select: text;
+    -webkit-user-drag: none;
+}
+
+/* 可复制展示型文本仍允许选中。 */
+.code,
+pre {
+    user-select: text;
+}
+
 button,
 .control {
     min-height: var(--control-height);

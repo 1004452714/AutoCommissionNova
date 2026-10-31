@@ -84,7 +84,7 @@ function filteredFields(): Array<[string, FieldSpec]> {
     return fields;
 }
 
-// 提交新 data 值。
+// 提交新 data 值；非可选标量在清空时写入空串，避免删除必填 data 字段。
 function updateValue(value: unknown): void {
     emit("update", value);
 }
@@ -217,10 +217,13 @@ function addWaveRoute(number: number): void {
     updateValue({ ...dataObject.value, [`wave${number}`]: { ...routes, [condition]: "" } });
 }
 
-// 更新波次路径条件或文件值。
+// 更新波次路径条件或文件值，条件重复时保留原值避免静默覆盖其他波次路径。
 function updateWaveRoute(number: number, previousCondition: string, condition: string, path: string): void {
     const routes = { ...waveRoutes(number) };
-    if (condition !== previousCondition) delete routes[previousCondition];
+    if (condition !== previousCondition) {
+        if (Object.hasOwn(routes, condition)) return;
+        delete routes[previousCondition];
+    }
     routes[condition] = path;
     updateValue({ ...dataObject.value, [`wave${number}`]: routes });
 }
@@ -313,13 +316,13 @@ function branchProcessor(key: string): ProcessorMeta | undefined {
         <template v-else-if="spec.kind === 'custom' && spec.editor === 'waves'">
             <div class="parameter-row"><FieldLabel :label="text.totalTimeout" name="timeout" :hint="text.defaultTimeout" /><input class="control" type="number" min="1" :value="dataObject.timeout ?? ''" :placeholder="text.defaultTimeout" @input="updateValue({ ...dataObject, timeout: Number(($event.target as HTMLInputElement).value) })"></div>
             <p v-if="waveNumbers.length" class="field-note wave-condition-hint">{{ text.killConditionHint }}</p>
-            <section v-for="number in waveNumbers" :key="number" class="wave-card"><header><label><FieldLabel :label="text.wave" :name="`wave${number}`" /><input class="control wave-number" type="number" min="1" :value="number" @change="renameWave(number, ($event.target as HTMLInputElement).value)"></label><button class="danger mini" type="button" @click="removeWave(number)">{{ text.deleteWave }}</button></header><div v-for="(path, condition) in waveRoutes(number)" :key="String(condition)" class="wave-route"><input class="control" type="number" min="-1" step="1" :value="condition" :placeholder="text.killConditionPlaceholder" :aria-label="text.killCondition" @change="updateWaveRoute(number, String(condition), ($event.target as HTMLInputElement).value, String(path))"><input class="control" :value="path" placeholder="路径文件.json" aria-label="路径文件" @input="updateWaveRoute(number, String(condition), String(condition), ($event.target as HTMLInputElement).value)"><button class="danger" type="button" @click="removeWaveRoute(number, String(condition))">×</button></div><button type="button" @click="addWaveRoute(number)">{{ text.addPathCondition }}</button></section>
+            <section v-for="number in waveNumbers" :key="number" class="wave-card"><header><label><FieldLabel :label="text.wave" :name="`wave${number}`" /><input class="control wave-number" type="number" min="1" :value="number" @change="renameWave(number, ($event.target as HTMLInputElement).value)"></label><button class="danger mini" type="button" @click="removeWave(number)">{{ text.deleteWave }}</button></header><div v-for="(path, condition) in waveRoutes(number)" :key="String(condition)" class="wave-route"><input class="control" type="number" min="-1" step="1" :value="condition" :placeholder="text.killConditionPlaceholder" :aria-label="text.killCondition" @change="updateWaveRoute(number, String(condition), ($event.target as HTMLInputElement).value, String(path))"><UiSelect editable :model-value="String(path ?? '')" :options="pathOptions" :placeholder="'路径文件.json'" aria-label="路径文件" width="field" @update:model-value="updateWaveRoute(number, String(condition), String(condition), $event)" /><button class="danger" type="button" @click="removeWaveRoute(number, String(condition))">×</button></div><button type="button" @click="addWaveRoute(number)">{{ text.addPathCondition }}</button></section>
             <button type="button" @click="addWave">{{ text.addWave }}</button>
         </template>
 
         <template v-else-if="spec.kind === 'custom' && spec.editor === 'branches'">
             <p v-if="!branches.length" class="status-error">{{ text.emptyBranches }}</p>
-            <section v-for="branch in branches" v-else :key="branch.key" class="branch-card"><header><FieldLabel :label="branch.label" :name="branch.key" /></header><StepTypeMenu :model-value="branchStep(branch.key).type" :processors="processors.filter((item) => item.type !== '用户分支选择')" :aria-label="`${branch.label} ${text.stepType}`" @change="updateBranchType(branch.key, $event)" /><StepDataEditor v-if="branchProcessor(branch.key)" :model-value="branchStep(branch.key).data" :spec="branchProcessor(branch.key)!.dataSpec" :step-type="branchStep(branch.key).type" :processors="processors" :roles="roles" :branches="[]" :path-options="pathOptions" :sub-process-options="subProcessOptions" @update="updateBranchStep(branch.key, { data: $event })" @record-path="emit('recordPath')" @edit-subprocess="emit('editSubprocess', $event)"></StepDataEditor><label><FieldLabel :label="text.note" name="note" /><input class="control" :value="branchStep(branch.key).note ?? ''" @input="updateBranchStep(branch.key, { note: ($event.target as HTMLInputElement).value })"></label></section>
+            <section v-for="branch in branches" v-else :key="branch.key" class="branch-card"><header><FieldLabel :label="branch.label" :name="branch.key" /></header><StepTypeMenu :model-value="branchStep(branch.key).type" :processors="processors.filter((item) => item.type !== '用户分支选择')" :aria-label="`${branch.label} ${text.stepType}`" @change="updateBranchType(branch.key, $event)" /><StepDataEditor v-if="branchProcessor(branch.key)" :model-value="branchStep(branch.key).data" :spec="branchProcessor(branch.key)!.dataSpec" :step-type="branchStep(branch.key).type" :processors="processors" :roles="roles" :branches="[]" :path-options="pathOptions" :sub-process-options="subProcessOptions" @update="updateBranchStep(branch.key, { data: $event })" @record-path="emit('recordPath', $event)" @edit-subprocess="emit('editSubprocess', $event)"></StepDataEditor><label><FieldLabel :label="text.note" name="note" /><input class="control" :value="branchStep(branch.key).note ?? ''" @input="updateBranchStep(branch.key, { note: ($event.target as HTMLInputElement).value })"></label></section>
         </template>
 
         <p v-else class="status-error">{{ text.unsupportedEditor }}</p>

@@ -374,7 +374,7 @@ function refreshSyntax(index: number, target: HTMLTextAreaElement): void {
     syntaxSelected.value = 0;
 }
 
-// 将选中补全替换到当前方法名或参数片段。
+// 将选中补全替换到当前方法名或参数片段，并把光标落在首个待填参数处。
 function applySyntaxCompletion(index = syntaxSelected.value): void {
     const target = syntaxTarget.value;
     const point = points.value[syntaxPointIndex.value];
@@ -389,11 +389,40 @@ function applySyntaxCompletion(index = syntaxSelected.value): void {
     markPointsChanged();
     syntaxItems.value = [];
     syntaxPointIndex.value = -1;
+    // 模板含括号时把光标放进括号内首个空参数位，避免插入后停留在 walk(, ) 这类占位串末尾。
+    const open = item.value.indexOf("(");
+    const close = item.value.lastIndexOf(")");
+    let nextCursor = start + item.value.length;
+    if (open >= 0 && close > open) {
+        const inner = item.value.slice(open + 1, close);
+        // 参数占位符以逗号分隔，空位即第一个空白的参数段。
+        const slots = inner.split(",");
+        const empty = slots.findIndex((slot) => !slot.trim());
+        nextCursor = start + open + 1 + (empty <= 0 ? 0 : slots.slice(0, empty).reduce((total, slot) => total + slot.length + 1, 0));
+    }
     nextTick(() => {
-        const nextCursor = start + item.value.length;
         target.focus();
         target.setSelectionRange(nextCursor, nextCursor);
     });
+}
+
+// 焦点离开简易策略参数区域后关闭自动补全菜单。
+function handleSyntaxFocusOut(event: FocusEvent): void {
+    const nextElement = event.relatedTarget as Element | null;
+    if (nextElement) {
+        if (!nextElement.closest("[data-syntax-picker]")) closeSyntaxPicker();
+        return;
+    }
+    nextTick(() => {
+        const activeElement = document.activeElement as Element | null;
+        if (!activeElement?.closest("[data-syntax-picker]")) closeSyntaxPicker();
+    });
+}
+
+// 关闭自动补全菜单并清空当前输入目标。
+function closeSyntaxPicker(): void {
+    syntaxItems.value = [];
+    syntaxPointIndex.value = -1;
 }
 
 // 处理简易策略补全菜单的方向键、确认和关闭。
@@ -415,13 +444,14 @@ function handleSyntaxKeydown(event: KeyboardEvent, index: number): void {
         applySyntaxCompletion();
     } else if (event.key === "Escape") {
         event.preventDefault();
-        syntaxItems.value = [];
+        closeSyntaxPicker();
     }
 }
 
-// 记录拖动点位的源索引。
+// 记录由拖拽手柄发起的点位拖动源索引。
 function startDrag(index: number, event: DragEvent): void {
-    if (interactionBusy.value) {
+    // 行内长按输入框时不应把整行拖成虚影，排序只允许从手柄发起。
+    if (interactionBusy.value || !(event.target as HTMLElement | null)?.classList.contains("drag")) {
         event.preventDefault();
         return;
     }
@@ -875,7 +905,7 @@ onBeforeUnmount(cleanupRecorder);
 
 <template>
     <section v-if="displayMode === 'compact'" class="compact">
-        <header><div><h1>{{ text.title }}</h1><span>{{ phase }}</span></div><strong>{{ pointCountText }}</strong></header>
+        <header><div><h1>{{ text.title }}</h1><span>{{ text.phase[phase] }}</span></div><strong>{{ pointCountText }}</strong></header>
         <div class="compact-shortcuts"><span>{{ settings.addKey }} {{ text.sample }}</span><span>{{ settings.finishKey }} {{ text.finishKey }}</span><span>{{ settings.toggleKey }} 切换</span><span>Alt 编辑</span></div>
         <div class="compact-list">
             <article v-for="(point,index) in points" :key="point.id">
@@ -887,7 +917,7 @@ onBeforeUnmount(cleanupRecorder);
     </section>
 
     <div v-else class="app workspace-frame" :class="{ 'compact-edit': displayMode === 'compact-edit' }" :data-interactive-surface="displayMode === 'compact-edit' ? '' : undefined" @focusin="displayMode === 'compact-edit' && handleInteractionFocus()" @focusout="displayMode === 'compact-edit' && handleInteractionBlur()">
-        <header class="topbar"><h1>{{ text.title }}</h1><span class="phase">{{ phase }}</span><div class="top-spacer"></div><button :disabled="interactionBusy" @click="requestClose()">{{ commonText.close }}</button></header>
+        <header class="topbar"><h1>{{ text.title }}</h1><span class="phase">{{ text.phase[phase] }}</span><div class="top-spacer"></div><button :disabled="interactionBusy" @click="requestClose()">{{ commonText.close }}</button></header>
         <section class="toolbar">
             <button :disabled="interactionBusy" @click="openSettings">{{ text.settings }}</button>
             <div ref="authorsMenuElement" class="authors-picker">
@@ -903,14 +933,14 @@ onBeforeUnmount(cleanupRecorder);
         <main class="content">
             <div class="point-table">
                 <div class="point-row point-header"><span></span><span></span><span>#</span><span>坐标</span><span>{{ text.pointType }}</span><span>{{ text.moveMode }}</span><span>{{ text.action }}</span><span>{{ text.actionParams }}</span><span>操作</span></div>
-                <div v-for="(point,index) in points" :key="point.id" class="point-row" :draggable="!interactionBusy" @dragstart="startDrag(index,$event)" @dragover.prevent @drop="dropPoint(index,$event)">
-                    <span class="drag">⋮⋮</span>
+                <div v-for="(point,index) in points" :key="point.id" class="point-row" @dragover.prevent @drop="dropPoint(index,$event)">
+                    <span class="drag" :draggable="!interactionBusy" title="拖动调整顺序" @dragstart="startDrag(index,$event)">⋮⋮</span>
                     <button class="icon-button run-point" type="button" :title="text.run" :aria-label="`${text.run} #${index + 1}`" :disabled="interactionBusy" @click="runFromPoint(index)"><Play :size="16" /></button>
                     <strong>{{ index + 1 }}</strong><button class="coordinate" :disabled="interactionBusy" @click="openCoordinate(index)">{{ point.x.toFixed(4) }}, {{ point.y.toFixed(4) }}</button>
                     <UiSelect v-model="point.type" :options="pointTypeOptions" :aria-label="`点位类型 #${index + 1}`" :disabled="interactionBusy" width="table" @change="markPointsChanged" />
                     <UiSelect v-model="point.move_mode" :options="moveModeOptions" :aria-label="`移动方式 #${index + 1}`" :disabled="interactionBusy" width="table" @change="markPointsChanged" />
                     <UiSelect :model-value="point.action" :options="actionOptions" :aria-label="`动作 #${index + 1}`" :disabled="interactionBusy" width="table" @change="updatePointAction(index, $event)" />
-                    <div class="param-cell" :class="{ 'combat-param': point.action === 'combat_script' }">
+                    <div class="param-cell" :class="{ 'combat-param': point.action === 'combat_script' }" :data-syntax-picker="point.action === 'combat_script' ? '' : undefined" @focusout="point.action === 'combat_script' && handleSyntaxFocusOut($event)">
                         <template v-if="point.action === 'combat_script'">
                             <div class="strategy-picker" :class="{ expanded: strategyExpandedIndex === index }" data-strategy-picker @focusout="handleStrategyFocusOut($event)">
                                 <button v-if="strategyExpandedIndex !== index" class="icon-button strategy-trigger" type="button" :title="text.searchScript" :aria-label="text.searchScript" :disabled="interactionBusy || !settings.combatScripts.length" @click="openStrategyPicker(index)"><Search :size="16" /></button>
@@ -999,7 +1029,8 @@ textarea.action-params { overflow:hidden; white-space:nowrap; }
 .no-params { display:block; color:var(--color-text-muted); text-align:center; }
 .row-actions { display:flex; gap:3px; }
 .footer { min-height:54px; flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-top:1px solid var(--color-border); }
-.footer>div { min-width:0; overflow:hidden; white-space:pre-line; }
+/* 状态栏常包含保存路径与错误详情，需要支持选中复制。 */
+.footer>div { min-width:0; overflow:hidden; white-space:pre-line; user-select:text; }
 .compact { position:absolute; top:32.407407vh; left:0; width:15.625vw; height:50vh; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-panel); background:var(--color-workspace); box-shadow:0 10px 36px rgba(0,0,0,.5); pointer-events:none; }
 .compact header { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--color-border); }
 .compact h1 { margin:0; font-size:15px; }

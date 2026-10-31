@@ -282,6 +282,54 @@ describe("process editor workflows", () => {
         wavesWrapper.unmount();
     });
 
+    it("switches the map path button back to recording after the text is cleared", async () => {
+        // 已有路径显示编辑入口，清空文本框后回到录制入口，无需额外按钮。
+        const wrapper = mount(StepInspector, { props: {
+            step: { type: "地图追踪", data: "route.json" }, processors: processInit.processors, roles: [], branches: [],
+            pathOptions: [{ value: "route.json", label: "route.json" }],
+        } });
+        expect(wrapper.find(".record-row button.primary").text()).toBe("编辑路径");
+        expect(wrapper.findAll(".record-row button")).toHaveLength(1);
+        await wrapper.find(".record-row input").setValue("");
+        // 清空后按钮切回录制路径，且必填 data 保留为空串而不是整个消失。
+        expect(wrapper.find(".record-row button.primary").text()).toBe("录制路径");
+        expect(wrapper.find(".record-row input").exists()).toBe(true);
+        expect(wrapper.emitted("changed")?.at(-1)?.[0]).toMatchObject({ type: "地图追踪", data: "" });
+        // 重新选中已有路径后按钮恢复为编辑入口。
+        await wrapper.find(".record-row input").setValue("route.json");
+        expect(wrapper.find(".record-row button.primary").text()).toBe("编辑路径");
+        wrapper.unmount();
+    });
+
+    it("rejects duplicate wave conditions instead of overwriting another route", async () => {
+        // 波次条件改名撞上已有条件时必须保持原数据不变。
+        const wrapper = mount(StepDataEditor, { props: {
+            modelValue: { wave1: { "3": "three.json", "6": "six.json" } },
+            spec: processInit.processors.find(processor => processor.type === "固若金汤")!.dataSpec,
+            stepType: "固若金汤", processors: processInit.processors, roles: [], branches: [],
+        } });
+        const conditions = wrapper.findAll(".wave-route input[type=number]");
+        expect(conditions).toHaveLength(2);
+        await conditions[0].setValue("6");
+        expect(wrapper.emitted("update")).toBeUndefined();
+        // 非重复条件正常提交改名。
+        await conditions[0].setValue("5");
+        expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual({ wave1: { "5": "three.json", "6": "six.json" } });
+        wrapper.unmount();
+    });
+
+    it("keeps the description field when its text is cleared", async () => {
+        // 剪切会把输入框瞬时清空，字段本身必须继续存在以便继续录入。
+        const wrapper = mount(StepInspector, { props: { step: { type: "对象步骤", desc: "原文" }, processors: processInit.processors, roles: [], branches: [] } });
+        const description = wrapper.find('input[placeholder="委托描述中包含此处文本才执行"]');
+        expect(description.exists()).toBe(true);
+        await description.setValue("");
+        expect(wrapper.emitted("changed")?.at(-1)?.[0]).toMatchObject({ desc: "" });
+        // 字段仍被渲染，用户可以直接继续粘贴。
+        expect(wrapper.find('input[placeholder="委托描述中包含此处文本才执行"]').exists()).toBe(true);
+        wrapper.unmount();
+    });
+
     it("selects, creates, and opens subprocess documents", async () => {
         // 已有子流程使用编辑按钮，手动的新路径使用新建按钮。
         const subprocessSpec = processInit.processors.find(processor => processor.type === "执行子流程")!.dataSpec;

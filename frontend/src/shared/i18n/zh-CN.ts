@@ -154,6 +154,13 @@ export const copy = {
         settings: "设置",
         start: "开始录制",
         finish: "结束录制",
+        // 录制阶段只用于界面展示，宿主协议仍使用英文枚举值。
+        phase: {
+            idle: "未开始",
+            recording: "录制中",
+            stopped: "已停止",
+            saved: "已保存",
+        },
         sample: "添加当前点位",
         coordinate: "添加坐标",
         save: "保存路径",

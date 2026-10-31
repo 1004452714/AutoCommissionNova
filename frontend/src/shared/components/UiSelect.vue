@@ -171,6 +171,18 @@ function updateEditableValue(event: Event): void {
     else nextTick(positionMenu);
 }
 
+// 可编辑输入框失焦后关闭菜单；焦点落入传送后的菜单时保留，供点击选项。
+function handleInputBlur(): void {
+    // 点击选项经由 mousedown.prevent 阻止默认聚焦，这里用微任务等待最终焦点落定。
+    nextTick(() => {
+        if (!open.value) return;
+        const active = document.activeElement;
+        if (active && menuElement.value?.contains(active)) return;
+        if (active && rootElement.value?.contains(active)) return;
+        closeMenu();
+    });
+}
+
 // 处理触发器和输入框上的完整键盘选择行为。
 function handleTriggerKeydown(event: KeyboardEvent): void {
     if (event.key === "Tab") {
@@ -248,7 +260,7 @@ onBeforeUnmount(cleanupSelect);
 <template>
     <span ref="rootElement" class="ui-select" :class="[`ui-select--${width}`, { 'ui-select--open': open, 'ui-select--disabled': disabled }]" :style="rootStyle">
         <span v-if="width !== 'table'" class="ui-select__sizer" aria-hidden="true">{{ longestLabel }}</span>
-        <input v-if="editable" ref="triggerElement" class="ui-select__trigger ui-select__input" type="text" role="combobox" autocomplete="off" :value="modelValue ?? ''" :placeholder="placeholder" :disabled="disabled" :aria-label="accessibleLabel" :aria-expanded="open" :aria-controls="listboxId" @focus="openMenu()" @input="updateEditableValue" @keydown="handleTriggerKeydown">
+        <input v-if="editable" ref="triggerElement" class="ui-select__trigger ui-select__input" type="text" role="combobox" autocomplete="off" :value="modelValue ?? ''" :placeholder="placeholder" :disabled="disabled" :aria-label="accessibleLabel" :aria-expanded="open" :aria-controls="listboxId" @focus="openMenu()" @input="updateEditableValue" @blur="handleInputBlur" @keydown="handleTriggerKeydown">
         <button v-else ref="triggerElement" class="ui-select__trigger" type="button" role="combobox" :disabled="disabled" :aria-label="accessibleLabel" :aria-expanded="open" :aria-controls="listboxId" aria-haspopup="listbox" @click="toggleMenu" @keydown="handleTriggerKeydown">
             <span :class="{ placeholder: !selectedLabel }" :title="selectedLabel || placeholder">{{ selectedLabel || placeholder }}</span><ChevronDown :size="16" aria-hidden="true" />
         </button>

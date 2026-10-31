@@ -63,9 +63,19 @@ function emitChanged(): void {
     emit("changed", cloneProcessValue(editableStep.value));
 }
 
-// 更新步骤字段并通知页面进入未保存状态。
-function updateStepField(name: string, value: unknown): void {
-    if (value === "" || value === undefined) delete editableStep.value[name]; else editableStep.value[name] = value;
+// 判断 data 是否为可清空的必填字符串；数字由输入控件归一化，布尔无法清空。
+function requiredScalarData(): boolean {
+    const spec = processor.value?.dataSpec;
+    if (!spec || spec.optional) return false;
+    return spec.kind === "string";
+}
+
+// 更新步骤字段并通知页面进入未保存状态；keepEmpty 用于已启用字段保持“空值”而非删除字段。
+function updateStepField(name: string, value: unknown, keepEmpty = false): void {
+    // 必填标量 data 清空时写入空串，避免删除字段后写出一份缺必填项的步骤。
+    if (keepEmpty || (name === "data" && requiredScalarData())) editableStep.value[name] = value ?? "";
+    else if (value === "" || value === undefined) delete editableStep.value[name];
+    else editableStep.value[name] = value;
     emitChanged();
 }
 
@@ -158,7 +168,7 @@ function removeLoc(index: number): void {
                 <div class="card-body">
                     <UiSelect v-if="optionalCommonFields.length" v-model="optionalCommon" class="field-picker" :options="optionalCommonFields.map((name) => ({ value: name, label: `${commonLabels[name]} (${name})` }))" :placeholder="text.selectCommonField" :aria-label="text.selectCommonField" width="field" :max-width="300" @change="addSelectedCommonField" />
 
-                    <div v-if="editableStep.desc !== undefined" class="common-field-row"><FieldLabel :label="text.description" name="desc" :hint="text.descriptionHint" /><input class="control" :value="editableStep.desc" :placeholder="text.descriptionHint" @input="updateStepField('desc', ($event.target as HTMLInputElement).value)"><button class="danger" type="button" @click="removeCommonField('desc')">{{ text.removeField }}</button></div>
+                    <div v-if="editableStep.desc !== undefined" class="common-field-row"><FieldLabel :label="text.description" name="desc" :hint="text.descriptionHint" /><input class="control" :value="editableStep.desc" :placeholder="text.descriptionHint" @input="updateStepField('desc', ($event.target as HTMLInputElement).value, true)"><button class="danger" type="button" @click="removeCommonField('desc')">{{ text.removeField }}</button></div>
 
                     <section v-if="editableStep.loc !== undefined" class="loc-editor"><header><FieldLabel :label="text.locationField" name="loc" /><div class="loc-head-actions"><div class="segmented"><button type="button" :class="{ active: locMode === 'single' }" @click="changeLocMode('single')">{{ text.singlePoint }}</button><button type="button" :class="{ active: locMode === 'multiple' }" @click="changeLocMode('multiple')">{{ text.multiplePoints }}</button></div><button class="danger" type="button" @click="removeCommonField('loc')">{{ text.removeField }}</button></div></header><div v-for="(point,index) in locRows" :key="index" class="loc-row"><label><span>{{ text.coordinateX }}</span><input class="control" type="number" :value="point[0]" :aria-label="text.coordinateX" @input="updateLoc(index,0,($event.target as HTMLInputElement).value)"></label><label><span>{{ text.coordinateY }}</span><input class="control" type="number" :value="point[1]" :aria-label="text.coordinateY" @input="updateLoc(index,1,($event.target as HTMLInputElement).value)"></label><label><span>{{ text.tolerance }}</span><input class="control" type="number" :value="point[2] ?? ''" :aria-label="text.tolerance" @input="updateLoc(index,2,($event.target as HTMLInputElement).value)"></label><button v-if="locMode === 'multiple'" class="danger loc-remove" type="button" @click="removeLoc(index)">×</button></div><button v-if="locMode === 'multiple'" type="button" @click="addLoc">{{ text.addCoordinate }}</button></section>
 
