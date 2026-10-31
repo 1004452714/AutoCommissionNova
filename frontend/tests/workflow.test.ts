@@ -5,6 +5,7 @@ import PathRecorder from "@/apps/path-recorder/App.vue";
 import StepDataEditor from "@/apps/process-editor/StepDataEditor.vue";
 import StepInspector from "@/apps/process-editor/StepInspector.vue";
 import StepTypeMenu from "@/apps/process-editor/StepTypeMenu.vue";
+import UiSelect from "@/shared/components/UiSelect.vue";
 import CommissionConfig from "@/apps/commission-config/App.vue";
 import DeveloperTest from "@/apps/developer-test/App.vue";
 import { DEFAULT_SETTINGS, createPoint } from "@/apps/path-recorder/model";
@@ -678,6 +679,28 @@ describe("process editor workflows", () => {
 });
 
 describe("path recorder workflows", () => {
+    it("only starts reordering from the drag handle", async () => {
+        // 长按行内文本不应触发行排序，只有手柄拖拽才改变顺序。
+        const request = installHost(async (url) => {
+            if (url === "/init") return recorderState("stopped");
+            if (url === "/points") return { status: "ok", phase: "stopped" };
+            return { status: "ok" };
+        });
+        const wrapper = mount(PathRecorder);
+        await flushPromises();
+        const row = wrapper.find(".point-row:not(.point-header)");
+        // 行本身不再可拖拽，只有手柄带 draggable。
+        expect(row.attributes("draggable")).toBeUndefined();
+        expect(row.find(".drag").attributes("draggable")).toBe("true");
+        // 行元素上不再挂 dragstart，因此不存在的拖拽不会引发任何重排请求。
+        const blocked = new Event("dragstart", { bubbles: true, cancelable: true });
+        Object.defineProperty(blocked, "target", { value: row.element });
+        row.element.dispatchEvent(blocked);
+        await flushPromises();
+        expect(request.mock.calls.some((call) => call[0] === "/points")).toBe(false);
+        wrapper.unmount();
+    });
+
     it("saves the UI file name and confirms before overwriting a different file", async () => {
         // 首次响应要求覆盖确认，确认后的重试必须保留页面填写的文件名。
         const request = installHost(async (url, data) => {
@@ -915,6 +938,59 @@ describe("path recorder workflows", () => {
         await row.find(".strategy-search").trigger("focusout", { relatedTarget: row.find("textarea.action-params").element });
         await flushPromises();
         expect(row.find(".strategy-menu").exists()).toBe(false);
+
+        // 简易策略参数框输入后出现补全菜单，移出参数区域即收起。
+        await row.find("textarea.action-params").trigger("focus");
+        await row.find("textarea.action-params").setValue("key");
+        await flushPromises();
+        expect(row.find(".syntax-menu").exists()).toBe(true);
+        await row.find(".param-cell").trigger("focusout", { relatedTarget: document.body });
+        await flushPromises();
+        expect(row.find(".syntax-menu").exists()).toBe(false);
+
+        // 切换动作会卸载参数框，补全菜单不能残留指向旧目标。
+        await row.find("textarea.action-params").setValue("key");
+        await flushPromises();
+        expect(row.find(".syntax-menu").exists()).toBe(true);
+        await chooseUiOption(row.findAll(".ui-select")[2], "fight");
+        await flushPromises();
+        expect(row.find(".syntax-menu").exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it("drops stale array drafts when a field is removed and added again", async () => {
+        // 未失焦就删除字段时，草稿不能残留到重新添加的同名字段上。
+        const objectSpec = processInit.processors.find(processor => processor.type === "对象步骤")!.dataSpec;
+        const wrapper = mount(StepDataEditor, { props: {
+            modelValue: { name: "甲", items: ["旧条目"] }, spec: objectSpec, stepType: "对象步骤",
+            processors: processInit.processors, roles: [], branches: [],
+        } });
+        const textarea = wrapper.find("textarea");
+        await textarea.setValue("草稿内容");
+        // 直接移除字段，不触发文本域失焦清理。
+        const removeButton = wrapper.findAll(".data-field .danger.mini").at(-1)!;
+        await removeButton.trigger("click");
+        expect(wrapper.emitted("update")?.at(-1)?.[0]).toEqual({ name: "甲" });
+        wrapper.unmount();
+    });
+
+    it("closes an editable select when its input loses focus", async () => {
+        // 可编辑下拉在移焦到外部后必须自行收起，避免弹层残留遮挡后续操作。
+        const wrapper = mount(UiSelect, {
+            attachTo: document.body,
+            props: { editable: true, modelValue: "", options: [{ value: "a.json", label: "a.json" }], ariaLabel: "路径" },
+        });
+        // 外层容器提供稳定的聚焦目标。
+        const outside = document.createElement("button");
+        document.body.appendChild(outside);
+        await wrapper.find("input").trigger("focus");
+        await flushPromises();
+        expect(wrapper.find('input[aria-expanded="true"]').exists()).toBe(true);
+        outside.focus();
+        await wrapper.find("input").trigger("blur");
+        await flushPromises();
+        expect(wrapper.find('input[aria-expanded="true"]').exists()).toBe(false);
+        outside.remove();
         wrapper.unmount();
     });
 

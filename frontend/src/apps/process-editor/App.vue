@@ -180,6 +180,8 @@ function startDrag(index: number, event: DragEvent): void {
     // 只有手柄可以发起排序，避免长按文本时把整行拖成虚影。
     if (!(event.target as HTMLElement | null)?.classList.contains("drag")) {
         event.preventDefault();
+        // 拦截非手柄拖拽时清空源索引，避免沿用上一次未完成的拖拽。
+        dragIndex.value = -1;
         return;
     }
     dragIndex.value = index;

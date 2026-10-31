@@ -226,6 +226,8 @@ async function resamplePoint(index: number): Promise<void> {
         const result = await requestHtmlMask<RecorderResult, { index: number }>("/resample", { index });
         if (result.status === "error") throw new Error(result.message || "重新录制失败");
         if (result.points) points.value = clonePoints(result.points);
+        // 宿主回写点位后索引可能变化，补全目标随之失效。
+        closeSyntaxPicker();
         dirty.value = true;
         saved.value = false;
         setStatus(`已更新点位 #${index + 1}`, "success");
@@ -275,6 +277,8 @@ function closeCoordinate(): void {
 function deletePoint(index: number): void {
     if (interactionBusy.value) return;
     points.value.splice(index, 1);
+    // 点位索引整体前移，补全目标随之失效。
+    closeSyntaxPicker();
     markPointsChanged();
 }
 
@@ -282,6 +286,8 @@ function deletePoint(index: number): void {
 function copyPoint(index: number): void {
     if (interactionBusy.value) return;
     points.value = duplicatePoint(points.value, index);
+    // 插入新点位会改变后续索引，补全目标随之失效。
+    closeSyntaxPicker();
     markPointsChanged();
 }
 
@@ -290,6 +296,8 @@ function updatePointAction(index: number, action: string): void {
     if (interactionBusy.value || !points.value[index]) return;
     points.value[index] = changePointAction(points.value[index], action, settings.value);
     if (strategyExpandedIndex.value === index) closeStrategyPicker();
+    // 切换动作会卸载当前参数输入框，补全菜单必须同时收起，避免指向已不存在的目标。
+    if (syntaxPointIndex.value === index) closeSyntaxPicker();
     markPointsChanged();
 }
 
@@ -387,8 +395,7 @@ function applySyntaxCompletion(index = syntaxSelected.value): void {
     const start = parameterMatch ? cursor - parameterMatch[2].length : cursor - (tokenMatch?.[0].length ?? 0);
     point.action_params = `${target.value.slice(0, start)}${item.value}${target.value.slice(cursor)}`;
     markPointsChanged();
-    syntaxItems.value = [];
-    syntaxPointIndex.value = -1;
+    closeSyntaxPicker();
     // 模板含括号时把光标放进括号内首个空参数位，避免插入后停留在 walk(, ) 这类占位串末尾。
     const open = item.value.indexOf("(");
     const close = item.value.lastIndexOf(")");
@@ -453,6 +460,8 @@ function startDrag(index: number, event: DragEvent): void {
     // 行内长按输入框时不应把整行拖成虚影，排序只允许从手柄发起。
     if (interactionBusy.value || !(event.target as HTMLElement | null)?.classList.contains("drag")) {
         event.preventDefault();
+        // 拦截非法拖拽时清空源索引，避免沿用上一次未完成的拖拽。
+        dragIndex.value = -1;
         return;
     }
     dragIndex.value = index;
@@ -470,6 +479,8 @@ function dropPoint(targetIndex: number, event: DragEvent): void {
     if (dragIndex.value < insertion) insertion -= 1;
     points.value.splice(insertion, 0, point);
     dragIndex.value = -1;
+    // 重排后行索引变化，补全目标随之失效。
+    closeSyntaxPicker();
     markPointsChanged();
 }
 
@@ -520,6 +531,8 @@ async function saveRoute(overwrite = false): Promise<void> {
 // 清空全部点位并同步空会话。
 async function clearPoints(): Promise<void> {
     points.value = [];
+    // 点位被全部移除，补全目标随之失效。
+    closeSyntaxPicker();
     dirty.value = true;
     saved.value = false;
     await syncPoints();
@@ -839,6 +852,7 @@ function handleDocumentFocusOut(): void {
 function handleWindowBlur(): void {
     windowFocused.value = false;
     closeStrategyPicker();
+    closeSyntaxPicker();
     void syncInteractionLock();
 }
 

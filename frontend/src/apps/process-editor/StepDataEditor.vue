@@ -111,7 +111,16 @@ function removeObjectField(name: string): void {
     // 删除使用浅副本，避免直接修改父组件传入对象。
     const next = { ...dataObject.value };
     delete next[name];
+    // 字段被移除后其数组草稿必须同步丢弃，否则重新添加同名字段会回显旧内容。
+    clearFieldDrafts(name);
     updateValue(next);
+}
+
+// 丢弃某个字段及其嵌套子字段残留的数组编辑草稿。
+function clearFieldDrafts(name: string): void {
+    for (const key of Object.keys(arrayDrafts)) {
+        if (key === name || key.startsWith(`${name}.`)) delete arrayDrafts[key];
+    }
 }
 
 // 选择后立即添加可选字段、写入声明默认值并复位下拉框。
@@ -123,6 +132,8 @@ function addOptionalField(): void {
     const initial = "default" in field
         ? cloneProcessValue(field.default)
         : field.type === "array" ? [] : field.type === "object" ? {} : field.type === "boolean" ? false : field.type === "number" ? 0 : "";
+    // 新增字段必须从干净状态开始，不能回显历史残留草稿。
+    clearFieldDrafts(name);
     updateValue({ ...dataObject.value, [name]: initial });
     optionalField.value = "";
 }
