@@ -3,7 +3,7 @@
  * 使用 BetterGI AutoSkip 实时任务处理 NPC 对话
  */
 import { DIALOG_REGIONS } from "../config/index.js";
-import { isInMainUI, bvPageOcrRegion, RO } from "../vision/index.js";
+import { isInMainUI, bvPageOcrRegion } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { dispatchOnDialogOcr } from "../probes/index.js";
@@ -85,9 +85,20 @@ export default [
                     ? Array.from(results).find(r => r.text.includes(extractedName))
                     : null;
 
-                await page.locator(RO.inTalk)
-                    .withRetryInterval(500)
-                    .withRetryAction(async () => {
+                // 要交互的文本：优先白名单命中的 NPC，其次任务描述提取的人名；
+                // 都没有时为空串（等价于交互区域内任意文本），用于末尾按 F 触发的兜底分支
+                let interactionText = "";
+                if (matchedNPCs.length > 0) {
+                    interactionText = matchedNPCs[0].matchedNPC;
+                } else if (matchedByName) {
+                    interactionText = extractedName;
+                }
+                const interactionLocator = page.locator(interactionText, DIALOG_REGIONS.DIALOG_OPTIONS);
+
+                await page.Flow()
+                    .WithDefaultTimeout(10000)
+                    .WithDefaultRetryInterval(1000)
+                    .Do(async () => {
                         if (matchedNPCs.length > 0) {
                             for (let i = 0; i < matchedNPCs.length; i++) {
                                 const { element, matchedNPC } = matchedNPCs[i];
@@ -115,7 +126,8 @@ export default [
                             await sleep(400);
                         }
                     })
-                    .waitFor();
+                    .UntilDisappear(interactionLocator)
+                    .Run();
 
                 log.info("开始执行自动对话");
 
