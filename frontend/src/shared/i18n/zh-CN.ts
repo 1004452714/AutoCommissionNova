@@ -92,12 +92,15 @@ export const copy = {
         editPath: "编辑路径",
         editSubprocess: "编辑子流程",
         createSubprocess: "新建子流程",
-        saveSubprocess: "保存子流程",
-        backToParent: "返回上级流程",
+        // 子流程工具条按钮保持两字，避免在窄工具栏内换行。
+        saveSubprocess: "保存",
+        backToParent: "返回",
         apply: "应用修改",
         duplicate: "复制",
         moveUp: "上移",
         moveDown: "下移",
+        // 步骤行拖动手柄的提示文案。
+        dragToReorder: "拖动调整顺序",
         unsaved: "有未保存的修改",
         discardTitle: "未保存的修改",
         discardMessage: "当前流程有未保存的修改，确定继续吗？",
@@ -126,6 +129,8 @@ export const copy = {
         multiplePoints: "多点",
         addCoordinate: "添加坐标",
         tolerance: "容差",
+        // 容差省略时表示使用默认判断范围，作为输入框占位提示。
+        defaultTolerance: "默认",
         coordinateX: "X",
         coordinateY: "Y",
         noData: "此步骤不需要 data",

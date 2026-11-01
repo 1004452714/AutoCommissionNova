@@ -144,10 +144,10 @@ describe("process editor workflows", () => {
         expect(objectWrapper.find(".optional-picker").exists()).toBe(false);
         objectWrapper.unmount();
 
-        // 地址检测维持单多点选择并显示 X、Y、容差三个标签。
+        // 地址检测维持单多点选择；坐标表表头只出现一次 X、Y、容差。
         const locationWrapper = mount(StepInspector, { props: { step: { type: "无数据步骤", loc: [1, 2, 3] }, processors: processInit.processors, roles: [], branches: [] } });
-        expect(locationWrapper.findAll(".loc-row input")).toHaveLength(3);
-        expect(locationWrapper.findAll(".loc-row label").map((label) => label.text())).toEqual(["X", "Y", "容差"]);
+        expect(locationWrapper.findAll(".loc-table--single input")).toHaveLength(3);
+        expect(locationWrapper.findAll(".loc-head span").map((item) => item.text())).toEqual(["#", "X", "Y", "容差", ""]);
         expect(locationWrapper.find(".segmented").text()).toContain("单点");
         expect(locationWrapper.find(".segmented").text()).toContain("多点");
         expect(locationWrapper.find(".loc-editor>header .segmented").exists()).toBe(true);
@@ -388,7 +388,7 @@ describe("process editor workflows", () => {
         await flushPromises();
         expect(request).toHaveBeenCalledWith("/openSubprocess", expect.objectContaining({ reference: "child.json" }));
         expect(page.find(".subprocess-return").exists()).toBe(true);
-        expect(page.find(".step-toolbar button.primary").text()).toBe("保存子流程");
+        expect(page.find(".step-toolbar button.primary").text()).toBe("保存");
         await page.find(".subprocess-return").trigger("click");
         expect(page.findAll(".step")).toHaveLength(1);
         page.unmount();
@@ -417,7 +417,7 @@ describe("process editor workflows", () => {
         expect(request).toHaveBeenCalledWith("/nextSubprocess", expect.objectContaining({ scope: processScope }));
         expect(request).toHaveBeenCalledWith("/openSubprocess", expect.objectContaining({ reference: "subprocess-2.json" }));
         expect(wrapper.find(".subprocess-return").exists()).toBe(true);
-        expect(wrapper.find(".step-toolbar button.primary").text()).toBe("保存子流程");
+        expect(wrapper.find(".step-toolbar button.primary").text()).toBe("保存");
         wrapper.unmount();
     });
 

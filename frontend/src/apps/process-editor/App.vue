@@ -89,6 +89,19 @@ const openDialogVisible = ref(false);
 const createDialogVisible = ref(false);
 // HTML5 拖放开始时记录原始索引。
 const dragIndex = ref(-1);
+// 当前指针悬停的目标行，-1 表示未命中任何行。
+const dropIndex = ref(-1);
+// 指针位于目标行下半区时为 true，用于决定插入前后。
+const dropAfter = ref(false);
+
+// 步骤副标题优先展示步骤说明，其次退回委托描述 desc，便于在列表中区分同类步骤。
+function stepSubtitle(step: ProcessStep): string {
+    const note = typeof step.note === "string" ? step.note.trim() : "";
+    if (note) return note;
+    const desc = typeof step.desc === "string" ? step.desc.trim() : "";
+    if (desc) return desc;
+    return "";
+}
 // 未保存确认弹窗的待执行 Promise。
 let confirmResolve: ((value: boolean) => void) | null = null;
 // 确认弹窗是否占用工作区交互。
@@ -185,8 +198,35 @@ function startDrag(index: number, event: DragEvent): void {
         return;
     }
     dragIndex.value = index;
+    dropIndex.value = -1;
     event.dataTransfer?.setData("text/plain", String(index));
     if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+}
+
+// 拖拽经过目标行时记录落点，用于绘制插入指示线与高亮当前行。
+function dragOverStep(index: number, event: DragEvent): void {
+    if (dragIndex.value < 0) return;
+    const row = event.currentTarget as HTMLElement;
+    const rect = row.getBoundingClientRect();
+    // 指针越过行中线即插入到该行之后。
+    dropIndex.value = index;
+    dropAfter.value = event.clientY > rect.top + rect.height / 2;
+}
+
+// 指针离开目标行时清除该行的落点反馈，避免残留指示线。
+function dragLeaveStep(index: number, event: DragEvent): void {
+    // 移入子元素同样会触发 dragleave，需确认指针确实离开了整行。
+    const row = event.currentTarget as HTMLElement;
+    const related = event.relatedTarget as Node | null;
+    if (related && row.contains(related)) return;
+    if (dropIndex.value === index) dropIndex.value = -1;
+}
+
+// 结束拖拽时清空全部落点状态，覆盖取消拖拽的情况。
+function endDrag(): void {
+    dragIndex.value = -1;
+    dropIndex.value = -1;
+    dropAfter.value = false;
 }
 
 // 按指针所在半区将拖放步骤插入目标前后。
@@ -201,6 +241,8 @@ function dropStep(targetIndex: number, event: DragEvent): void {
     steps.value.splice(insertion, 0, step);
     selectedIndex.value = insertion;
     dragIndex.value = -1;
+    dropIndex.value = -1;
+    dropAfter.value = false;
     markChanged();
 }
 
@@ -533,8 +575,8 @@ onBeforeUnmount(cleanupEditor);
                     </div>
                 </div>
                 <div class="step-list">
-                    <article v-for="(step, index) in steps" :key="index" class="step" :class="{ selected: selectedIndex === index }" @dragover.prevent @drop="dropStep(index, $event)" @click="selectStep(index)">
-                        <span class="drag" aria-hidden="true" draggable="true" @dragstart="startDrag(index, $event)">⋮⋮</span><span class="index">{{ index + 1 }}</span><div class="step-summary"><strong>{{ step.type }}</strong><small>{{ step.note || step.desc || '' }}</small></div>
+                    <article v-for="(step, index) in steps" :key="index" class="step" :class="{ selected: selectedIndex === index, dragging: dragIndex === index, 'drop-before': dropIndex === index && dropAfter === false, 'drop-after': dropIndex === index && dropAfter === true }" @dragover.prevent="dragOverStep(index, $event)" @dragleave="dragLeaveStep(index, $event)" @drop="dropStep(index, $event)" @dragend="endDrag" @click="selectStep(index)">
+                        <span class="drag" aria-hidden="true" draggable="true" :title="text.dragToReorder" @dragstart="startDrag(index, $event)">⋮⋮</span><span class="index">{{ index + 1 }}</span><div class="step-summary"><strong>{{ step.type }}</strong><small>{{ stepSubtitle(step) }}</small></div>
                         <div class="step-actions"><button class="danger" :title="commonText.delete" :aria-label="commonText.delete" @click.stop="deleteStep(index)"><svg class="delete-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" aria-hidden="true"><path d="M5 11h5.5m0 0v29a1 1 0 0 0 1 1h25a1 1 0 0 0 1-1V11m-27 0H16m21.5 0H43m-5.5 0H32m-16 0V7h16v4m-16 0h16M20 18v15m8-15v15" /></svg></button></div>
                     </article>
                     <div v-if="!steps.length" class="empty">{{ text.noSteps }}</div>
@@ -562,11 +604,39 @@ onBeforeUnmount(cleanupEditor);
 .app { display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--color-border); border-radius:var(--radius-panel); background:var(--color-workspace); box-shadow:0 14px 44px rgba(0,0,0,.5); }.app.locked { pointer-events:none; }
 .topbar { height:56px; flex:none; display:flex; align-items:center; gap:12px; padding:0 14px; border-bottom:1px solid var(--color-border); }.topbar h1 { margin:0; font-size:19px; }.document-path { max-width:260px; overflow:hidden; color:var(--color-text-muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }.hint { color:var(--color-text-muted); font-size:12px; }.status { min-width:0; flex:1; overflow:hidden; text-align:right; text-overflow:ellipsis; white-space:pre-line; }
 /* 路径与状态等只读文本需要支持复制，恢复文字选择。 */
-.document-path,.status { user-select:text; }.layout { min-height:0; flex:1; display:grid; grid-template-columns:230px 420px minmax(0,1fr); }.sidebar,.inspector { min-height:0; overflow:auto; padding:12px; background:var(--color-navigation); }.sidebar { border-right:1px solid var(--color-border); }.inspector { border-left:1px solid var(--color-border); }.inspector label { display:grid; gap:5px; margin-bottom:10px; color:#cbd3dd; font-size:12px; }
+.document-path,.status { user-select:text; }
+/* 三栏比例：左侧工具列够窄、中间步骤列稳定可读、右侧参数列拿到最多空间。 */
+.layout { min-height:0; flex:1; display:grid; grid-template-columns:228px 336px minmax(0,1fr); }.sidebar,.inspector { min-height:0; overflow:auto; padding:12px; background:var(--color-navigation); }.sidebar { border-right:1px solid var(--color-border); }.inspector { border-left:1px solid var(--color-border); }.inspector label { display:grid; gap:5px; margin-bottom:10px; color:#cbd3dd; font-size:12px; }
 .side-mode-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:12px; }.side-validate { display:block; width:100%; margin-bottom:2px; }.path { min-height:34px; margin:10px 0; color:var(--color-text-muted); font-size:12px; overflow-wrap:anywhere; user-select:text; }.recent { display:grid; gap:4px; padding-top:10px; border-top:1px solid var(--color-border); }.recent-header { display:flex; align-items:center; justify-content:space-between; }.recent h2 { margin:0; font-size:13px; }.recent-clear { min-height:26px; padding:0 10px; font-size:12px; }.recent-list button { overflow:hidden; background:transparent; text-align:left; text-overflow:ellipsis; white-space:nowrap; }.recent-list span { color:var(--color-text-muted); font-size:12px; }
 .sidebar-locked { pointer-events:none; opacity:.58; }
-.steps-pane { min-width:0; min-height:0; display:flex; flex-direction:column; }.step-toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--color-border); }.toolbar-actions { display:flex; gap:8px; margin-left:auto; }.step-list { min-height:0; flex:1; overflow:auto; padding:10px 12px; }.step { display:flex; align-items:center; gap:8px; min-height:52px; margin-bottom:6px; padding:7px 8px; border:1px solid var(--color-border); border-radius:var(--radius-control); background:var(--color-surface); cursor:pointer; }.step.selected { border-color:var(--color-primary); background:rgba(77,141,255,.12); }.drag { color:var(--color-text-muted); cursor:grab; }.index { width:26px; color:var(--color-text-muted); text-align:center; }.step-summary { min-width:0; flex:1; display:grid; }.step-summary small { overflow:hidden; color:var(--color-text-muted); text-overflow:ellipsis; white-space:nowrap; }.step-actions { display:flex; gap:3px; }.step-actions button { width:30px; min-height:30px; padding:0; display:grid; place-items:center; }.step-actions .delete-icon { width:17px; height:17px; }
+.steps-pane { min-width:0; min-height:0; display:flex; flex-direction:column; }
+.step-toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--color-border); }
+.toolbar-actions { display:flex; gap:8px; margin-left:auto; }
+.step-list { min-height:0; flex:1; overflow:auto; padding:8px; }
+.step { display:flex; align-items:center; gap:8px; min-height:50px; padding:6px 8px; border:1px solid transparent; border-radius:var(--radius-control); cursor:pointer; transition:background-color 160ms, border-color 160ms; }
+.step:hover:not(.selected) { background:rgba(255,255,255,.035); }
+.step.selected { border-color:rgba(44,165,141,.4); background:var(--color-primary-soft); }
+/* 拖动中的源行：下沉提示，让用户明确正在拖哪一条。 */
+.step.dragging { opacity:.42; border-style:dashed; border-color:var(--color-primary); background:var(--color-primary-soft); }
+/* 落点指示线：上半区插到行前、下半区插到行后。 */
+.step.drop-before { box-shadow:inset 0 2px 0 var(--color-primary); }
+.step.drop-after { box-shadow:inset 0 -2px 0 var(--color-primary); }
+.step .drag { color:var(--color-text-muted); cursor:grab; transition:color 160ms; }
+.step .drag:hover { color:var(--color-primary-hover); }
+.step.dragging .drag { cursor:grabbing; color:var(--color-primary); }
+.step .index { width:18px; flex:none; color:#6f7d80; font-size:12px; font-variant-numeric:tabular-nums; text-align:center; }
+.step.selected .step-summary strong { color:#fff; }
+.step-summary { min-width:0; flex:1; display:grid; gap:1px; }
+.step-summary strong { overflow:hidden; font-size:13px; font-weight:400; text-overflow:ellipsis; white-space:nowrap; }
+.step-summary small { overflow:hidden; color:var(--color-text-muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.step-actions { display:flex; gap:3px; opacity:0; transition:opacity 160ms; }
+.step:hover .step-actions,.step.selected .step-actions { opacity:1; }
+.step-actions button { width:28px; min-height:28px; padding:0; display:grid; place-items:center; border-color:transparent; background:transparent; }
+.step-actions .delete-icon { width:15px; height:15px; }
 .inspector textarea { min-height:68px; }.code,pre { font-family:Consolas,monospace; font-size:12px; }
 .empty { display:grid; min-height:120px; place-items:center; color:var(--color-text-muted); text-align:center; }.modal-backdrop { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.62); pointer-events:auto; }.modal { width:min(420px,88vw); padding:18px; border:1px solid var(--color-border); border-radius:var(--radius-panel); background:var(--color-surface); box-shadow:0 18px 50px rgba(0,0,0,.55); }.modal h2 { margin:0; font-size:18px; }.modal p { color:var(--color-text-muted); }.modal>div { display:flex; justify-content:flex-end; gap:8px; }
-@media (max-width:1500px) { .layout { grid-template-columns:220px minmax(330px,1fr); }.inspector { position:absolute; z-index:2; right:0; top:56px; bottom:0; width:min(500px,52vw); border:1px solid var(--color-border); box-shadow:-8px 0 30px rgba(0,0,0,.35); }.inspector:has(.empty) { display:none; } }
+/* 中等宽度先压缩左栏与步骤列，尽量保住三栏结构。 */
+@media (max-width:1500px) { .layout { grid-template-columns:196px 276px minmax(0,1fr); } }
+/* 更窄时才把参数列改为右侧浮层，避免步骤列表被挤没。 */
+@media (max-width:1180px) { .layout { grid-template-columns:minmax(240px,1fr); }.sidebar { display:none; }.inspector { position:absolute; z-index:2; right:0; top:56px; bottom:0; width:min(480px,58vw); border:1px solid var(--color-border); box-shadow:-8px 0 30px rgba(0,0,0,.35); background:var(--color-surface); }.inspector:has(.empty) { display:none; } }
 </style>

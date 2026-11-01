@@ -67,6 +67,13 @@ const selectedProcessor = computed(() => props.processors.find((processor) => pr
 const longestType = computed(() => props.processors.reduce((longest, processor) => processor.type.length > longest.length ? processor.type : longest, props.modelValue || text.selectStepType));
 // 触发器文字在添加模式固定为添加步骤，其余展示当前类型。
 const triggerLabel = computed(() => props.variant === "add" ? text.addStep : selectedProcessor.value?.type || props.modelValue || text.selectStepType);
+// 添加模式的触发器需要预留一级分类列宽度，避免只有弹出菜单时才变宽；其余模式按最长步骤名撑开。
+const sizerLabel = computed(() => {
+    if (props.variant !== "add") return longestType.value;
+    // 一级列展示分类名或单处理器分类的步骤名，取最长者作为触发器占位文本。
+    const longestLabel = menuEntries.value.reduce((longest, entry) => entry.label.length > longest.length ? entry.label : longest, "");
+    return longestLabel.length > text.addStep.length ? longestLabel : text.addStep;
+});
 
 // 使用当前控件字体测量菜单文本，避免按字符数估算造成中文列过宽。
 function measureTextWidth(labels: string[]): number {
@@ -251,7 +258,7 @@ onBeforeUnmount(cleanupMenu);
 
 <template>
     <span ref="rootElement" class="step-type-menu" :style="{ '--step-menu-max-width': `${maxWidth}px` }">
-        <span class="step-type-sizer" aria-hidden="true">{{ variant === "add" ? text.addStep : longestType }}</span>
+        <span class="step-type-sizer" aria-hidden="true">{{ sizerLabel }}</span>
         <button ref="triggerElement" class="step-type-trigger" type="button" role="combobox" :disabled="disabled" :aria-label="accessibleLabel" :aria-expanded="open" :aria-controls="menuId" aria-haspopup="menu" @click="open ? closeMenu() : openMenu()" @keydown="handleTriggerKeydown">
             <span>{{ triggerLabel }}</span><ChevronDown :size="16" aria-hidden="true" />
         </button>
