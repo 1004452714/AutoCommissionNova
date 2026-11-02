@@ -38,3 +38,6 @@ end_of_line = crlf
 charset = utf-8
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[frontend/entries/*/index.html]
+end_of_line = lf

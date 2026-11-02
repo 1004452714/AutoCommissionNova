@@ -6,5 +6,6 @@
 *.html text eol=CRLF
 *.mjs text eol=CRLF
 *.md text eol=CRLF
-# 打包产物行尾由构建决定，统一按 LF 入库，避免 checkout 的 CRLF 改写造成长期脏 diff
+
 web/*/index.html text eol=lf
+frontend/entries/*/index.html text eol=lf
