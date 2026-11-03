@@ -3,7 +3,7 @@
  * 使用 BetterGI AutoSkip 实时任务处理 NPC 对话
  */
 import { DIALOG_REGIONS } from "../config/index.js";
-import { isInMainUI, bvPageOcrRegion } from "../vision/index.js";
+import { isInMainUI, isInTalkUI, bvPageOcrRegion } from "../vision/index.js";
 import { extractName } from "../utils/text-utils.js";
 import { isCancellationError } from "../utils/error-utils.js";
 import { dispatchOnDialogOcr } from "../probes/index.js";
@@ -85,49 +85,74 @@ export default [
                     ? Array.from(results).find(r => r.text.includes(extractedName))
                     : null;
 
-                // 要交互的文本：优先白名单命中的 NPC，其次任务描述提取的人名；
-                // 都没有时为空串（等价于交互区域内任意文本），用于末尾按 F 触发的兜底分支
-                let interactionText = "";
-                if (matchedNPCs.length > 0) {
-                    interactionText = matchedNPCs[0].matchedNPC;
-                } else if (matchedByName) {
-                    interactionText = extractedName;
-                }
-                const interactionLocator = page.locator(interactionText, DIALOG_REGIONS.DIALOG_OPTIONS);
+                // 进入对话的判定：满足以下任一即视为进入对话
+                //   1) 目标交互文本出现过并被点击至消失（交互成功）
+                //   2) 检测到 InTalk 图标（左上角对话气泡）
+                // 由于 BvFlow 单步只支持单一条件，无法表达"文本消失 或 InTalk 出现"的或条件，
+                // 这里直接用一段有上限的轮询实现，非致命。
+                const interactionTexts = matchedNPCs.length > 0
+                    ? matchedNPCs.map(item => item.matchedNPC)
+                    : (matchedByName ? [extractedName] : [""]);
+                const interactionLocator = interactionTexts.length > 1
+                    ? page.GetByAnyText(interactionTexts, DIALOG_REGIONS.DIALOG_OPTIONS)
+                    : page.locator(interactionTexts[0], DIALOG_REGIONS.DIALOG_OPTIONS);
 
-                await page.Flow()
-                    .WithDefaultTimeout(10000)
-                    .WithDefaultRetryInterval(1000)
-                    .Do(async () => {
+                const clickTargets = async () => {
+                    keyDown("VK_MENU");
+                    await sleep(400);
+                    try {
+                        // 按住 Alt 后第一次点击点不到，需要点两下（中间稍作间隔）
                         if (matchedNPCs.length > 0) {
-                            for (let i = 0; i < matchedNPCs.length; i++) {
-                                const { element, matchedNPC } = matchedNPCs[i];
+                            for (const { matchedNPC } of matchedNPCs) {
                                 log.info("找到白名单NPC: {npc}，点击该NPC", matchedNPC);
-                                keyDown("VK_MENU");
-                                await sleep(200);
-                                element.click();
-                                await sleep(100);
+                                const locator = page.locator(matchedNPC, DIALOG_REGIONS.DIALOG_OPTIONS);
+                                locator.click();
+                                await sleep(400);
                                 leftButtonClick();
-                                keyUp("VK_MENU");
                             }
                         } else if (matchedByName) {
                             log.info("点击包含提取到任务人名的选项: {text}", matchedByName.text);
-                            keyDown("VK_MENU");
-                            await sleep(200);
                             matchedByName.click();
-                            await sleep(100);
-                            leftButtonClick();
-                            keyUp("VK_MENU");
-                        } else {
-                            log.info("未找到匹配的NPC，使用默认按F触发对话");
-                            keyPress("F");
-                            await sleep(100);
-                            keyPress("F");
                             await sleep(400);
+                            leftButtonClick();
+                        } else {
+                            log.info("点击交互区域内选项");
+                            interactionLocator.click();
+                            await sleep(400);
+                            leftButtonClick();
                         }
-                    })
-                    .UntilDisappear(interactionLocator)
-                    .Run();
+                    } finally {
+                        keyUp("VK_MENU");
+                    }
+                };
+
+                let enteredDialog = false;
+                const interactStart = Date.now();
+                while (Date.now() - interactStart < 10000) {
+                    if (isInTalkUI()) {
+                        enteredDialog = true;
+                        log.info("检测到已进入对话界面，进入自动对话");
+                        break;
+                    }
+                    if (interactionLocator.isExist()) {
+                        await clickTargets();
+                        await sleep(300);
+                        if (!interactionLocator.isExist()) {
+                            enteredDialog = true;
+                            log.info("目标交互文本已点击消失，进入自动对话");
+                            break;
+                        }
+                    }
+                    await sleep(500);
+                }
+
+                if (!enteredDialog) {
+                    log.info("未检测到交互文本或对话界面，使用默认按F触发对话");
+                    keyPress("F");
+                    await sleep(100);
+                    keyPress("F");
+                    await sleep(400);
+                }
 
                 log.info("开始执行自动对话");
 

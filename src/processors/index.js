@@ -9,6 +9,7 @@ import keyPress from "./key-press.js";
 import keyMouseScript from "./key-mouse-script.js";
 import mapTracking from "./map-tracking.js";
 import autoSkip from "./auto-skip.js";
+import interact from "./interact.js";
 import autoFight from "./auto-fight.js";
 import autoTask from "./auto-task.js";
 import switchCommissionParty from "./switch-commission-party.js";
@@ -32,6 +33,7 @@ const processors = [
     keyMouseScript,
     mapTracking,
     autoSkip,
+    interact,
     autoFight,
     autoTask,
     switchCommissionParty,
