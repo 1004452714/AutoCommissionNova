@@ -25,6 +25,7 @@ import startChallenge from "./start-challenge.js";
 import musicFlow from "./music-flow.js";
 import impregnableDefense from "./impregnable-defense.js";
 import interactAround from "./interact-around.js";
+import customScript from "./custom-script.js";
 
 const processors = [
     wait,
@@ -49,6 +50,7 @@ const processors = [
     musicFlow,
     impregnableDefense,
     interactAround,
+    customScript,
 ];
 
 /**
