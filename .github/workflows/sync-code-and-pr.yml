@@ -321,6 +321,7 @@ jobs:
         run: git push origin "HEAD:$SOURCE_BRANCH"
 
       - name: 创建新 PR
+        id: create_pr
         if: inputs.operation == 'new_pr' && steps.push.outputs.pr_diff == 'true'
         shell: bash
         env:
@@ -345,6 +346,9 @@ jobs:
           PR_NUMBER="$(jq -r '.number' <<< "$PR_RESPONSE")"
           PR_URL="$(jq -r '.html_url' <<< "$PR_RESPONSE")"
           TARGET_SHA="${{ steps.push.outputs.target_sha }}"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "target_repo=$TARGET_REPO" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
           STATE="$(jq -cn --arg target_repo "$TARGET_REPO" --argjson pr_number "$PR_NUMBER" --arg version "$VERSION" --arg source_sha "$SOURCE_SHA" --arg target_sha "$TARGET_SHA" --arg branch "$BRANCH" '{target_repo:$target_repo,pr_number:$pr_number,version:$version,source_sha:$source_sha,target_sha:$target_sha,branch:$branch}')"
           VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
           STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
@@ -361,7 +365,23 @@ jobs:
           fi
           echo "$PR_URL"
 
-      - name: 输出已有 PR
+      - name: PR 阶段打 tag
+        if: inputs.operation == 'new_pr' && steps.push.outputs.pr_diff == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SOURCE_SHA: ${{ steps.create_pr.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          TAG="v$VERSION"
+          # PR 阶段即打 tag（默认按会被合并处理），指向本次发布对应的源码提交。
+          # 使用 -f 允许重打，避免历史遗留的同名 tag 导致失败。
+          git tag -f "$TAG" "$SOURCE_SHA"
+          git push -f origin "refs/tags/$TAG"
+          echo "已为 PR 阶段预打 tag $TAG -> $SOURCE_SHA（合并后确认，关闭未合并或更新时会删除重打）"
+
+      - name: 更新已有 PR
+        id: update_pr
         if: inputs.operation == 'update_pr'
         shell: bash
         env:
@@ -381,6 +401,7 @@ jobs:
           SOURCE_SHA="$(git rev-parse HEAD)"
           TARGET_SHA="${{ steps.push.outputs.target_sha }}"
           BRANCH="${{ steps.release.outputs.branch }}"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           STATE="$(jq -cn --arg target_repo "$TARGET_REPO_VALUE" --argjson pr_number "$PR_NUMBER" --arg version "$VERSION" --arg source_sha "$SOURCE_SHA" --arg target_sha "$TARGET_SHA" --arg branch "$BRANCH" '{target_repo:$target_repo,pr_number:$pr_number,version:$version,source_sha:$source_sha,target_sha:$target_sha,branch:$branch}')"
           VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
           STATUS="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API")"
@@ -396,6 +417,21 @@ jobs:
             exit 1
           fi
           echo "$PR_URL"
+
+      - name: 更新时重打 tag
+        if: inputs.operation == 'update_pr'
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SOURCE_SHA: ${{ steps.update_pr.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          TAG="v$VERSION"
+          # PR 有更新：先删掉旧 tag，再指向新的源码提交重打，保证 tag 跟随 PR 最新内容。
+          git push origin ":refs/tags/$TAG" 2>/dev/null || echo "远端无旧 tag $TAG，跳过删除"
+          git tag -f "$TAG" "$SOURCE_SHA"
+          git push -f origin "refs/tags/$TAG"
+          echo "已更新并重打 tag $TAG -> $SOURCE_SHA"
 
   monitor-merged-pr:
     if: github.event_name == 'schedule'
@@ -435,7 +471,7 @@ jobs:
           ref: ${{ env.SOURCE_BRANCH }}
           fetch-depth: 0
 
-      - name: 检查 PR 并创建 tag
+      - name: 检查 PR 并确认或清理 tag
         if: steps.pending.outputs.active == 'true'
         shell: bash
         env:
@@ -453,39 +489,50 @@ jobs:
           MERGED_AT="$(jq -r '.merged_at // empty' <<< "$PR")"
           PR_HEAD_SHA="$(jq -r '.head.sha' <<< "$PR")"
           VARIABLE_API="https://api.github.com/repos/${{ github.repository }}/actions/variables/PENDING_SCRIPT_RELEASE"
+          TAG="v$VERSION"
+          ENCODED_BRANCH="$(jq -rn --arg value "$BRANCH" '$value | @uri')"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # 1) PR 被关闭但未合并：删分支、删 tag、清变量，彻底放弃这次发布。
           if [ "$STATE" = "closed" ] && [ -z "$MERGED_AT" ]; then
-            echo "PR 已关闭但未合并，清除待发布状态"
-            ENCODED_BRANCH="$(jq -rn --arg value "$BRANCH" '$value | @uri')"
+            echo "PR 已关闭但未合并，删除同步分支与预打 tag 并清除待发布状态"
             curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' \
-              "https://api.github.com/repos/$TARGET_FORK/git/refs/heads/$ENCODED_BRANCH" >/dev/null
+              "https://api.github.com/repos/$TARGET_FORK/git/refs/heads/$ENCODED_BRANCH" >/dev/null || true
+            git push origin ":refs/tags/$TAG" 2>/dev/null || echo "远端无 tag $TAG，跳过"
             curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
-            echo "源仓库版本提交会保留但不会创建 tag；下次发布将使用后续版本"
+            echo "源仓库版本提交会保留；已删除 tag $TAG；下次发布将使用后续版本"
             exit 0
           fi
+
+          # 2) PR 尚未合并：等待下次检查（tag 保持 PR 阶段预打的版本）。
           if [ -z "$MERGED_AT" ]; then
-            echo "PR 尚未合并，等待下次检查"
+            echo "PR 尚未合并，等待下次检查（tag $TAG 保持 PR 阶段预打状态）"
             exit 0
           fi
+
+          # 3) 已合并但 PR 分支包含未记录的提交（例如有人手工往同步分支推送）：
+          #    发布内容已与源仓库不一致，删除 tag 并停止跟踪，避免每天失败死循环。
           if [ "$PR_HEAD_SHA" != "$TARGET_SHA" ]; then
-            echo "PR 分支包含未由同步工作流记录的提交: expected=$TARGET_SHA actual=$PR_HEAD_SHA" >&2
-            echo "请先将修改回写源仓库并运行 update_pr" >&2
-            exit 1
+            echo "::warning::PR 分支包含未由同步工作流记录的提交: expected=$TARGET_SHA actual=$PR_HEAD_SHA，删除 tag 并停止跟踪"
+            git push origin ":refs/tags/$TAG" 2>/dev/null || echo "远端无 tag $TAG，跳过"
+            curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
+            echo "已删除 tag $TAG 并清除待发布状态；请将改动回写源仓库后用 update_pr 重新发布"
+            exit 0
           fi
+
+          # 4) 正常合并：确认 PR 阶段预打的 tag 指向记录的源码提交；缺失则补打。
           if ! git cat-file -e "$SOURCE_SHA^{commit}"; then
             echo "记录的源码提交不存在: $SOURCE_SHA" >&2
             exit 1
           fi
-          TAG="v$VERSION"
-          if git show-ref --tags --verify --quiet "refs/tags/$TAG"; then
-            if [ "$(git rev-list -n 1 "$TAG")" != "$SOURCE_SHA" ]; then
-              echo "tag $TAG 已存在但未指向记录的源码提交" >&2
-              exit 1
-            fi
+          if git show-ref --tags --verify --quiet "refs/tags/$TAG" \
+            && [ "$(git rev-list -n 1 "$TAG")" = "$SOURCE_SHA" ]; then
+            echo "tag $TAG 已正确指向 $SOURCE_SHA，确认发布"
           else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag "$TAG" "$SOURCE_SHA"
-            git push origin "$TAG"
+            echo "tag $TAG 缺失或指向不符，按记录补打 -> $SOURCE_SHA"
+            git tag -f "$TAG" "$SOURCE_SHA"
+            git push -f origin "refs/tags/$TAG"
           fi
           curl -fsSL -X DELETE -H "Authorization: Bearer $SYNC_TOKEN" -H 'Accept: application/vnd.github+json' "$VARIABLE_API" >/dev/null
-          echo "已为合并 PR 创建 $TAG 并停止跟踪"
+          echo "已确认 $TAG 对应合并 PR 并停止跟踪"
